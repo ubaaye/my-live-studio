@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="my"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>လွန်ဆွဲပွဲ (TUG OF WAR) — NLO Live Studio</title>
+<style>
+*{box-sizing:border-box} html,body{margin:0;height:100%;background:#070a18;overflow:hidden;
+ font-family:"Optimistic AI VF",system-ui,sans-serif;color:#eef1ff;-webkit-user-select:none;user-select:none}
+#stage{position:fixed;inset:0} #stage canvas{display:block}
+.hud{position:fixed;top:8px;left:8px;right:8px;display:flex;gap:8px;z-index:5;pointer-events:none}
+.team{flex:1;background:rgba(10,14,34,.72);border:1.5px solid #ffffff2a;border-radius:14px;padding:7px 10px;backdrop-filter:blur(6px)}
+.team.red{border-color:#ff5a5a88}.team.blue{border-color:#4da3ff88}
+.team .nm{font-weight:800;font-size:15px} .team .st{font-size:12px;opacity:.85;margin-top:1px}
+.bar{height:6px;background:#ffffff22;border-radius:3px;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;transition:width .25s}
+.red .bar i{background:#ff5a5a}.blue .bar i{background:#4da3ff}
+.mid{width:86px;text-align:center;background:rgba(10,14,34,.72);border:1.5px solid #ffd54d66;border-radius:14px;padding:7px 4px;backdrop-filter:blur(6px)}
+.mid .tm{font-size:21px;font-weight:900;line-height:1} .mid .sc{font-size:13px;margin-top:2px} .mid .rd{font-size:11px;opacity:.8}
+#ticker{position:fixed;left:10px;bottom:64px;z-index:5;font-size:12.5px;line-height:1.5;pointer-events:none;text-shadow:0 1px 3px #000}
+#ticker div{background:rgba(5,8,20,.55);display:inline-block;padding:2px 8px;border-radius:8px;margin-top:3px}
+#guide{position:fixed;left:8px;right:8px;bottom:8px;z-index:6;background:rgba(10,14,34,.82);border:1px solid #ffffff26;
+ border-radius:14px;padding:8px 12px;backdrop-filter:blur(8px);font-size:12.5px}
+#guide .hd{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px;cursor:pointer}
+#guide .rows{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}
+#guide .rows div b{color:#ffd54d;font-weight:700}
+#guide.closed .rows{display:none}
+#howto{position:fixed;top:96px;left:0;right:0;text-align:center;z-index:4;pointer-events:none}
+#howto span{background:rgba(5,8,20,.5);padding:3px 12px;border-radius:999px;font-size:13px}
+#popup{position:fixed;top:38%;left:0;right:0;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:scale(.9);transition:all .18s}
+#popup.show{opacity:1;transform:scale(1)}
+#popup .big{display:inline-block;background:linear-gradient(180deg,#ffd54d,#ff9d2e);color:#431c00;font-weight:900;
+ font-size:21px;padding:10px 22px;border-radius:16px;box-shadow:0 8px 30px #000a}
+#popup .sub{display:block;margin-top:7px;font-size:14px;color:#fff;text-shadow:0 1px 4px #000}
+#demo{position:fixed;right:8px;top:110px;z-index:9;display:none;flex-direction:column;gap:5px}
+#demo button{background:#1b2350;color:#fff;border:1px solid #ffffff33;border-radius:9px;padding:6px 9px;font-size:12px}
+#demo.show{display:flex}
+</style></head><body>
+<div id="stage"></div>
+<div class="hud">
+  <div class="team red"><div class="nm">🔴 အနီ</div><div class="st"><span id="mR">0</span> ယောက် · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
+  <div class="mid"><div class="tm" id="tm">1:30</div><div class="sc" id="sc">0 — 0</div><div class="rd">ပွဲစဉ် <span id="rd">1</span></div></div>
+  <div class="team blue"><div class="nm">🔵 အပြာ</div><div class="st"><span id="mB">0</span> ယောက် · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
+</div>
+<div id="howto"><span>မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
+<div id="ticker"></div>
+<div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
+<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — လွန်ဆွဲပွဲ (TUG OF WAR)</span><span id="gTog">▾</span></div><div class="rows" id="gRows"></div></div>
+<div id="demo"></div>
+<script src="three.min.js"></script>
+<script>window.GAME3D = {};</script>
+<script>
+GAME3D['tug'] = {
+  create: function(THREE) {
+    const T = THREE;
+    const scene = new T.Scene();
+    scene.background = new T.Color(0xffb273);
+    scene.fog = new T.FogExp2(0xffb273, 0.025);
+
+    const camera = new T.PerspectiveCamera(55, 0.5, 0.1, 100);
+    camera.position.set(0, 3.8, 11.5);
+    camera.lookAt(0, 1.0, 0);
+
+    const hemiLight = new T.HemisphereLight(0xffdfa9, 0x6e4320, 0.85);
+    scene.add(hemiLight);
+
+    const dirLight = new T.DirectionalLight(0xfffaed, 1.2);
+    dirLight.position.set(6, 12, 8);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 30;
+    dirLight.shadow.camera.left = -8;
+    dirLight.shadow.camera.right = 8;
+    dirLight.shadow.camera.top = 8;
+    dirLight.shadow.camera.bottom = -4;
+    scene.add(dirLight);
+
+    const skinMat = new T.MeshStandardMaterial({ color: 0xf3b28f, roughness: 0.8 });
+    const thanakaMat = new T.MeshStandardMaterial({ color: 0xfff6bc, roughness: 0.9 });
+    const redMat = new T.MeshStandardMaterial({ color: 0xdd2c2c, roughness: 0.8 });
+    const redDarkMat = new T.MeshStandardMaterial({ color: 0x881111, roughness: 0.8 });
+    const blueMat = new T.MeshStandardMaterial({ color: 0x2c66dd, roughness: 0.8 });
+    const blueDarkMat = new T.MeshStandardMaterial({ color: 0x112b88, roughness: 0.8 });
+    const goldMat = new T.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.5, metalness: 0.2 });
+    const groundMat = new T.MeshStandardMaterial({ color: 0xdca363, roughness: 0.9 });
+    const mudMat = new T.MeshStandardMaterial({ color: 0x3d2310, roughness: 0.3 });
+    const ropeMat = new T.MeshStandardMaterial({ color: 0xab8855, roughness: 0.85, emissive: 0x000000 });
+    const woodMat = new T.MeshStandardMaterial({ color: 0x7a5230, roughness: 0.85 });
+    const leafMat = new T.MeshStandardMaterial({ color: 0x3b8433, roughness: 0.8 });
+    const whiteMat = new T.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.7 });
+
+    const boxGeo = new T.BoxGeometry(1, 1, 1);
+    const sphereGeo = new T.SphereGeometry(1, 12, 10);
+    const cylinderGeo = new T.CylinderGeometry(1, 1, 1, 10);
+    const circleGeo = new T.CircleGeometry(1, 8);
+
+    const ground = new T.Mesh(new T.PlaneGeometry(30, 20), groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const mud = new T.Mesh(new T.CylinderGeometry(2.8, 3.2, 0.05, 24), mudMat);
+    mud.position.set(0, 0.02, 0);
+    mud.scale.set(1, 1, 0.5);
+    scene.add(mud);
+
+    const lineR = new T.Mesh(boxGeo, redMat);
+    lineR.scale.set(0.12, 0.03, 3);
+    lineR.position.set(-3, 0.03, 0);
+    scene.add(lineR);
+
+    const lineB = new T.Mesh(boxGeo, blueMat);
+    lineB.scale.set(0.12, 0.03, 3);
+    lineB.position.set(3, 0.03, 0);
+    scene.add(lineB);
+
+    const lineC = new T.Mesh(boxGeo, whiteMat);
+    lineC.scale.set(0.08, 0.03, 3);
+    lineC.position.set(0, 0.03, 0);
+    scene.add(lineC);
+
+    const bgGroup = new T.Group();
+    bgGroup.position.z = -3.5;
+    scene.add(bgGroup);
+
+    for (let i = -4; i <= 4; i++) {
+      const post = new T.Mesh(cylinderGeo, woodMat);
+      post.scale.set(0.08, 3, 0.08);
+      post.position.set(i * 1.8, 1.5, 0);
+      bgGroup.add(post);
+    }
+    const bar1 = new T.Mesh(cylinderGeo, woodMat);
+    bar1.scale.set(0.06, 16, 0.06);
+    bar1.rotation.z = Math.PI / 2;
+    bar1.position.set(0, 1.8, 0);
+    bgGroup.add(bar1);
+
+    const bar2 = bar1.clone();
+    bar2.position.y = 2.7;
+    bgGroup.add(bar2);
+
+    const bannerR = new T.Mesh(boxGeo, redMat);
+    bannerR.scale.set(1.5, 0.6, 0.02);
+    bannerR.position.set(-3, 2.25, 0.02);
+    bgGroup.add(bannerR);
+
+    const bannerB = new T.Mesh(boxGeo, blueMat);
+    bannerB.scale.set(1.5, 0.6, 0.02);
+    bannerB.position.set(3, 2.25, 0.02);
+    bgGroup.add(bannerB);
+
+    const spectators = [];
+    const specColors = [0xdd3333, 0x3366dd, 0xddaa22, 0x22aa55, 0xaa33aa, 0xff7722];
+    for (let i = 0; i < 22; i++) {
+      const spec = new T.Group();
+      const body = new T.Mesh(cylinderGeo, new T.MeshStandardMaterial({ color: specColors[i % specColors.length], roughness: 0.8 }));
+      body.scale.set(0.2, 0.5, 0.2);
+      body.position.y = 0.25;
+      spec.add(body);
+
+      const head = new T.Mesh(sphereGeo, skinMat);
+      head.scale.set(0.14, 0.14, 0.14);
+      head.position.y = 0.6;
+      spec.add(head);
+
+      const t1 = new T.Mesh(circleGeo, thanakaMat);
+      t1.scale.set(0.04, 0.04, 0.04);
+      t1.position.set(0.06, 0.6, 0.12);
+      spec.add(t1);
+
+      spec.position.set(-6.0 + i * 0.58, 1.2 + (i % 2) * 0.4, -0.2);
+      bgGroup.add(spec);
+      spectators.push({ mesh: spec, offset: i * 0.7, idx: i });
+    }
+
+    const flagColors = [0xff3333, 0xffd700, 0x3388ff, 0x33cc55, 0xff66cc];
+    const flags = [];
+    for (let i = 0; i < 14; i++) {
+      const flag = new T.Mesh(boxGeo, new T.MeshStandardMaterial({ color: flagColors[i % flagColors.length], roughness: 0.8, side: T.DoubleSide }));
+      flag.scale.set(0.3, 0.4, 0.01);
+      flag.position.set(-6.5 + i * 1.0, 3.2 + Math.sin(i * 0.5) * 0.15, -1);
+      flag.rotation.z = 0.2;
+      scene.add(flag);
+      flags.push({ mesh: flag, baseZ: 0.2, idx: i });
+    }
+
+    function makePalm(x, z) {
+      const palm = new T.Group();
+      palm.position.set(x, 0, z);
+      const trunk = new T.Mesh(cylinderGeo, woodMat);
+      trunk.scale.set(0.2, 4, 0.2);
+      trunk.position.y = 2;
+      trunk.rotation.z = x > 0 ? -0.15 : 0.15;
+      palm.add(trunk);
+      for (let a = 0; a < 5; a++) {
+        const frond = new T.Mesh(boxGeo, leafMat);
+        frond.scale.set(1.4, 0.05, 0.3);
+        frond.position.set(0, 3.9, 0);
+        frond.rotation.y = (a / 5) * Math.PI * 2;
+        frond.rotation.z = -0.4;
+        palm.add(frond);
+      }
+      scene.add(palm);
+    }
+    makePalm(-7.2, -2);
+    makePalm(7.2, -2);
+
+    function makePerson(team) {
+      const isRed = team === 'red';
+      const teamM = isRed ? redMat : blueMat;
+      const darkM = isRed ? redDarkMat : blueDarkMat;
+
+      const root = new T.Group();
+      const torsoGroup = new T.Group();
+      torsoGroup.position.y = 0.65;
+      root.add(torsoGroup);
+
+      const torso = new T.Mesh(boxGeo, teamM);
+      torso.scale.set(0.38, 0.45, 0.25);
+      torso.castShadow = true;
+      torsoGroup.add(torso);
+
+      const headGroup = new T.Group();
+      headGroup.position.set(0, 0.32, 0);
+      torsoGroup.add(headGroup);
+
+      const head = new T.Mesh(sphereGeo, skinMat);
+      head.scale.set(0.18, 0.2, 0.18);
+      head.castShadow = true;
+      headGroup.add(head);
+
+      const thanakaL = new T.Mesh(circleGeo, thanakaMat);
+      thanakaL.scale.set(0.045, 0.045, 1);
+      thanakaL.position.set(0.09, 0, 0.16);
+      thanakaL.rotation.y = 0.5;
+      headGroup.add(thanakaL);
+
+      const thanakaR = thanakaL.clone();
+      thanakaR.position.set(-0.09, 0, 0.16);
+      thanakaR.rotation.y = -0.5;
+      headGroup.add(thanakaR);
+
+      const turban = new T.Mesh(new T.TorusGeometry(0.18, 0.04, 8, 16), teamM);
+      turban.rotation.x = Math.PI / 2;
+      turban.position.y = 0.08;
+      headGroup.add(turban);
+
+      const armL = new T.Group();
+      armL.position.set(0.22, 0.15, 0);
+      torsoGroup.add(armL);
+      const meshArmL = new T.Mesh(boxGeo, skinMat);
+      meshArmL.scale.set(0.1, 0.38, 0.1);
+      meshArmL.position.y = -0.16;
+      meshArmL.castShadow = true;
+      armL.add(meshArmL);
+
+      const armR = new T.Group();
+      armR.position.set(-0.22, 0.15, 0);
+      torsoGroup.add(armR);
+      const meshArmR = new T.Mesh(boxGeo, skinMat);
+      meshArmR.scale.set(0.1, 0.38, 0.1);
+      meshArmR.position.y = -0.16;
+      meshArmR.castShadow = true;
+      armR.add(meshArmR);
+
+      const longyi = new T.Mesh(cylinderGeo, darkM);
+      longyi.scale.set(0.22, 0.35, 0.2);
+      longyi.position.set(0, -0.3, 0);
+      torsoGroup.add(longyi);
+
+      const legL = new T.Group();
+      legL.position.set(0.11, 0.35, 0);
+      root.add(legL);
+      const meshLegL = new T.Mesh(boxGeo, skinMat);
+      meshLegL.scale.set(0.11, 0.38, 0.11);
+      meshLegL.position.y = -0.19;
+      meshLegL.castShadow = true;
+      legL.add(meshLegL);
+
+      const legR = new T.Group();
+      legR.position.set(-0.11, 0.35, 0);
+      root.add(legR);
+      const meshLegR = new T.Mesh(boxGeo, skinMat);
+      meshLegR.scale.set(0.11, 0.38, 0.11);
+      meshLegR.position.y = -0.19;
+      meshLegR.castShadow = true;
+      legR.add(meshLegR);
+
+      return { root, torsoGroup, headGroup, armL, armR, legL, legR, team, popTimer: 0 };
+    }
+
+    const tugGroup = new T.Group();
+    scene.add(tugGroup);
+
+    const rope = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, 12, 12), ropeMat);
+    rope.rotation.z = Math.PI / 2;
+    rope.position.set(0, 1.05, 0);
+    rope.castShadow = true;
+    tugGroup.add(rope);
+
+    const ribbon = new T.Mesh(boxGeo, goldMat);
+    ribbon.scale.set(0.08, 0.35, 0.12);
+    ribbon.position.set(0, 1.05, 0);
+    tugGroup.add(ribbon);
+
+    const redPullers = [];
+    const bluePullers = [];
+
+    for (let i = 0; i < 5; i++) {
+      const pR = makePerson('red');
+      pR.root.position.set(-1.0 - i * 0.85, 0, 0);
+      pR.root.rotation.y = Math.PI / 2;
+      tugGroup.add(pR.root);
+      redPullers.push(pR);
+
+      const pB = makePerson('blue');
+      pB.root.position.set(1.0 + i * 0.85, 0, 0);
+      pB.root.rotation.y = -Math.PI / 2;
+      tugGroup.add(pB.root);
+      bluePullers.push(pB);
+    }
+
+    const particles = [];
+    const partGeo = new T.DodecahedronGeometry(0.08, 0);
+    const partMat = new T.MeshBasicMaterial({ color: 0xdcb888, transparent: true, opacity: 0.8 });
+    for (let i = 0; i < 35; i++) {
+      const p = new T.Mesh(partGeo, partMat);
+      p.visible = false;
+      scene.add(p);
+      particles.push({ mesh: p, life: 0, maxLife: 1, vx: 0, vy: 0, vz: 0 });
+    }
+
+    function spawnDust(x, z, count) {
+      let spawned = 0;
+      for (let i = 0; i < particles.length && spawned < count; i++) {
+        const pt = particles[i];
+        if (pt.life <= 0) {
+          pt.mesh.visible = true;
+          pt.mesh.position.set(x + (Math.random() - 0.5) * 0.4, 0.08, z + (Math.random() - 0.5) * 0.4);
+          pt.mesh.scale.setScalar(0.6 + Math.random() * 0.8);
+          pt.vx = (Math.random() - 0.5) * 0.8;
+          pt.vy = 0.5 + Math.random() * 0.8;
+          pt.vz = (Math.random() - 0.5) * 0.8;
+          pt.life = 0.5 + Math.random() * 0.5;
+          pt.maxLife = pt.life;
+          spawned++;
+        }
+      }
+    }
+
+    let prevP = 0;
+    let shakeTime = 0;
+    let glowTime = 0;
+    let redFallTime = 0;
+    let blueFallTime = 0;
+    let redHeaveTime = 0;
+    let blueHeaveTime = 0;
+    let redJoinIdx = 0;
+    let blueJoinIdx = 0;
+
+    function animatePuller(p, idx, time, pVel, heaveTime, fallTime) {
+      if (p.popTimer > 0) {
+        const s = 1.0 + Math.sin(p.popTimer * Math.PI * 4) * 0.3;
+        p.root.scale.setScalar(s);
+      } else {
+        p.root.scale.setScalar(1.0);
+      }
+
+      if (fallTime > 0) {
+        const fallRatio = fallTime / 1.8;
+        if (fallRatio > 0.4) {
+          p.root.rotation.x = -Math.PI * 0.4 * ((fallRatio - 0.4) / 0.6);
+          p.torsoGroup.rotation.x = -0.2;
+        } else {
+          p.root.rotation.x = -Math.PI * 0.4 * (fallRatio / 0.4);
+          p.torsoGroup.rotation.x = 0;
+        }
+        return;
+      }
+
+      p.root.rotation.x = 0;
+
+      const isRed = p.team === 'red';
+      const speed = 4.0 + Math.abs(pVel) * 10.0;
+      const heave = heaveTime > 0 ? Math.sin(heaveTime * 12) * 0.35 : 0;
+      const strain = Math.sin(time * speed + idx * 0.5) * 0.08;
+
+      p.torsoGroup.rotation.x = -0.35 - heave - strain;
+      p.headGroup.rotation.x = 0.2 + heave * 0.5;
+
+      p.armL.rotation.x = -1.1 + strain;
+      p.armR.rotation.x = -1.1 - strain;
+
+      const step = Math.sin(time * speed + idx);
+      p.legL.rotation.x = 0.4 + step * 0.2;
+      p.legR.rotation.x = -0.4 - step * 0.2;
+
+      p.root.position.y = Math.abs(Math.sin(time * speed * 2)) * 0.04;
+    }
+
+    return {
+      scene: scene,
+      camera: camera,
+      update: function(dt, S) {
+        dt = Math.min(dt, 0.05);
+        const pVel = (S.p - prevP) / Math.max(dt, 0.001);
+        prevP = S.p;
+
+        tugGroup.position.x = T.MathUtils.lerp(tugGroup.position.x, S.p * 1.6, 0.1);
+
+        if (shakeTime > 0) {
+          shakeTime -= dt;
+          camera.position.x = (Math.random() - 0.5) * 0.3 * Math.max(0, shakeTime / 1.2);
+          camera.position.y = 3.8 + (Math.random() - 0.5) * 0.3 * Math.max(0, shakeTime / 1.2);
+        } else {
+          camera.position.set(0, 3.8, 11.5);
+        }
+
+        if (glowTime > 0) {
+          glowTime -= dt;
+          ropeMat.emissive.setHex(0xffaa00);
+          ropeMat.emissiveIntensity = 0.5 + Math.sin(S.t * 14) * 0.4;
+        } else {
+          ropeMat.emissive.setHex(0x000000);
+          ropeMat.emissiveIntensity = 0;
+        }
+
+        if (redHeaveTime > 0) redHeaveTime -= dt;
+        if (blueHeaveTime > 0) blueHeaveTime -= dt;
+        if (redFallTime > 0) redFallTime -= dt;
+        if (blueFallTime > 0) blueFallTime -= dt;
+
+        for (let i = 0; i < 5; i++) {
+          if (redPullers[i].popTimer > 0) redPullers[i].popTimer -= dt;
+          if (bluePullers[i].popTimer > 0) bluePullers[i].popTimer -= dt;
+
+          animatePuller(redPullers[i], i, S.t, pVel, redHeaveTime, i === 0 ? redFallTime : 0);
+          animatePuller(bluePullers[i], i, S.t, pVel, blueHeaveTime, i === 0 ? blueFallTime : 0);
+        }
+
+        for (let i = 0; i < spectators.length; i++) {
+          const spec = spectators[i];
+          spec.mesh.position.y = 1.2 + (spec.idx % 2) * 0.4 + Math.sin(S.t * 5 + spec.offset) * 0.07;
+        }
+
+        for (let i = 0; i < flags.length; i++) {
+          const fl = flags[i];
+          fl.mesh.rotation.z = fl.baseZ + Math.sin(S.t * 4 + fl.idx) * 0.15;
+        }
+
+        for (let i = 0; i < particles.length; i++) {
+          const pt = particles[i];
+          if (pt.life > 0) {
+            pt.life -= dt;
+            pt.mesh.position.x += pt.vx * dt;
+            pt.mesh.position.y += pt.vy * dt;
+            pt.mesh.position.z += pt.vz * dt;
+            const r = pt.life / pt.maxLife;
+            pt.mesh.scale.setScalar(r);
+            pt.mesh.visible = pt.life > 0;
+          }
+        }
+      },
+      onJoin: function(team) {
+        if (team === 'red') {
+          redPullers[redJoinIdx % 5].popTimer = 0.5;
+          redJoinIdx++;
+        } else {
+          bluePullers[blueJoinIdx % 5].popTimer = 0.5;
+          blueJoinIdx++;
+        }
+      },
+      onGift: function(team, tier) {
+        const isRed = team === 'red';
+        if (tier === 1) {
+          if (isRed) redHeaveTime = 0.6;
+          else blueHeaveTime = 0.6;
+        } else if (tier === 2) {
+          if (isRed) redHeaveTime = 0.9;
+          else blueHeaveTime = 0.9;
+          const pullers = isRed ? redPullers : bluePullers;
+          for (let i = 0; i < 5; i++) {
+            spawnDust(tugGroup.position.x + pullers[i].root.position.x, pullers[i].root.position.z, 2);
+          }
+        } else if (tier === 3) {
+          glowTime = 5.0;
+          if (isRed) redHeaveTime = 1.4;
+          else blueHeaveTime = 1.4;
+        } else if (tier === 4) {
+          shakeTime = 1.2;
+          if (isRed) {
+            blueFallTime = 1.8;
+            spawnDust(tugGroup.position.x + bluePullers[0].root.position.x, 0, 8);
+          } else {
+            redFallTime = 1.8;
+            spawnDust(tugGroup.position.x + redPullers[0].root.position.x, 0, 8);
+          }
+        }
+      },
+      onLike: function(team) {
+        if (team === 'red') redHeaveTime = 0.4;
+        else blueHeaveTime = 0.4;
+      },
+      reset: function() {
+        shakeTime = 0;
+        glowTime = 0;
+        redFallTime = 0;
+        blueFallTime = 0;
+        redHeaveTime = 0;
+        blueHeaveTime = 0;
+        tugGroup.position.x = 0;
+        ropeMat.emissive.setHex(0x000000);
+      }
+    };
+  }
+};
+
+</script>
+<script>
+(function(){
+"use strict";
+var CFG = {"id": "tug", "metric": "p", "guide": [["Gift 1–99", "အားဖြည့် ဆွဲ"], ["Gift 100–499", "အပြင်း ဆွဲ + ဖုန်ထ"], ["Gift 500–999", "ရွှေကြိုး — အား ×၂ (၅ စက္ကန့်)"], ["Gift 1000+", "မြေငလျင် — ပြိုင်ဘက် ချော်လဲ"]]};
+var $ = function(id){ return document.getElementById(id); };
+// ---------- guide ----------
+CFG.guide.forEach(function(g){ var d=document.createElement('div'); d.innerHTML='<b>'+g[0]+'</b> — '+g[1]; $('gRows').appendChild(d); });
+$('guide').querySelector('.hd').addEventListener('click', function(){ $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
+// ---------- state ----------
+var S = { p:0, hpR:100, hpB:100, hR:0, hB:0, balR:100, balB:100, scoreR:0, scoreB:0, t:0, running:false, over:false, winner:null };
+var M = { red:{members:0, gifts:0, power:0, names:[]}, blue:{members:0, gifts:0, power:0, names:[]} };
+var round = 1, timeLeft = 90, goldUntil = {red:0, blue:0}, lastHit = {red:-9, blue:-9};
+var game = null;
+try { game = GAME3D[CFG.id].create(THREE); } catch(e){ showPop('Error', String(e).slice(0,80)); }
+var renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+$('stage').appendChild(renderer.domElement);
+function resize(){ var w=innerWidth, h=innerHeight; renderer.setSize(w,h); if(game){ game.camera.aspect=w/h; game.camera.updateProjectionMatrix(); } }
+addEventListener('resize', resize);
+// ---------- helpers ----------
+function tierOf(coins){ return coins>=1000?4 : coins>=500?3 : coins>=100?2 : 1; }
+function showPop(big, sub){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, 2100); }
+function tick(txt){ var d=document.createElement('div'); d.textContent=txt; var box=$('ticker'); box.appendChild(d); while(box.children.length>4) box.removeChild(box.firstChild); setTimeout(function(){ d.style.opacity='0.35'; }, 6000); setTimeout(function(){ d.remove(); }, 9000); }
+function num(n){ return String(n).replace(/\d/g, function(c){ return '၀၁၂၃၄၅၆၇၈၉'[+c]; }); }
+// ---------- game numbers ----------
+function applyGift(team, tier, name, giftName){
+  var foe = team==='red' ? 'blue' : 'red';
+  M[team].gifts++; M[team].power += tier;
+  if (game) game.onGift(team, tier);
+  var feat = CFG.guide[tier-1][1];
+  if (CFG.metric==='p'){ S.p += (team==='red'?1:-1) * [0,.10,.22,.40,.70][tier]; }
+  else if (CFG.metric==='h'){ if(team==='red') S.hR=Math.min(1,S.hR+[0,.03,.07,.13,.22][tier]); else S.hB=Math.min(1,S.hB+[0,.03,.07,.13,.22][tier]);
+    if (tier===2){ if(foe==='red') S.hR=Math.max(0,S.hR-.04); else S.hB=Math.max(0,S.hB-.04); } }
+  else if (CFG.metric==='hp'){ var dmg=[0,4,9,16,30][tier]; if(foe==='red') S.hpR=Math.max(0,S.hpR-dmg); else S.hpB=Math.max(0,S.hpB-dmg); lastHit[foe]=S.t; }
+  else if (CFG.metric==='bal'){ var bd=[0,6,13,22,40][tier]; if(foe==='red') S.balR=Math.max(0,S.balR-bd); else S.balB=Math.max(0,S.balB-bd); lastHit[foe]=S.t; }
+  else if (CFG.metric==='goal'){ S.p += (team==='red'?1:-1) * [0,.12,.26,.45,.85][tier]; if(tier===3) goldUntil[team]=S.t+5; if(tier===4 && Math.abs(S.p)>0.55){ goal(team); } }
+  if (tier>=3) showPop((team==='red'?'အနီ':'အပြာ')+' — '+feat, name+' က '+giftName+' ပို့တယ်');
+  tick('🎁 '+name+' → '+(team==='red'?'အနီ':'အပြာ')+' · '+feat);
+  syncHud();
+}
+function goal(team){ if(team==='red') S.scoreR++; else S.scoreB++; showPop('ဂိုး!!!', (team==='red'?'အနီ':'အပြာ')+' ဂိုး ဝင်တယ်'); S.p=0; if(game) game.reset(); syncHud(); }
+function winCheck(){
+  if (S.over) return;
+  var w=null;
+  if (CFG.metric==='p' && Math.abs(S.p)>=1) w = S.p>0?'red':'blue';
+  else if (CFG.metric==='h'){ if(S.hR>=1) w='red'; else if(S.hB>=1) w='blue'; }
+  else if (CFG.metric==='hp'){ if(S.hpR<=0) w='blue'; else if(S.hpB<=0) w='red'; }
+  else if (CFG.metric==='bal'){ if(S.balR<=0) w='blue'; else if(S.balB<=0) w='red'; }
+  else if (CFG.metric==='goal' && timeLeft<=0){ w = S.scoreR===S.scoreB ? null : (S.scoreR>S.scoreB?'red':'blue'); if(!w){ timeLeft=30; tick('အချိန်စေ့ — သရေ! နောက်ထပ် ၃၀ စက္ကန့်'); return; } }
+  if (w) endRound(w);
+}
+function endRound(w){ S.over=true; S.winner=w; S.running=false; if(w==='red') M.red.wins=(M.red.wins||0)+1; else M.blue.wins=(M.blue.wins||0)+1;
+  showPop('🏆 '+(w==='red'?'အနီ':'အပြာ')+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
+  setTimeout(newRound, 6000); syncHud(); }
+function newRound(){ round++; S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
+function syncHud(){
+  $('mR').textContent=num(M.red.members); $('mB').textContent=num(M.blue.members);
+  $('gR').textContent=num(M.red.gifts); $('gB').textContent=num(M.blue.gifts);
+  $('sc').textContent = num(M.red.wins||0)+' — '+num(M.blue.wins||0);
+  var pctR=50, pctB=50;
+  if (CFG.metric==='p'){ pctR=50+S.p*50; pctB=100-pctR; }
+  else if (CFG.metric==='h'){ pctR=S.hR*100; pctB=S.hB*100; }
+  else if (CFG.metric==='hp'){ pctR=S.hpR; pctB=S.hpB; }
+  else if (CFG.metric==='bal'){ pctR=S.balR; pctB=S.balB; }
+  else if (CFG.metric==='goal'){ pctR=50+S.p*50; pctB=100-pctR; $('sc').textContent=num(S.scoreR)+' — '+num(S.scoreB); }
+  $('bR').style.width=pctR+'%'; $('bB').style.width=pctB+'%';
+}
+// ---------- events ----------
+function onEvent(ev){
+  if (!ev || !ev.kind) return;
+  var team = ev.team==='blue' ? 'blue' : 'red';
+  if (ev.kind==='join'){ M[team].members++; if(ev.name && M[team].names.indexOf(ev.name)<0) M[team].names.push(ev.name); if(game) game.onJoin(team); tick('👋 '+ev.name+' → '+(team==='red'?'အနီ':'အပြာ')+' ဝင်တယ်'); }
+  else if (ev.kind==='gift'){ applyGift(team, tierOf(ev.coins||1), ev.name||'ပရိသတ်', ev.gift||'Gift'); }
+  else if (ev.kind==='like'){ if(game) game.onLike(team); var tr = (M.red.power<M.blue.power)?'red':(M.blue.power<M.red.power?'blue':null); if(tr && CFG.metric==='p') S.p += (tr==='red'?1:-1)*0.02; }
+  else if (ev.kind==='chat'){ tick('💬 '+ev.name+': '+(ev.text||'').slice(0,40)); }
+  syncHud();
+}
+addEventListener('message', function(e){ var d=e.data; if(d && d.nlo===1) onEvent(d); });
+if (parent && parent!==window) parent.postMessage({nlo:1, kind:'ready', game:CFG.id}, '*');
+// ---------- demo (standalone debug) ----------
+if (window.parent===window){
+  $('demo').classList.add('show');
+  var names=['Aung Aung','May May','Ko Ko','Thiri','Zaw Zaw','Nilar'];
+  [['R1','အနီ ၁ join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
+   ['B1','အပြာ ၂ join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }],
+   ['GR','အနီ gift',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }],
+   ['GB','အပြာ gift',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }]
+  ].forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $('demo').appendChild(btn); });
+}
+// ---------- loop ----------
+S.running = true;
+var last = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  var dt = Math.min(0.05, (now-last)/1000); last = now;
+  if (S.running && !S.over){
+    S.t += dt; timeLeft -= dt;
+    if (CFG.metric==='bal'){ ['red','blue'].forEach(function(tm){ var k=tm==='red'?'balR':'balB'; if (S.t-lastHit[tm]>2.5) S[k]=Math.min(100, S[k]+dt*2.2); }); }
+    if (timeLeft<=0 && CFG.metric!=='goal'){ var w=null;
+      if(CFG.metric==='p') w = S.p===0?null:(S.p>0?'red':'blue');
+      else if(CFG.metric==='h') w = S.hR===S.hB?null:(S.hR>S.hB?'red':'blue');
+      else if(CFG.metric==='hp') w = S.hpR===S.hpB?null:(S.hpR>S.hpB?'red':'blue');
+      else if(CFG.metric==='bal') w = S.balR===S.balB?null:(S.balR>S.balB?'red':'blue');
+      if (w) endRound(w); else { timeLeft=30; tick('အချိန်စေ့ — သရေ! နောက်ထပ် ၃၀ စက္ကန့်'); }
+    }
+    if (timeLeft<=0 && CFG.metric==='goal') winCheck();
+    winCheck();
+    var mm = Math.max(0, Math.ceil(timeLeft)); $('tm').textContent = Math.floor(mm/60)+':'+('0'+(mm%60)).slice(-2);
+    if ((frame._s||0) < S.t-0.25){ frame._s = S.t; syncHud(); }
+  }
+  if (game){ game.update(dt, S); renderer.render(game.scene, game.camera); }
+}
+resize(); syncHud(); requestAnimationFrame(frame);
+})();
+</script>
+</body></html>

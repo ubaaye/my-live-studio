@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="my"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ဘောလုံးပွဲ (FOOTBALL CLASH) — NLO Live Studio</title>
+<style>
+*{box-sizing:border-box} html,body{margin:0;height:100%;background:#070a18;overflow:hidden;
+ font-family:"Optimistic AI VF",system-ui,sans-serif;color:#eef1ff;-webkit-user-select:none;user-select:none}
+#stage{position:fixed;inset:0} #stage canvas{display:block}
+.hud{position:fixed;top:8px;left:8px;right:8px;display:flex;gap:8px;z-index:5;pointer-events:none}
+.team{flex:1;background:rgba(10,14,34,.72);border:1.5px solid #ffffff2a;border-radius:14px;padding:7px 10px;backdrop-filter:blur(6px)}
+.team.red{border-color:#ff5a5a88}.team.blue{border-color:#4da3ff88}
+.team .nm{font-weight:800;font-size:15px} .team .st{font-size:12px;opacity:.85;margin-top:1px}
+.bar{height:6px;background:#ffffff22;border-radius:3px;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;transition:width .25s}
+.red .bar i{background:#ff5a5a}.blue .bar i{background:#4da3ff}
+.mid{width:86px;text-align:center;background:rgba(10,14,34,.72);border:1.5px solid #ffd54d66;border-radius:14px;padding:7px 4px;backdrop-filter:blur(6px)}
+.mid .tm{font-size:21px;font-weight:900;line-height:1} .mid .sc{font-size:13px;margin-top:2px} .mid .rd{font-size:11px;opacity:.8}
+#ticker{position:fixed;left:10px;bottom:64px;z-index:5;font-size:12.5px;line-height:1.5;pointer-events:none;text-shadow:0 1px 3px #000}
+#ticker div{background:rgba(5,8,20,.55);display:inline-block;padding:2px 8px;border-radius:8px;margin-top:3px}
+#guide{position:fixed;left:8px;right:8px;bottom:8px;z-index:6;background:rgba(10,14,34,.82);border:1px solid #ffffff26;
+ border-radius:14px;padding:8px 12px;backdrop-filter:blur(8px);font-size:12.5px}
+#guide .hd{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px;cursor:pointer}
+#guide .rows{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}
+#guide .rows div b{color:#ffd54d;font-weight:700}
+#guide.closed .rows{display:none}
+#howto{position:fixed;top:96px;left:0;right:0;text-align:center;z-index:4;pointer-events:none}
+#howto span{background:rgba(5,8,20,.5);padding:3px 12px;border-radius:999px;font-size:13px}
+#popup{position:fixed;top:38%;left:0;right:0;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:scale(.9);transition:all .18s}
+#popup.show{opacity:1;transform:scale(1)}
+#popup .big{display:inline-block;background:linear-gradient(180deg,#ffd54d,#ff9d2e);color:#431c00;font-weight:900;
+ font-size:21px;padding:10px 22px;border-radius:16px;box-shadow:0 8px 30px #000a}
+#popup .sub{display:block;margin-top:7px;font-size:14px;color:#fff;text-shadow:0 1px 4px #000}
+#demo{position:fixed;right:8px;top:110px;z-index:9;display:none;flex-direction:column;gap:5px}
+#demo button{background:#1b2350;color:#fff;border:1px solid #ffffff33;border-radius:9px;padding:6px 9px;font-size:12px}
+#demo.show{display:flex}
+</style></head><body>
+<div id="stage"></div>
+<div class="hud">
+  <div class="team red"><div class="nm">🔴 အနီ</div><div class="st"><span id="mR">0</span> ယောက် · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
+  <div class="mid"><div class="tm" id="tm">1:30</div><div class="sc" id="sc">0 — 0</div><div class="rd">ပွဲစဉ် <span id="rd">1</span></div></div>
+  <div class="team blue"><div class="nm">🔵 အပြာ</div><div class="st"><span id="mB">0</span> ယောက် · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
+</div>
+<div id="howto"><span>မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
+<div id="ticker"></div>
+<div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
+<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — ဘောလုံးပွဲ (FOOTBALL CLASH)</span><span id="gTog">▾</span></div><div class="rows" id="gRows"></div></div>
+<div id="demo"></div>
+<script src="three.min.js"></script>
+<script>window.GAME3D = {};</script>
+<script>
+GAME3D['football'] = {
+  create: function(THREE) {
+    const T = THREE;
+    const scene = new T.Scene();
+    scene.background = new T.Color(0xf6cf97);
+    scene.fog = new T.FogExp2(0xf6cf97, 0.035);
+
+    const camera = new T.PerspectiveCamera(55, 0.5, 0.1, 100);
+    camera.position.set(0, 7.5, 9.5);
+    camera.lookAt(0, 0.2, -0.8);
+
+    // Lights
+    const hemiLight = new T.HemisphereLight(0xfff3d1, 0x445533, 0.85);
+    scene.add(hemiLight);
+
+    const dirLight = new T.DirectionalLight(0xfffaed, 1.2);
+    dirLight.position.set(6, 12, 8);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 1;
+    dirLight.shadow.camera.far = 25;
+    dirLight.shadow.camera.left = -6;
+    dirLight.shadow.camera.right = 6;
+    dirLight.shadow.camera.top = 6;
+    dirLight.shadow.camera.bottom = -6;
+    scene.add(dirLight);
+
+    // Shared Geometries & Materials
+    const geoBox = new T.BoxGeometry(1, 1, 1);
+    const geoCyl = new T.CylinderGeometry(1, 1, 1, 8);
+    const geoSphere = new T.SphereGeometry(1, 12, 10);
+    const geoCone = new T.ConeGeometry(1, 1, 5);
+
+    const matPitch = new T.MeshStandardMaterial({ color: 0x486b36, roughness: 0.85 });
+    const matLine = new T.MeshBasicMaterial({ color: 0xf0f0e0 });
+    const matBamboo = new T.MeshStandardMaterial({ color: 0xba9543, roughness: 0.75 });
+    const matSkin = new T.MeshStandardMaterial({ color: 0xdfa36b, roughness: 0.8 });
+    const matThanaka = new T.MeshBasicMaterial({ color: 0xf4e596 });
+    const matRedKit = new T.MeshStandardMaterial({ color: 0xd93838, roughness: 0.8 });
+    const matRedDark = new T.MeshStandardMaterial({ color: 0x8a1c1c, roughness: 0.85 });
+    const matBlueKit = new T.MeshStandardMaterial({ color: 0x2755a1, roughness: 0.8 });
+    const matBlueDark = new T.MeshStandardMaterial({ color: 0x142b54, roughness: 0.85 });
+    const matBall = new T.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.5 });
+    const matBallGold = new T.MeshStandardMaterial({ color: 0xffd700, metalness: 0.7, roughness: 0.2 });
+    const matPatch = new T.MeshBasicMaterial({ color: 0x1a1a1a });
+    const matWood = new T.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
+    const matPalm = new T.MeshStandardMaterial({ color: 0x2d6a37, roughness: 0.8 });
+    const matGoldBanner = new T.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.6 });
+
+    // Temp vectors for update loops (no allocations per frame)
+    const tmpV1 = new T.Vector3();
+    const tmpV2 = new T.Vector3();
+
+    // Pitch & Ground
+    const pitch = new T.Mesh(new T.PlaneGeometry(10, 6), matPitch);
+    pitch.rotation.x = -Math.PI / 2;
+    pitch.receiveShadow = true;
+    scene.add(pitch);
+
+    // Pitch Line Markings
+    function addLine(w, h, x, z) {
+      const l = new T.Mesh(new T.PlaneGeometry(w, h), matLine);
+      l.rotation.x = -Math.PI / 2;
+      l.position.set(x, 0.005, z);
+      scene.add(l);
+    }
+    addLine(9.2, 0.06, 0, -2.6);
+    addLine(9.2, 0.06, 0, 2.6);
+    addLine(0.06, 5.2, -4.6, 0);
+    addLine(0.06, 5.2, 4.6, 0);
+    addLine(0.06, 5.2, 0, 0);
+
+    // Centre Circle
+    const circlePts = [];
+    for (let i = 0; i <= 32; i++) {
+      const a = (i / 32) * Math.PI * 2;
+      circlePts.push(new T.Vector3(Math.cos(a) * 0.9, 0.006, Math.sin(a) * 0.9));
+    }
+    const centerCircle = new T.Line(new T.BufferGeometry().setFromPoints(circlePts), matLine);
+    scene.add(centerCircle);
+
+    // Bamboo Goals
+    function createGoal(x, facingRight) {
+      const goal = new T.Group();
+      goal.position.set(x, 0, 0);
+      const post1 = new T.Mesh(geoCyl, matBamboo);
+      post1.scale.set(0.05, 1.4, 0.05);
+      post1.position.set(0, 0.7, -1.1);
+      const post2 = post1.clone();
+      post2.position.set(0, 0.7, 1.1);
+      const crossbar = new T.Mesh(geoCyl, matBamboo);
+      crossbar.scale.set(0.05, 2.25, 0.05);
+      crossbar.rotation.x = Math.PI / 2;
+      crossbar.position.set(0, 1.4, 0);
+      goal.add(post1, post2, crossbar);
+
+      // Simple Net
+      const netMat = new T.MeshBasicMaterial({ color: 0xdddddd, wireframe: true, transparent: true, opacity: 0.4 });
+      const net = new T.Mesh(new T.BoxGeometry(0.6, 1.35, 2.2), netMat);
+      net.position.set(facingRight ? -0.3 : 0.3, 0.675, 0);
+      goal.add(net);
+      scene.add(goal);
+    }
+    createGoal(-4.6, false);
+    createGoal(4.6, true);
+
+    // Myanmar Village Environment (Stands, Crowd, Flags, Palms)
+    // Stands
+    const stand = new T.Mesh(geoBox, matBamboo);
+    stand.scale.set(10.5, 0.6, 1.2);
+    stand.position.set(0, 0.3, -3.5);
+    scene.add(stand);
+
+    const banner = new T.Mesh(geoBox, matGoldBanner);
+    banner.scale.set(6, 0.4, 0.05);
+    banner.position.set(0, 0.8, -3.0);
+    scene.add(banner);
+
+    // Spectator crowd (Bouncing simple figures)
+    const crowdMembers = [];
+    const crowdMatColors = [0xd93838, 0x2755a1, 0xf4a261, 0x2a9d8f, 0xe76f51];
+    for (let i = 0; i < 18; i++) {
+      const spec = new T.Group();
+      const body = new T.Mesh(geoCyl, new T.MeshStandardMaterial({ color: crowdMatColors[i % crowdMatColors.length], roughness: 0.8 }));
+      body.scale.set(0.14, 0.4, 0.14);
+      body.position.y = 0.2;
+      const head = new T.Mesh(geoSphere, matSkin);
+      head.scale.set(0.11, 0.11, 0.11);
+      head.position.y = 0.45;
+      spec.add(body, head);
+      spec.position.set(-4.5 + i * 0.52 + (Math.random() - 0.5) * 0.2, 0.6, -3.5 + (Math.random() - 0.5) * 0.3);
+      scene.add(spec);
+      crowdMembers.push({ group: spec, offset: Math.random() * Math.PI * 2 });
+    }
+
+    // Overhead Flags
+    const pennants = [];
+    const flagColors = [0xe63946, 0xf4a261, 0xe76f51, 0x2a9d8f, 0x2755a1];
+    for (let i = 0; i < 12; i++) {
+      const p = new T.Mesh(geoCone, new T.MeshBasicMaterial({ color: flagColors[i % flagColors.length], side: T.DoubleSide }));
+      p.scale.set(0.15, 0.3, 0.02);
+      p.rotation.z = Math.PI;
+      p.position.set(-4.8 + i * 0.85, 3.2 + Math.sin(i * 0.5) * 0.15, -2.8);
+      scene.add(p);
+      pennants.push(p);
+    }
+
+    // Palm Trees
+    function makePalm(x, z) {
+      const palm = new T.Group();
+      palm.position.set(x, 0, z);
+      const trunk = new T.Mesh(geoCyl, matWood);
+      trunk.scale.set(0.12, 3.5, 0.12);
+      trunk.position.y = 1.75;
+      trunk.rotation.z = (Math.random() - 0.5) * 0.15;
+      palm.add(trunk);
+      for (let i = 0; i < 5; i++) {
+        const leaf = new T.Mesh(geoCone, matPalm);
+        leaf.scale.set(0.35, 1.6, 0.05);
+        leaf.rotation.x = Math.PI / 2.5;
+        leaf.rotation.y = (i / 5) * Math.PI * 2;
+        leaf.position.set(0, 3.4, 0);
+        palm.add(leaf);
+      }
+      scene.add(palm);
+    }
+    makePalm(-5.2, -3.2);
+    makePalm(5.2, -3.2);
+    makePalm(-5.2, 3.0);
+    makePalm(5.2, 3.0);
+
+    // Helper: Make Articulated Character
+    const geoHead = new T.SphereGeometry(0.16, 10, 8);
+    const geoTorso = new T.BoxGeometry(0.32, 0.42, 0.2);
+    const geoLongyi = new T.CylinderGeometry(0.18, 0.2, 0.32, 8);
+    const geoLimb = new T.BoxGeometry(0.08, 0.32, 0.08);
+    const geoThanaka = new T.CircleGeometry(0.04, 6);
+    const geoGaungBaung = new T.TorusGeometry(0.15, 0.035, 6, 12);
+
+    function makePerson(team, role) {
+      const root = new T.Group();
+      const isRed = team === 'red';
+      const kitMat = isRed ? matRedKit : matBlueKit;
+      const longyiMat = isRed ? matRedDark : matBlueDark;
+
+      const torso = new T.Mesh(geoTorso, kitMat);
+      torso.position.y = 0.52;
+      torso.castShadow = true;
+      root.add(torso);
+
+      const longyi = new T.Mesh(geoLongyi, longyiMat);
+      longyi.position.y = -0.15;
+      torso.add(longyi);
+
+      const head = new T.Group();
+      head.position.y = 0.28;
+      torso.add(head);
+
+      const headMesh = new T.Mesh(geoHead, matSkin);
+      headMesh.castShadow = true;
+      head.add(headMesh);
+
+      const tL = new T.Mesh(geoThanaka, matThanaka);
+      tL.position.set(-0.09, -0.02, 0.13);
+      head.add(tL);
+      const tR = new T.Mesh(geoThanaka, matThanaka);
+      tR.position.set(0.09, -0.02, 0.13);
+      head.add(tR);
+
+      const gb = new T.Mesh(geoGaungBaung, kitMat);
+      gb.rotation.x = Math.PI / 2;
+      gb.position.y = 0.06;
+      head.add(gb);
+
+      const armL = new T.Group();
+      armL.position.set(-0.2, 0.16, 0);
+      const armLM = new T.Mesh(geoLimb, matSkin);
+      armLM.position.y = -0.14;
+      armL.add(armLM);
+      torso.add(armL);
+
+      const armR = new T.Group();
+      armR.position.set(0.2, 0.16, 0);
+      const armRM = new T.Mesh(geoLimb, matSkin);
+      armRM.position.y = -0.14;
+      armR.add(armRM);
+      torso.add(armR);
+
+      const legL = new T.Group();
+      legL.position.set(-0.09, -0.28, 0);
+      const legLM = new T.Mesh(geoLimb, matSkin);
+      legLM.position.y = -0.14;
+      legL.add(legLM);
+      torso.add(legL);
+
+      const legR = new T.Group();
+      legR.position.set(0.09, -0.28, 0);
+      const legRM = new T.Mesh(geoLimb, matSkin);
+      legRM.position.y = -0.14;
+      legR.add(legRM);
+      torso.add(legR);
+
+      scene.add(root);
+
+      return {
+        root, torso, head, armL, armR, legL, legR,
+        team, role, basePos: new T.Vector3(),
+        animOffset: Math.random() * 10,
+        kickTimer: 0
+      };
+    }
+
+    // Build Teams (4 Field + 1 Keeper per team = 10 players total)
+    const players = [];
+
+    // Red Team (Attacks Right +X)
+    const pR_GK = makePerson('red', 'gk');
+    pR_GK.basePos.set(-4.2, 0, 0);
+    players.push(pR_GK);
+
+    const pR_D = makePerson('red', 'field');
+    pR_D.basePos.set(-2.2, 0, -0.8);
+    players.push(pR_D);
+
+    const pR_M = makePerson('red', 'field');
+    pR_M.basePos.set(-0.8, 0, 0.8);
+    players.push(pR_M);
+
+    const pR_A1 = makePerson('red', 'field');
+    pR_A1.basePos.set(0.4, 0, -0.4);
+    players.push(pR_A1);
+
+    const pR_A2 = makePerson('red', 'field');
+    pR_A2.basePos.set(1.4, 0, 0.4);
+    players.push(pR_A2);
+
+    // Blue Team (Attacks Left -X)
+    const pB_GK = makePerson('blue', 'gk');
+    pB_GK.basePos.set(4.2, 0, 0);
+    players.push(pB_GK);
+
+    const pB_D = makePerson('blue', 'field');
+    pB_D.basePos.set(2.2, 0, 0.8);
+    players.push(pB_D);
+
+    const pB_M = makePerson('blue', 'field');
+    pB_M.basePos.set(0.8, 0, -0.8);
+    players.push(pB_M);
+
+    const pB_A1 = makePerson('blue', 'field');
+    pB_A1.basePos.set(-0.4, 0, 0.4);
+    players.push(pB_A1);
+
+    const pB_A2 = makePerson('blue', 'field');
+    pB_A2.basePos.set(-1.4, 0, -0.4);
+    players.push(pB_A2);
+
+    // Football
+    const ballGroup = new T.Group();
+    const ballMesh = new T.Mesh(geoSphere, matBall);
+    ballMesh.scale.set(0.18, 0.18, 0.18);
+    ballMesh.castShadow = true;
+    ballGroup.add(ballMesh);
+
+    // Pentagonal patches on ball
+    for (let i = 0; i < 6; i++) {
+      const patch = new T.Mesh(geoSphere, matPatch);
+      patch.scale.set(0.06, 0.06, 0.02);
+      const a = (i / 6) * Math.PI * 2;
+      patch.position.set(Math.cos(a) * 0.16, Math.sin(a) * 0.16, Math.sin(i) * 0.05);
+      ballMesh.add(patch);
+    }
+    scene.add(ballGroup);
+
+    // Particle Systems (Confetti & Dust Pool)
+    const confettiPool = [];
+    const confettiMat = new T.MeshBasicMaterial({ side: T.DoubleSide });
+    for (let i = 0; i < 25; i++) {
+      const c = new T.Mesh(new T.PlaneGeometry(0.08, 0.08), confettiMat.clone());
+      c.visible = false;
+      scene.add(c);
+      confettiPool.push({ mesh: c, life: 0, vel: new T.Vector3() });
+    }
+
+    function triggerConfetti(x, z) {
+      const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
+      confettiPool.forEach(c => {
+        c.mesh.visible = true;
+        c.mesh.position.set(x + (Math.random() - 0.5) * 0.5, 0.5, z + (Math.random() - 0.5) * 0.5);
+        c.mesh.material.color.setHex(colors[Math.floor(Math.random() * colors.length)]);
+        c.vel.set((Math.random() - 0.5) * 4, 3 + Math.random() * 4, (Math.random() - 0.5) * 4);
+        c.life = 1.2;
+      });
+    }
+
+    // State Tracking
+    let prevScoreR = 0;
+    let prevScoreB = 0;
+    let celebrationTimer = 0;
+    let celebratingTeam = null;
+    let t3Timer = 0;
+    let specialAction = null; // { type, team, timer, duration }
+    let lastP = 0;
+
+    // Reset setup
+    function resetPositions() {
+      players.forEach(p => {
+        p.root.position.copy(p.basePos);
+        p.root.rotation.y = p.team === 'red' ? Math.PI / 2 : -Math.PI / 2;
+        p.torso.rotation.set(0, 0, 0);
+        p.armL.rotation.set(0, 0, 0);
+        p.armR.rotation.set(0, 0, 0);
+        p.legL.rotation.set(0, 0, 0);
+        p.legR.rotation.set(0, 0, 0);
+      });
+      ballGroup.position.set(0, 0.18, 0);
+      ballMesh.material = matBall;
+    }
+    resetPositions();
+
+    return {
+      scene: scene,
+      camera: camera,
+
+      onJoin: function(team) {
+        // Visual bounce for team players
+        players.filter(p => p.team === team).forEach(p => { p.kickTimer = 0.5; });
+      },
+
+      onLike: function(team) {
+        // Trigger kick action on forward player of team
+        const fw = players.find(p => p.team === team && p.role === 'field');
+        if (fw) fw.kickTimer = 0.6;
+      },
+
+      onGift: function(team, tier) {
+        if (tier === 1) {
+          specialAction = { type: 'dribble', team, timer: 0, duration: 1.5 };
+        } else if (tier === 2) {
+          specialAction = { type: 'power', team, timer: 0, duration: 1.2 };
+          const p = players.find(pl => pl.team === team && pl.role === 'field');
+          if (p) p.kickTimer = 0.8;
+        } else if (tier === 3) {
+          t3Timer = 5.0;
+        } else if (tier === 4) {
+          specialAction = { type: 'lightning', team, timer: 0, duration: 1.0 };
+          triggerConfetti(team === 'red' ? 4.2 : -4.2, 0);
+        }
+      },
+
+      reset: function() {
+        prevScoreR = 0;
+        prevScoreB = 0;
+        celebrationTimer = 0;
+        t3Timer = 0;
+        specialAction = null;
+        resetPositions();
+      },
+
+      update: function(dt, S) {
+        dt = Math.min(dt, 0.05);
+
+        // Check Goals
+        if (S.scoreR > prevScoreR) {
+          prevScoreR = S.scoreR;
+          celebrationTimer = 2.0;
+          celebratingTeam = 'red';
+          triggerConfetti(4.2, 0);
+        }
+        if (S.scoreB > prevScoreB) {
+          prevScoreB = S.scoreB;
+          celebrationTimer = 2.0;
+          celebratingTeam = 'blue';
+          triggerConfetti(-4.2, 0);
+        }
+
+        // T3 Golden Ball Timer
+        if (t3Timer > 0) {
+          t3Timer -= dt;
+          ballMesh.material = matBallGold;
+          ballMesh.rotation.y += dt * 5;
+        } else {
+          ballMesh.material = matBall;
+        }
+
+        // Ball Dynamics & Positions
+        const targetX = S.p * 3.4;
+        const pVel = (S.p - lastP) / Math.max(dt, 0.001);
+        lastP = S.p;
+
+        let ballX = targetX;
+        let ballY = 0.18;
+        let ballZ = Math.sin(S.t * 3.5) * 0.4;
+
+        // Handle Special Actions
+        if (specialAction) {
+          specialAction.timer += dt;
+          const progress = specialAction.timer / specialAction.duration;
+
+          if (specialAction.type === 'dribble') {
+            ballZ = Math.sin(specialAction.timer * 20) * 0.2;
+          } else if (specialAction.type === 'power') {
+            const goalX = specialAction.team === 'red' ? 4.4 : -4.4;
+            ballX = T.MathUtils.lerp(targetX, goalX, Math.sin(progress * Math.PI));
+            ballY = 0.18 + Math.sin(progress * Math.PI) * 0.8;
+          } else if (specialAction.type === 'lightning') {
+            const goalX = specialAction.team === 'red' ? 4.5 : -4.5;
+            ballX = goalX;
+            ballY = 0.18 + (Math.random() - 0.5) * 0.1;
+          }
+
+          if (specialAction.timer >= specialAction.duration) specialAction = null;
+        }
+
+        // Lerp Ball actual position
+        ballGroup.position.x += (ballX - ballGroup.position.x) * 12 * dt;
+        ballGroup.position.y += (ballY - ballGroup.position.y) * 12 * dt;
+        ballGroup.position.z += (ballZ - ballGroup.position.z) * 12 * dt;
+
+        // Roll ball animation
+        ballMesh.rotation.z -= (ballGroup.position.x - targetX) * 2;
+        ballMesh.rotation.x += dt * 4;
+
+        // Update Players
+        players.forEach(p => {
+          // Dynamic Positioning along pitch
+          if (p.role === 'field') {
+            const pushOffset = (S.p * 1.8) * (p.team === 'red' ? 1 : -1);
+            tmpV1.set(p.basePos.x + pushOffset, p.basePos.y, p.basePos.z);
+          } else {
+            // Keeper stays near goal line
+            const clampX = p.team === 'red' ? -4.2 : 4.2;
+            tmpV1.set(clampX, 0, Math.sin(S.t * 2 + p.animOffset) * 0.6);
+          }
+
+          // Move towards target position smoothly
+          p.root.position.x += (tmpV1.x - p.root.position.x) * 6 * dt;
+          p.root.position.z += (tmpV1.z - p.root.position.z) * 6 * dt;
+
+          // Orient player towards ball
+          const dx = ballGroup.position.x - p.root.position.x;
+          const dz = ballGroup.position.z - p.root.position.z;
+          const targetAngle = Math.atan2(dx, dz);
+          p.root.rotation.y += (targetAngle - p.root.rotation.y) * 8 * dt;
+
+          // Leg/Arm Procedural Animation (Running / Breathing Cycle)
+          const moveSpeed = Math.abs(pVel) + 1.0;
+          const cycle = Math.sin(S.t * 10 * moveSpeed + p.animOffset);
+          const breath = Math.sin(S.t * 3 + p.animOffset) * 0.03;
+
+          p.torso.position.y = 0.52 + breath + Math.abs(cycle) * 0.04;
+          p.legL.rotation.x = cycle * 0.6;
+          p.legR.rotation.x = -cycle * 0.6;
+          p.armL.rotation.x = -cycle * 0.5;
+          p.armR.rotation.x = cycle * 0.5;
+          p.head.rotation.y = Math.sin(S.t * 2 + p.animOffset) * 0.1;
+
+          // Kicking action visual logic
+          if (p.kickTimer > 0) {
+            p.kickTimer -= dt;
+            p.legR.rotation.x = -Math.PI / 3;
+            p.torso.rotation.x = 0.2;
+          } else {
+            p.torso.rotation.x = 0;
+          }
+
+          // Goal Celebration Animation
+          if (celebrationTimer > 0 && p.team === celebratingTeam) {
+            p.armL.rotation.z = 2.4;
+            p.armR.rotation.z = -2.4;
+            p.root.position.y = Math.abs(Math.sin(S.t * 12)) * 0.4;
+          } else {
+            p.armL.rotation.z = 0;
+            p.armR.rotation.z = 0;
+            p.root.position.y = 0;
+          }
+        });
+
+        if (celebrationTimer > 0) celebrationTimer -= dt;
+
+        // Environment Ambient Animations
+        crowdMembers.forEach(c => {
+          c.group.position.y = 0.6 + Math.abs(Math.sin(S.t * 4 + c.offset)) * 0.12;
+        });
+
+        pennants.forEach((p, idx) => {
+          p.rotation.z = Math.PI + Math.sin(S.t * 3 + idx) * 0.15;
+        });
+
+        // Update Confetti Particles
+        confettiPool.forEach(c => {
+          if (!c.mesh.visible) return;
+          c.life -= dt;
+          if (c.life <= 0) {
+            c.mesh.visible = false;
+          } else {
+            c.mesh.position.addScaledVector(c.vel, dt);
+            c.vel.y -= 9.8 * dt;
+            c.mesh.rotation.x += dt * 6;
+            c.mesh.rotation.y += dt * 4;
+          }
+        });
+      }
+    };
+  }
+};
+
+</script>
+<script>
+(function(){
+"use strict";
+var CFG = {"id": "football", "metric": "goal", "guide": [["Gift 1–99", "ဒရစ်ဘယ် အမြန်"], ["Gift 100–499", "အပြင်း ကန် — ဂိုး စမ်း"], ["Gift 500–999", "ရွှေဘောလုံး (၅ စက္ကန့်)"], ["Gift 1000+", "မိုးကြိုး ကန် — ဂိုး အခွင့်"]]};
+var $ = function(id){ return document.getElementById(id); };
+// ---------- guide ----------
+CFG.guide.forEach(function(g){ var d=document.createElement('div'); d.innerHTML='<b>'+g[0]+'</b> — '+g[1]; $('gRows').appendChild(d); });
+$('guide').querySelector('.hd').addEventListener('click', function(){ $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
+// ---------- state ----------
+var S = { p:0, hpR:100, hpB:100, hR:0, hB:0, balR:100, balB:100, scoreR:0, scoreB:0, t:0, running:false, over:false, winner:null };
+var M = { red:{members:0, gifts:0, power:0, names:[]}, blue:{members:0, gifts:0, power:0, names:[]} };
+var round = 1, timeLeft = 90, goldUntil = {red:0, blue:0}, lastHit = {red:-9, blue:-9};
+var game = null;
+try { game = GAME3D[CFG.id].create(THREE); } catch(e){ showPop('Error', String(e).slice(0,80)); }
+var renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+$('stage').appendChild(renderer.domElement);
+function resize(){ var w=innerWidth, h=innerHeight; renderer.setSize(w,h); if(game){ game.camera.aspect=w/h; game.camera.updateProjectionMatrix(); } }
+addEventListener('resize', resize);
+// ---------- helpers ----------
+function tierOf(coins){ return coins>=1000?4 : coins>=500?3 : coins>=100?2 : 1; }
+function showPop(big, sub){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, 2100); }
+function tick(txt){ var d=document.createElement('div'); d.textContent=txt; var box=$('ticker'); box.appendChild(d); while(box.children.length>4) box.removeChild(box.firstChild); setTimeout(function(){ d.style.opacity='0.35'; }, 6000); setTimeout(function(){ d.remove(); }, 9000); }
+function num(n){ return String(n).replace(/\d/g, function(c){ return '၀၁၂၃၄၅၆၇၈၉'[+c]; }); }
+// ---------- game numbers ----------
+function applyGift(team, tier, name, giftName){
+  var foe = team==='red' ? 'blue' : 'red';
+  M[team].gifts++; M[team].power += tier;
+  if (game) game.onGift(team, tier);
+  var feat = CFG.guide[tier-1][1];
+  if (CFG.metric==='p'){ S.p += (team==='red'?1:-1) * [0,.10,.22,.40,.70][tier]; }
+  else if (CFG.metric==='h'){ if(team==='red') S.hR=Math.min(1,S.hR+[0,.03,.07,.13,.22][tier]); else S.hB=Math.min(1,S.hB+[0,.03,.07,.13,.22][tier]);
+    if (tier===2){ if(foe==='red') S.hR=Math.max(0,S.hR-.04); else S.hB=Math.max(0,S.hB-.04); } }
+  else if (CFG.metric==='hp'){ var dmg=[0,4,9,16,30][tier]; if(foe==='red') S.hpR=Math.max(0,S.hpR-dmg); else S.hpB=Math.max(0,S.hpB-dmg); lastHit[foe]=S.t; }
+  else if (CFG.metric==='bal'){ var bd=[0,6,13,22,40][tier]; if(foe==='red') S.balR=Math.max(0,S.balR-bd); else S.balB=Math.max(0,S.balB-bd); lastHit[foe]=S.t; }
+  else if (CFG.metric==='goal'){ S.p += (team==='red'?1:-1) * [0,.12,.26,.45,.85][tier]; if(tier===3) goldUntil[team]=S.t+5; if(tier===4 && Math.abs(S.p)>0.55){ goal(team); } }
+  if (tier>=3) showPop((team==='red'?'အနီ':'အပြာ')+' — '+feat, name+' က '+giftName+' ပို့တယ်');
+  tick('🎁 '+name+' → '+(team==='red'?'အနီ':'အပြာ')+' · '+feat);
+  syncHud();
+}
+function goal(team){ if(team==='red') S.scoreR++; else S.scoreB++; showPop('ဂိုး!!!', (team==='red'?'အနီ':'အပြာ')+' ဂိုး ဝင်တယ်'); S.p=0; if(game) game.reset(); syncHud(); }
+function winCheck(){
+  if (S.over) return;
+  var w=null;
+  if (CFG.metric==='p' && Math.abs(S.p)>=1) w = S.p>0?'red':'blue';
+  else if (CFG.metric==='h'){ if(S.hR>=1) w='red'; else if(S.hB>=1) w='blue'; }
+  else if (CFG.metric==='hp'){ if(S.hpR<=0) w='blue'; else if(S.hpB<=0) w='red'; }
+  else if (CFG.metric==='bal'){ if(S.balR<=0) w='blue'; else if(S.balB<=0) w='red'; }
+  else if (CFG.metric==='goal' && timeLeft<=0){ w = S.scoreR===S.scoreB ? null : (S.scoreR>S.scoreB?'red':'blue'); if(!w){ timeLeft=30; tick('အချိန်စေ့ — သရေ! နောက်ထပ် ၃၀ စက္ကန့်'); return; } }
+  if (w) endRound(w);
+}
+function endRound(w){ S.over=true; S.winner=w; S.running=false; if(w==='red') M.red.wins=(M.red.wins||0)+1; else M.blue.wins=(M.blue.wins||0)+1;
+  showPop('🏆 '+(w==='red'?'အနီ':'အပြာ')+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
+  setTimeout(newRound, 6000); syncHud(); }
+function newRound(){ round++; S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
+function syncHud(){
+  $('mR').textContent=num(M.red.members); $('mB').textContent=num(M.blue.members);
+  $('gR').textContent=num(M.red.gifts); $('gB').textContent=num(M.blue.gifts);
+  $('sc').textContent = num(M.red.wins||0)+' — '+num(M.blue.wins||0);
+  var pctR=50, pctB=50;
+  if (CFG.metric==='p'){ pctR=50+S.p*50; pctB=100-pctR; }
+  else if (CFG.metric==='h'){ pctR=S.hR*100; pctB=S.hB*100; }
+  else if (CFG.metric==='hp'){ pctR=S.hpR; pctB=S.hpB; }
+  else if (CFG.metric==='bal'){ pctR=S.balR; pctB=S.balB; }
+  else if (CFG.metric==='goal'){ pctR=50+S.p*50; pctB=100-pctR; $('sc').textContent=num(S.scoreR)+' — '+num(S.scoreB); }
+  $('bR').style.width=pctR+'%'; $('bB').style.width=pctB+'%';
+}
+// ---------- events ----------
+function onEvent(ev){
+  if (!ev || !ev.kind) return;
+  var team = ev.team==='blue' ? 'blue' : 'red';
+  if (ev.kind==='join'){ M[team].members++; if(ev.name && M[team].names.indexOf(ev.name)<0) M[team].names.push(ev.name); if(game) game.onJoin(team); tick('👋 '+ev.name+' → '+(team==='red'?'အနီ':'အပြာ')+' ဝင်တယ်'); }
+  else if (ev.kind==='gift'){ applyGift(team, tierOf(ev.coins||1), ev.name||'ပရိသတ်', ev.gift||'Gift'); }
+  else if (ev.kind==='like'){ if(game) game.onLike(team); var tr = (M.red.power<M.blue.power)?'red':(M.blue.power<M.red.power?'blue':null); if(tr && CFG.metric==='p') S.p += (tr==='red'?1:-1)*0.02; }
+  else if (ev.kind==='chat'){ tick('💬 '+ev.name+': '+(ev.text||'').slice(0,40)); }
+  syncHud();
+}
+addEventListener('message', function(e){ var d=e.data; if(d && d.nlo===1) onEvent(d); });
+if (parent && parent!==window) parent.postMessage({nlo:1, kind:'ready', game:CFG.id}, '*');
+// ---------- demo (standalone debug) ----------
+if (window.parent===window){
+  $('demo').classList.add('show');
+  var names=['Aung Aung','May May','Ko Ko','Thiri','Zaw Zaw','Nilar'];
+  [['R1','အနီ ၁ join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
+   ['B1','အပြာ ၂ join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }],
+   ['GR','အနီ gift',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }],
+   ['GB','အပြာ gift',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }]
+  ].forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $('demo').appendChild(btn); });
+}
+// ---------- loop ----------
+S.running = true;
+var last = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  var dt = Math.min(0.05, (now-last)/1000); last = now;
+  if (S.running && !S.over){
+    S.t += dt; timeLeft -= dt;
+    if (CFG.metric==='bal'){ ['red','blue'].forEach(function(tm){ var k=tm==='red'?'balR':'balB'; if (S.t-lastHit[tm]>2.5) S[k]=Math.min(100, S[k]+dt*2.2); }); }
+    if (timeLeft<=0 && CFG.metric!=='goal'){ var w=null;
+      if(CFG.metric==='p') w = S.p===0?null:(S.p>0?'red':'blue');
+      else if(CFG.metric==='h') w = S.hR===S.hB?null:(S.hR>S.hB?'red':'blue');
+      else if(CFG.metric==='hp') w = S.hpR===S.hpB?null:(S.hpR>S.hpB?'red':'blue');
+      else if(CFG.metric==='bal') w = S.balR===S.balB?null:(S.balR>S.balB?'red':'blue');
+      if (w) endRound(w); else { timeLeft=30; tick('အချိန်စေ့ — သရေ! နောက်ထပ် ၃၀ စက္ကန့်'); }
+    }
+    if (timeLeft<=0 && CFG.metric==='goal') winCheck();
+    winCheck();
+    var mm = Math.max(0, Math.ceil(timeLeft)); $('tm').textContent = Math.floor(mm/60)+':'+('0'+(mm%60)).slice(-2);
+    if ((frame._s||0) < S.t-0.25){ frame._s = S.t; syncHud(); }
+  }
+  if (game){ game.update(dt, S); renderer.render(game.scene, game.camera); }
+}
+resize(); syncHud(); requestAnimationFrame(frame);
+})();
+</script>
+</body></html>

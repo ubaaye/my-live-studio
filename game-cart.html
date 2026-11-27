@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="my"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>နွားလှည်းပြိုင်ပွဲ (OX-CART RACE) — NLO Live Studio</title>
+<style>
+*{box-sizing:border-box} html,body{margin:0;height:100%;background:#070a18;overflow:hidden;
+ font-family:"Optimistic AI VF",system-ui,sans-serif;color:#eef1ff;-webkit-user-select:none;user-select:none}
+#stage{position:fixed;inset:0} #stage canvas{display:block}
+.hud{position:fixed;top:8px;left:8px;right:8px;display:flex;gap:8px;z-index:5;pointer-events:none}
+.team{flex:1;background:rgba(10,14,34,.72);border:1.5px solid #ffffff2a;border-radius:14px;padding:7px 10px;backdrop-filter:blur(6px)}
+.team.red{border-color:#ff5a5a88}.team.blue{border-color:#4da3ff88}
+.team .nm{font-weight:800;font-size:15px} .team .st{font-size:12px;opacity:.85;margin-top:1px}
+.bar{height:6px;background:#ffffff22;border-radius:3px;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;transition:width .25s}
+.red .bar i{background:#ff5a5a}.blue .bar i{background:#4da3ff}
+.mid{width:86px;text-align:center;background:rgba(10,14,34,.72);border:1.5px solid #ffd54d66;border-radius:14px;padding:7px 4px;backdrop-filter:blur(6px)}
+.mid .tm{font-size:21px;font-weight:900;line-height:1} .mid .sc{font-size:13px;margin-top:2px} .mid .rd{font-size:11px;opacity:.8}
+#ticker{position:fixed;left:10px;bottom:64px;z-index:5;font-size:12.5px;line-height:1.5;pointer-events:none;text-shadow:0 1px 3px #000}
+#ticker div{background:rgba(5,8,20,.55);display:inline-block;padding:2px 8px;border-radius:8px;margin-top:3px}
+#guide{position:fixed;left:8px;right:8px;bottom:8px;z-index:6;background:rgba(10,14,34,.82);border:1px solid #ffffff26;
+ border-radius:14px;padding:8px 12px;backdrop-filter:blur(8px);font-size:12.5px}
+#guide .hd{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px;cursor:pointer}
+#guide .rows{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}
+#guide .rows div b{color:#ffd54d;font-weight:700}
+#guide.closed .rows{display:none}
+#howto{position:fixed;top:96px;left:0;right:0;text-align:center;z-index:4;pointer-events:none}
+#howto span{background:rgba(5,8,20,.5);padding:3px 12px;border-radius:999px;font-size:13px}
+#popup{position:fixed;top:38%;left:0;right:0;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:scale(.9);transition:all .18s}
+#popup.show{opacity:1;transform:scale(1)}
+#popup .big{display:inline-block;background:linear-gradient(180deg,#ffd54d,#ff9d2e);color:#431c00;font-weight:900;
+ font-size:21px;padding:10px 22px;border-radius:16px;box-shadow:0 8px 30px #000a}
+#popup .sub{display:block;margin-top:7px;font-size:14px;color:#fff;text-shadow:0 1px 4px #000}
+#demo{position:fixed;right:8px;top:110px;z-index:9;display:none;flex-direction:column;gap:5px}
+#demo button{background:#1b2350;color:#fff;border:1px solid #ffffff33;border-radius:9px;padding:6px 9px;font-size:12px}
+#demo.show{display:flex}
+</style></head><body>
+<div id="stage"></div>
+<div class="hud">
+  <div class="team red"><div class="nm">🔴 အနီ</div><div class="st"><span id="mR">0</span> ယောက် · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
+  <div class="mid"><div class="tm" id="tm">1:30</div><div class="sc" id="sc">0 — 0</div><div class="rd">ပွဲစဉ် <span id="rd">1</span></div></div>
+  <div class="team blue"><div class="nm">🔵 အပြာ</div><div class="st"><span id="mB">0</span> ယောက် · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
+</div>
+<div id="howto"><span>မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
+<div id="ticker"></div>
+<div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
+<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — နွားလှည်းပြိုင်ပွဲ (OX-CART RACE)</span><span id="gTog">▾</span></div><div class="rows" id="gRows"></div></div>
+<div id="demo"></div>
+<script src="three.min.js"></script>
+<script>window.GAME3D = {};</script>
+<script>
+GAME3D['cart'] = {
+  create: function(THREE) {
+    const T = THREE;
+
+    const scene = new T.Scene();
+    scene.background = new T.Color(0xfba868);
+    scene.fog = new T.FogExp2(0xfba868, 0.022);
+
+    const camera = new T.PerspectiveCamera(55, 0.5, 0.1, 100);
+    camera.position.set(0, 3.8, 9.5);
+    camera.lookAt(0, 1.0, 0);
+
+    const hemiLight = new T.HemisphereLight(0xffeedd, 0x664422, 0.85);
+    scene.add(hemiLight);
+
+    const dirLight = new T.DirectionalLight(0xfffae0, 1.25);
+    dirLight.position.set(8, 14, 7);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 25;
+    const d = 9;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    scene.add(dirLight);
+
+    const matCache = {};
+    function getMat(color, roughness, metalness) {
+      const key = color + '_' + (roughness || 0.85) + '_' + (metalness || 0.0);
+      if (!matCache[key]) {
+        matCache[key] = new T.MeshStandardMaterial({
+          color: color,
+          roughness: roughness || 0.85,
+          metalness: metalness || 0.0
+        });
+      }
+      return matCache[key];
+    }
+
+    const boxGeo = new T.BoxGeometry(1, 1, 1);
+    const cylGeo = new T.CylinderGeometry(0.5, 0.5, 1, 12);
+    const sphereGeo = new T.SphereGeometry(0.5, 12, 10);
+    const torusGeo = new T.TorusGeometry(0.5, 0.08, 8, 16);
+    const coneGeo = new T.ConeGeometry(0.5, 1, 10);
+    const circleGeo = new T.CircleGeometry(0.5, 12);
+
+    const matGround = getMat(0xd4a366, 0.9);
+    const matTrack = getMat(0xb88348, 0.95);
+    const matWood = getMat(0x6e4321, 0.85);
+    const matWoodDark = getMat(0x4a2c13, 0.9);
+    const matOx = getMat(0xe6d4c3, 0.8);
+    const matOxDark = getMat(0x9e8571, 0.8);
+    const matHorn = getMat(0x2a2825, 0.7);
+    const matSkin = getMat(0xdfab83, 0.8);
+    const matThanaka = getMat(0xf4e69b, 0.9);
+    const matGold = getMat(0xffd700, 0.4, 0.6);
+    const matRed = getMat(0xd32f2f, 0.75);
+    const matRedDark = getMat(0x8b0000, 0.8);
+    const matBlue = getMat(0x1976d2, 0.75);
+    const matBlueDark = getMat(0x0d47a1, 0.8);
+    const matWhite = getMat(0xeeeeee, 0.8);
+    const matLeaf = getMat(0x388e3c, 0.85);
+    const matBamboo = getMat(0x8bc34a, 0.8);
+    const matDust = new T.MeshBasicMaterial({ color: 0xeeddaa, transparent: true, opacity: 0.6 });
+    const matStreak = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
+
+    const ground = new T.Mesh(boxGeo, matGround);
+    ground.scale.set(60, 1, 20);
+    ground.position.set(0, -0.5, 0);
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const track = new T.Mesh(boxGeo, matTrack);
+    track.scale.set(60, 0.02, 6);
+    track.position.set(0, 0.01, 0);
+    track.receiveShadow = true;
+    scene.add(track);
+
+    function makePerson(team) {
+      const isRed = team === 'red';
+      const matShirt = isRed ? matRed : matBlue;
+      const matLongyi = isRed ? matRedDark : matBlueDark;
+
+      const root = new T.Group();
+
+      const torsoPivot = new T.Group();
+      torsoPivot.position.y = 0.5;
+      root.add(torsoPivot);
+
+      const torso = new T.Mesh(boxGeo, matShirt);
+      torso.scale.set(0.38, 0.5, 0.24);
+      torso.position.y = 0.25;
+      torso.castShadow = true;
+      torsoPivot.add(torso);
+
+      const longyi = new T.Mesh(cylGeo, matLongyi);
+      longyi.scale.set(0.36, 0.45, 0.32);
+      longyi.position.y = -0.1;
+      torsoPivot.add(longyi);
+
+      const headPivot = new T.Group();
+      headPivot.position.y = 0.55;
+      torsoPivot.add(headPivot);
+
+      const head = new T.Mesh(sphereGeo, matSkin);
+      head.scale.set(0.28, 0.3, 0.28);
+      head.position.y = 0.15;
+      head.castShadow = true;
+      headPivot.add(head);
+
+      const tL = new T.Mesh(circleGeo, matThanaka);
+      tL.scale.set(0.06, 0.06, 1);
+      tL.position.set(0.1, 0.14, 0.12);
+      tL.rotation.y = 0.4;
+      headPivot.add(tL);
+
+      const tR = tL.clone();
+      tR.position.x = -0.1;
+      tR.rotation.y = -0.4;
+      headPivot.add(tR);
+
+      const gb = new T.Mesh(torusGeo, matShirt);
+      gb.scale.set(0.24, 0.24, 0.2);
+      gb.rotation.x = Math.PI / 2;
+      gb.position.y = 0.26;
+      headPivot.add(gb);
+
+      function makeLimb(w, h, d, mat) {
+        const p = new T.Group();
+        const m = new T.Mesh(boxGeo, mat);
+        m.scale.set(w, h, d);
+        m.position.y = -h / 2;
+        m.castShadow = true;
+        p.add(m);
+        return { pivot: p, mesh: m };
+      }
+
+      const armL = makeLimb(0.1, 0.42, 0.1, matSkin);
+      armL.pivot.position.set(0.24, 0.45, 0);
+      torsoPivot.add(armL.pivot);
+
+      const armR = makeLimb(0.1, 0.42, 0.1, matSkin);
+      armR.pivot.position.set(-0.24, 0.45, 0);
+      torsoPivot.add(armR.pivot);
+
+      const legL = makeLimb(0.12, 0.45, 0.12, matSkin);
+      legL.pivot.position.set(0.11, 0, 0);
+      torsoPivot.add(legL.pivot);
+
+      const legR = makeLimb(0.12, 0.45, 0.12, matSkin);
+      legR.pivot.position.set(-0.11, 0, 0);
+      torsoPivot.add(legR.pivot);
+
+      return { root, torsoPivot, headPivot, armL: armL.pivot, armR: armR.pivot, legL: legL.pivot, legR: legR.pivot };
+    }
+
+    function makeOx(team) {
+      const matTeam = team === 'red' ? matRed : matBlue;
+      const root = new T.Group();
+
+      const body = new T.Mesh(boxGeo, matOx);
+      body.scale.set(1.4, 0.7, 0.65);
+      body.position.set(0, 0.7, 0);
+      body.castShadow = true;
+      root.add(body);
+
+      const hump = new T.Mesh(sphereGeo, matOxDark);
+      hump.scale.set(0.35, 0.35, 0.35);
+      hump.position.set(0.3, 1.15, 0);
+      hump.castShadow = true;
+      root.add(hump);
+
+      const headPivot = new T.Group();
+      headPivot.position.set(0.75, 0.85, 0);
+      root.add(headPivot);
+
+      const neck = new T.Mesh(boxGeo, matOx);
+      neck.scale.set(0.4, 0.45, 0.45);
+      neck.position.set(0.15, 0.1, 0);
+      headPivot.add(neck);
+
+      const head = new T.Mesh(boxGeo, matOx);
+      head.scale.set(0.5, 0.38, 0.38);
+      head.position.set(0.4, 0.1, 0);
+      head.castShadow = true;
+      headPivot.add(head);
+
+      const hornL = new T.Mesh(coneGeo, matHorn);
+      hornL.scale.set(0.08, 0.4, 0.08);
+      hornL.position.set(0.4, 0.38, 0.18);
+      hornL.rotation.z = -0.3;
+      hornL.rotation.x = -0.3;
+      headPivot.add(hornL);
+
+      const hornR = hornL.clone();
+      hornR.position.z = -0.18;
+      hornR.rotation.x = 0.3;
+      headPivot.add(hornR);
+
+      const ribL = new T.Mesh(torusGeo, matTeam);
+      ribL.scale.set(0.12, 0.12, 0.12);
+      ribL.position.set(0.4, 0.3, 0.18);
+      headPivot.add(ribL);
+
+      const ribR = ribL.clone();
+      ribR.position.z = -0.18;
+      headPivot.add(ribR);
+
+      const earL = new T.Mesh(boxGeo, matOxDark);
+      earL.scale.set(0.15, 0.06, 0.22);
+      earL.position.set(0.3, 0.2, 0.22);
+      earL.rotation.x = 0.3;
+      headPivot.add(earL);
+
+      const earR = earL.clone();
+      earR.position.z = -0.22;
+      earR.rotation.x = -0.3;
+      headPivot.add(earR);
+
+      function makeOxLeg(px, pz) {
+        const p = new T.Group();
+        p.position.set(px, 0.55, pz);
+        const l = new T.Mesh(boxGeo, matOx);
+        l.scale.set(0.16, 0.55, 0.16);
+        l.position.y = -0.25;
+        l.castShadow = true;
+        p.add(l);
+        root.add(p);
+        return p;
+      }
+
+      const legFL = makeOxLeg(0.5, 0.22);
+      const legFR = makeOxLeg(0.5, -0.22);
+      const legBL = makeOxLeg(-0.45, 0.22);
+      const legBR = makeOxLeg(-0.45, -0.22);
+
+      const tailPivot = new T.Group();
+      tailPivot.position.set(-0.7, 0.9, 0);
+      const tail = new T.Mesh(boxGeo, matOxDark);
+      tail.scale.set(0.06, 0.45, 0.06);
+      tail.position.y = -0.2;
+      tailPivot.add(tail);
+      root.add(tailPivot);
+
+      return { root, headPivot, legFL, legFR, legBL, legBR, tailPivot };
+    }
+
+    function makeCart(team) {
+      const matTeam = team === 'red' ? matRed : matBlue;
+      const root = new T.Group();
+
+      const bed = new T.Mesh(boxGeo, matWood);
+      bed.scale.set(1.6, 0.12, 1.1);
+      bed.position.set(-0.2, 0.55, 0);
+      bed.castShadow = true;
+      root.add(bed);
+
+      const railL = new T.Mesh(boxGeo, matWoodDark);
+      railL.scale.set(1.6, 0.25, 0.06);
+      railL.position.set(-0.2, 0.72, 0.52);
+      root.add(railL);
+
+      const railR = railL.clone();
+      railR.position.z = -0.52;
+      root.add(railR);
+
+      const banner = new T.Mesh(boxGeo, matTeam);
+      banner.scale.set(1.4, 0.2, 0.02);
+      banner.position.set(-0.2, 0.7, 0.55);
+      root.add(banner);
+
+      const axle = new T.Mesh(cylGeo, matWoodDark);
+      axle.scale.set(0.08, 1.4, 0.08);
+      axle.rotation.x = Math.PI / 2;
+      axle.position.set(-0.2, 0.45, 0);
+      root.add(axle);
+
+      function makeWheel() {
+        const g = new T.Group();
+        const rim = new T.Mesh(torusGeo, matWoodDark);
+        rim.scale.set(0.9, 0.9, 0.6);
+        rim.castShadow = true;
+        g.add(rim);
+
+        for (let i = 0; i < 6; i++) {
+          const spoke = new T.Mesh(boxGeo, matWood);
+          spoke.scale.set(0.05, 0.9, 0.04);
+          spoke.rotation.z = (i * Math.PI) / 6;
+          g.add(spoke);
+        }
+        const hub = new T.Mesh(cylGeo, matWoodDark);
+        hub.scale.set(0.18, 0.2, 0.18);
+        hub.rotation.x = Math.PI / 2;
+        g.add(hub);
+        return g;
+      }
+
+      const wheelL = makeWheel();
+      wheelL.position.set(-0.2, 0.45, 0.65);
+      root.add(wheelL);
+
+      const wheelR = makeWheel();
+      wheelR.position.set(-0.2, 0.45, -0.65);
+      root.add(wheelR);
+
+      const pole = new T.Mesh(boxGeo, matWood);
+      pole.scale.set(2.2, 0.08, 0.08);
+      pole.position.set(0.9, 0.55, 0);
+      root.add(pole);
+
+      const yoke = new T.Mesh(boxGeo, matWoodDark);
+      yoke.scale.set(0.1, 0.08, 1.3);
+      yoke.position.set(1.8, 0.85, 0);
+      root.add(yoke);
+
+      const ox1 = makeOx(team);
+      ox1.root.position.set(1.8, 0, 0.42);
+      root.add(ox1.root);
+
+      const ox2 = makeOx(team);
+      ox2.root.position.set(1.8, 0, -0.42);
+      root.add(ox2.root);
+
+      const driver = makePerson(team);
+      driver.root.position.set(-0.4, 0.6, 0);
+      driver.torsoPivot.rotation.x = 0.25;
+      driver.legL.rotation.x = -1.2;
+      driver.legR.rotation.x = -1.2;
+      driver.legL.position.y = -0.1;
+      driver.legR.position.y = -0.1;
+      root.add(driver.root);
+
+      const whipStick = new T.Mesh(boxGeo, matWoodDark);
+      whipStick.scale.set(0.03, 0.7, 0.03);
+      whipStick.position.set(0, -0.3, 0.15);
+      whipStick.rotation.x = -0.6;
+      driver.armR.add(whipStick);
+
+      const garland = new T.Mesh(torusGeo, matGold);
+      garland.scale.set(0.5, 0.5, 0.3);
+      garland.position.set(1.9, 1.1, 0);
+      garland.rotation.x = Math.PI / 2;
+      garland.visible = false;
+      root.add(garland);
+
+      return { root, wheelL, wheelR, ox1, ox2, driver, garland };
+    }
+
+    const cartRed = makeCart('red');
+    cartRed.root.position.set(-1, 0, 1.2);
+    scene.add(cartRed.root);
+
+    const cartBlue = makeCart('blue');
+    cartBlue.root.position.set(-1, 0, -1.3);
+    cartBlue.root.scale.set(0.92, 0.92, 0.92);
+    scene.add(cartBlue.root);
+
+    const sceneryItems = [];
+
+    function makePalmTree() {
+      const g = new T.Group();
+      const trunk = new T.Mesh(cylGeo, matWoodDark);
+      trunk.scale.set(0.25, 4, 0.25);
+      trunk.position.y = 2;
+      trunk.rotation.z = -0.08;
+      trunk.castShadow = true;
+      g.add(trunk);
+
+      for (let i = 0; i < 5; i++) {
+        const leaf = new T.Mesh(coneGeo, matLeaf);
+        leaf.scale.set(0.4, 2.2, 0.1);
+        leaf.position.set(0, 3.8, 0);
+        leaf.rotation.y = (i * Math.PI * 2) / 5;
+        leaf.rotation.z = 1.2;
+        g.add(leaf);
+      }
+      return g;
+    }
+
+    function makeFence() {
+      const g = new T.Group();
+      for (let i = 0; i < 4; i++) {
+        const p = new T.Mesh(cylGeo, matBamboo);
+        p.scale.set(0.06, 1.2, 0.06);
+        p.position.set(i * 0.8 - 1.2, 0.6, 0);
+        g.add(p);
+      }
+      const rail1 = new T.Mesh(cylGeo, matBamboo);
+      rail1.scale.set(0.04, 2.6, 0.04);
+      rail1.rotation.z = Math.PI / 2;
+      rail1.position.set(0, 0.4, 0);
+      g.add(rail1);
+
+      const rail2 = rail1.clone();
+      rail2.position.y = 0.9;
+      g.add(rail2);
+      return g;
+    }
+
+    for (let i = 0; i < 7; i++) {
+      const palm = makePalmTree();
+      palm.position.set(-16 + i * 5.5, 0, -3.8);
+      scene.add(palm);
+      sceneryItems.push(palm);
+
+      const fence = makeFence();
+      fence.position.set(-15 + i * 5.2, 0, -2.6);
+      scene.add(fence);
+      sceneryItems.push(fence);
+    }
+
+    const flagColors = [matRed, matBlue, matGold, matWhite, matLeaf];
+    const flagsGroup = new T.Group();
+    for (let i = -15; i <= 15; i += 1.8) {
+      const matF = flagColors[Math.abs(Math.floor(i)) % flagColors.length];
+      const flag = new T.Mesh(coneGeo, matF);
+      flag.scale.set(0.25, 0.4, 0.02);
+      flag.rotation.z = Math.PI;
+      flag.position.set(i, 3.6 + Math.sin(i * 0.5) * 0.15, -2.5);
+      flagsGroup.add(flag);
+    }
+    scene.add(flagsGroup);
+
+    const spectators = [];
+    const stand = new T.Mesh(boxGeo, matWood);
+    stand.scale.set(32, 0.6, 1.2);
+    stand.position.set(0, 0.3, -3.2);
+    scene.add(stand);
+
+    for (let i = -14; i <= 14; i += 1.4) {
+      const team = i < 0 ? 'red' : 'blue';
+      const spec = makePerson(team);
+      spec.root.scale.set(0.7, 0.7, 0.7);
+      spec.root.position.set(i + (Math.random() - 0.5) * 0.4, 0.6, -3.2 + (Math.random() - 0.5) * 0.2);
+      scene.add(spec.root);
+      spectators.push(spec);
+    }
+
+    const archGroup = new T.Group();
+    const p1 = new T.Mesh(cylGeo, matWoodDark);
+    p1.scale.set(0.2, 4.5, 0.2);
+    p1.position.set(0, 2.25, 2.2);
+    archGroup.add(p1);
+
+    const p2 = p1.clone();
+    p2.position.z = -2.5;
+    archGroup.add(p2);
+
+    const topBeam = new T.Mesh(boxGeo, matWoodDark);
+    topBeam.scale.set(0.3, 0.3, 4.9);
+    topBeam.position.set(0, 4.3, -0.15);
+    archGroup.add(topBeam);
+
+    const archBanner = new T.Mesh(boxGeo, matRed);
+    archBanner.scale.set(0.1, 0.6, 4.2);
+    archBanner.position.set(0, 3.8, -0.15);
+    archGroup.add(archBanner);
+
+    archGroup.position.x = 12;
+    scene.add(archGroup);
+
+    const dustPool = [];
+    for (let i = 0; i < 35; i++) {
+      const dMesh = new T.Mesh(sphereGeo, matDust);
+      dMesh.scale.set(0.2, 0.2, 0.2);
+      dMesh.visible = false;
+      scene.add(dMesh);
+      dustPool.push({ mesh: dMesh, life: 0, maxLife: 1, vx: 0, vy: 0, vz: 0 });
+    }
+
+    function spawnDust(x, y, z, count, speedScale) {
+      let idx = 0;
+      for (let i = 0; i < dustPool.length && idx < count; i++) {
+        const p = dustPool[i];
+        if (p.life <= 0) {
+          p.mesh.position.set(x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.3);
+          p.mesh.scale.setScalar(0.15 + Math.random() * 0.25);
+          p.mesh.visible = true;
+          p.life = 0.4 + Math.random() * 0.4;
+          p.maxLife = p.life;
+          p.vx = -1.5 * (speedScale || 1) + (Math.random() - 0.5) * 0.5;
+          p.vy = 0.5 + Math.random() * 0.8;
+          p.vz = (Math.random() - 0.5) * 0.5;
+          idx++;
+        }
+      }
+    }
+
+    const streaks = [];
+    for (let i = 0; i < 8; i++) {
+      const st = new T.Mesh(boxGeo, matStreak);
+      st.scale.set(1.5, 0.03, 0.03);
+      st.visible = false;
+      scene.add(st);
+      streaks.push(st);
+    }
+
+    const stateFx = {
+      red: { whipTimer: 0, boostTimer: 0, likeTimer: 0, tier: 0 },
+      blue: { whipTimer: 0, boostTimer: 0, likeTimer: 0, tier: 0 }
+    };
+
+    let prevHR = 0;
+    let prevHB = 0;
+
+    function animateOxen(cartObj, time, speed, dt) {
+      const freq = 6 * Math.max(0.2, speed);
+      const isMoving = speed > 0.05;
+
+      cartObj.wheelL.rotation.z -= speed * dt * 3.5;
+      cartObj.wheelR.rotation.z -= speed * dt * 3.5;
+
+      const legs1 = [cartObj.ox1.legFL, cartObj.ox1.legFR, cartObj.ox1.legBL, cartObj.ox1.legBR];
+      const legs2 = [cartObj.ox2.legFL, cartObj.ox2.legFR, cartObj.ox2.legBL, cartObj.ox2.legBR];
+
+      if (isMoving) {
+        const sin1 = Math.sin(time * freq);
+        const sin2 = Math.sin(time * freq + Math.PI);
+
+        legs1[0].rotation.z = sin1 * 0.6;
+        legs1[3].rotation.z = sin1 * 0.6;
+        legs1[1].rotation.z = sin2 * 0.6;
+        legs1[2].rotation.z = sin2 * 0.6;
+
+        legs2[0].rotation.z = sin2 * 0.6;
+        legs2[3].rotation.z = sin2 * 0.6;
+        legs2[1].rotation.z = sin1 * 0.6;
+        legs2[2].rotation.z = sin1 * 0.6;
+
+        cartObj.ox1.headPivot.rotation.z = Math.sin(time * freq * 0.5) * 0.08;
+        cartObj.ox2.headPivot.rotation.z = Math.cos(time * freq * 0.5) * 0.08;
+      } else {
+        for (let i = 0; i < 4; i++) {
+          legs1[i].rotation.z *= 0.8;
+          legs2[i].rotation.z *= 0.8;
+        }
+        cartObj.ox1.headPivot.rotation.z = Math.sin(time * 2) * 0.05;
+        cartObj.ox2.headPivot.rotation.z = Math.cos(time * 2) * 0.05;
+      }
+
+      cartObj.ox1.tailPivot.rotation.z = Math.sin(time * 4) * 0.2;
+      cartObj.ox2.tailPivot.rotation.z = -Math.sin(time * 4) * 0.2;
+    }
+
+    function animateDriver(driver, fx, time, isMoving) {
+      driver.torsoPivot.position.y = 0.5 + Math.sin(time * 8) * (isMoving ? 0.03 : 0.01);
+
+      if (fx.whipTimer > 0) {
+        driver.armR.rotation.z = -Math.sin(fx.whipTimer * Math.PI * 4) * 1.2;
+        driver.torsoPivot.rotation.z = 0.2;
+      } else if (fx.likeTimer > 0) {
+        driver.armL.rotation.z = Math.sin(time * 12) * 0.8 + 0.5;
+        driver.headPivot.rotation.y = Math.sin(time * 10) * 0.4;
+      } else {
+        driver.armR.rotation.z = Math.sin(time * 3) * 0.15;
+        driver.armL.rotation.z = -Math.sin(time * 3) * 0.15;
+        driver.headPivot.rotation.y *= 0.9;
+        driver.torsoPivot.rotation.z *= 0.9;
+      }
+    }
+
+    function update(dt, S) {
+      dt = Math.min(dt, 0.05);
+      const time = S.t || 0;
+
+      const hR = S.hR || 0;
+      const hB = S.hB || 0;
+
+      const spdR = Math.max(0, (hR - prevHR) / (dt || 0.016));
+      const spdB = Math.max(0, (hB - prevHB) / (dt || 0.016));
+      prevHR = hR;
+      prevHB = hB;
+
+      const targetXR = (hR - hB) * 5.0 - 0.8;
+      const targetXB = (hB - hR) * 5.0 - 0.8;
+
+      cartRed.root.position.x += (targetXR - cartRed.root.position.x) * 0.1;
+      cartBlue.root.position.x += (targetXB - cartBlue.root.position.x) * 0.1;
+
+      const mainSpeed = S.running ? Math.max(0.6, (spdR + spdB) * 0.5 * 4.0 + 0.8) : 0;
+
+      for (let i = 0; i < sceneryItems.length; i++) {
+        const item = sceneryItems[i];
+        if (S.running) item.position.x -= mainSpeed * dt;
+        if (item.position.x < -18) item.position.x += 36;
+      }
+
+      archGroup.position.x -= S.running ? mainSpeed * dt : 0;
+      if (archGroup.position.x < -18) archGroup.position.x = 18;
+
+      flagsGroup.children.forEach(function(f, idx) {
+        f.rotation.z = Math.PI + Math.sin(time * 6 + idx) * 0.15;
+      });
+
+      spectators.forEach(function(sp, idx) {
+        sp.torsoPivot.position.y = 0.5 + Math.abs(Math.sin(time * 6 + idx)) * 0.15;
+        sp.armL.rotation.z = Math.sin(time * 8 + idx) * 0.6 + 0.4;
+        sp.armR.rotation.z = -Math.sin(time * 8 + idx) * 0.6 - 0.4;
+      });
+
+      ['red', 'blue'].forEach(function(team) {
+        const fx = stateFx[team];
+        if (fx.whipTimer > 0) fx.whipTimer -= dt;
+        if (fx.boostTimer > 0) fx.boostTimer -= dt;
+        if (fx.likeTimer > 0) fx.likeTimer -= dt;
+      });
+
+      animateOxen(cartRed, time, S.running ? spdR * 5 + 0.8 : 0, dt);
+      animateOxen(cartBlue, time, S.running ? spdB * 5 + 0.8 : 0, dt);
+
+      animateDriver(cartRed.driver, stateFx.red, time, S.running);
+      animateDriver(cartBlue.driver, stateFx.blue, time, S.running);
+
+      if (S.running) {
+        if (spdR > 0.1 || stateFx.red.boostTimer > 0) {
+          spawnDust(cartRed.root.position.x - 0.2, 0.1, cartRed.root.position.z + 0.6, 1, 1.2);
+        }
+        if (spdB > 0.1 || stateFx.blue.boostTimer > 0) {
+          spawnDust(cartBlue.root.position.x - 0.2, 0.1, cartBlue.root.position.z - 0.6, 1, 1.2);
+        }
+      }
+
+      dustPool.forEach(function(p) {
+        if (p.life > 0) {
+          p.life -= dt;
+          p.mesh.position.x += p.vx * dt;
+          p.mesh.position.y += p.vy * dt;
+          p.mesh.position.z += p.vz * dt;
+          const progress = 1 - p.life / p.maxLife;
+          p.mesh.scale.setScalar((0.15 + progress * 0.35));
+          if (p.life <= 0) p.mesh.visible = false;
+        }
+      });
+
+      let stIdx = 0;
+      ['red', 'blue'].forEach(function(team) {
+        const fx = stateFx[team];
+        const cart = team === 'red' ? cartRed : cartBlue;
+        if (fx.boostTimer > 0 && fx.tier >= 3) {
+          for (let k = 0; k < 4 && stIdx < streaks.length; k++) {
+            const st = streaks[stIdx++];
+            st.visible = true;
+            st.position.set(
+              cart.root.position.x - 0.8 - Math.random() * 1.2,
+              cart.root.position.y + 0.4 + (Math.random() - 0.5) * 0.6,
+              cart.root.position.z + (Math.random() - 0.5) * 0.8
+            );
+          }
+        }
+      });
+      for (; stIdx < streaks.length; stIdx++) {
+        streaks[stIdx].visible = false;
+      }
+
+      if (S.over) {
+        if (S.winner === 'red') cartRed.garland.visible = true;
+        if (S.winner === 'blue') cartBlue.garland.visible = true;
+      }
+    }
+
+    function onJoin(team) {}
+
+    function onGift(team, tier) {
+      const fx = stateFx[team];
+      if (!fx) return;
+      fx.tier = tier;
+      fx.whipTimer = 0.6;
+      fx.boostTimer = tier * 0.5;
+
+      const cart = team === 'red' ? cartRed : cartBlue;
+      spawnDust(cart.root.position.x, 0.2, cart.root.position.z, tier * 4, 1.8);
+    }
+
+    function onLike(team) {
+      const fx = stateFx[team];
+      if (fx) fx.likeTimer = 0.8;
+    }
+
+    function reset() {
+      stateFx.red.whipTimer = 0;
+      stateFx.red.boostTimer = 0;
+      stateFx.red.likeTimer = 0;
+      stateFx.blue.whipTimer = 0;
+      stateFx.blue.boostTimer = 0;
+      stateFx.blue.likeTimer = 0;
+
+      cartRed.root.position.set(-0.8, 0, 1.2);
+      cartBlue.root.position.set(-0.8, 0, -1.3);
+
+      cartRed.garland.visible = false;
+      cartBlue.garland.visible = false;
+
+      prevHR = 0;
+      prevHB = 0;
+
+      dustPool.forEach(function(p) { p.life = 0; p.mesh.visible = false; });
+      streaks.forEach(function(s) { s.visible = false; });
+    }
+
+    return { scene, camera, update, onJoin, onGift, onLike, reset };
+  }
+};
+
+</script>
+<script>
+(function(){
+"use strict";
+var CFG = {"id": "cart", "metric": "h", "guide": [["Gift 1–99", "နွားရိုက် အားဖြည့်"], ["Gift 100–499", "ပြေးအား အပြင်း"], ["Gift 500–999", "ရွှေနဂါး အမြန်"], ["Gift 1000+", "လေဗွေ ပြေး — ရှေ့ ခုန်တက်"]]};
+var $ = function(id){ return document.getElementById(id); };
+// ---------- guide ----------
+CFG.guide.forEach(function(g){ var d=document.createElement('div'); d.innerHTML='<b>'+g[0]+'</b> — '+g[1]; $('gRows').appendChild(d); });
+$('guide').querySelector('.hd').addEventListener('click', function(){ $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
+// ---------- state ----------
+var S = { p:0, hpR:100, hpB:100, hR:0, hB:0, balR:100, balB:100, scoreR:0, scoreB:0, t:0, running:false, over:false, winner:null };
+var M = { red:{members:0, gifts:0, power:0, names:[]}, blue:{members:0, gifts:0, power:0, names:[]} };
+var round = 1, timeLeft = 90, goldUntil = {red:0, blue:0}, lastHit = {red:-9, blue:-9};
+var game = null;
+try { game = GAME3D[CFG.id].create(THREE); } catch(e){ showPop('Error', String(e).slice(0,80)); }
+var renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+$('stage').appendChild(renderer.domElement);
+function resize(){ var w=innerWidth, h=innerHeight; renderer.setSize(w,h); if(game){ game.camera.aspect=w/h; game.camera.updateProjectionMatrix(); } }
+addEventListener('resize', resize);
+// ---------- helpers ----------
+function tierOf(coins){ return coins>=1000?4 : coins>=500?3 : coins>=100?2 : 1; }
+function showPop(big, sub){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, 2100); }
+function tick(txt){ var d=document.createElement('div'); d.textContent=txt; var box=$('ticker'); box.appendChild(d); while(box.children.length>4) box.removeChild(box.firstChild); setTimeout(function(){ d.style.opacity='0.35'; }, 6000); setTimeout(function(){ d.remove(); }, 9000); }
+function num(n){ return String(n).replace(/\d/g, function(c){ return '၀၁၂၃၄၅၆၇၈၉'[+c]; }); }
+// ---------- game numbers ----------
+function applyGift(team, tier, name, giftName){
+  var foe = team==='red' ? 'blue' : 'red';
+  M[team].gifts++; M[team].power += tier;
+  if (game) game.onGift(team, tier);
+  var feat = CFG.guide[tier-1][1];
+  if (CFG.metric==='p'){ S.p += (team==='red'?1:-1) * [0,.10,.22,.40,.70][tier]; }
+  else if (CFG.metric==='h'){ if(team==='red') S.hR=Math.min(1,S.hR+[0,.03,.07,.13,.22][tier]); else S.hB=Math.min(1,S.hB+[0,.03,.07,.13,.22][tier]);
+    if (tier===2){ if(foe==='red') S.hR=Math.max(0,S.hR-.04); else S.hB=Math.max(0,S.hB-.04); } }
+  else if (CFG.metric==='hp'){ var dmg=[0,4,9,16,30][tier]; if(foe==='red') S.hpR=Math.max(0,S.hpR-dmg); else S.hpB=Math.max(0,S.hpB-dmg); lastHit[foe]=S.t; }
+  else if (CFG.metric==='bal'){ var bd=[0,6,13,22,40][tier]; if(foe==='red') S.balR=Math.max(0,S.balR-bd); else S.balB=Math.max(0,S.balB-bd); lastHit[foe]=S.t; }
+  else if (CFG.metric==='goal'){ S.p += (team==='red'?1:-1) * [0,.12,.26,.45,.85][tier]; if(tier===3) goldUntil[team]=S.t+5; if(tier===4 && Math.abs(S.p)>0.55){ goal(team); } }
+  if (tier>=3) showPop((team==='red'?'အနီ':'အပြာ')+' — '+feat, name+' က '+giftName+' ပို့တယ်');
+  tick('🎁 '+name+' → '+(team==='red'?'အနီ':'အပြာ')+' · '+feat);
+  syncHud();
+}
+function goal(team){ if(team==='red') S.scoreR++; else S.scoreB++; showPop('ဂိုး!!!', (team==='red'?'အနီ':'အပြာ')+' ဂိုး ဝင်တယ်'); S.p=0; if(game) game.reset(); syncHud(); }
+function winCheck(){
+  if (S.over) return;
+  var w=null;
+  if (CFG.metric==='p' && Math.abs(S.p)>=1) w = S.p>0?'red':'blue';
+  else if (CFG.metric==='h'){ if(S.hR>=1) w='red'; else if(S.hB>=1) w='blue'; }
+  else if (CFG.metric==='hp'){ if(S.hpR<=0) w='blue'; else if(S.hpB<=0) w='red'; }
+  else if (CFG.metric==='bal'){ if(S.balR<=0) w='blue'; else if(S.balB<=0) w='red'; }
+  else if (CFG.metric==='goal' && timeLeft<=0){ w = S.scoreR===S.scoreB ? null : (S.scoreR>S.scoreB?'red':'blue'); if(!w){ timeLeft=30; tick('အချိန်စေ့ — သရေ! နောက်ထပ် ၃၀ စက္ကန့်'); return; } }
+  if (w) endRound(w);
+}
+function endRound(w){ S.over=true; S.winner=w; S.running=false; if(w==='red') M.red.wins=(M.red.wins||0)+1; else M.blue.wins=(M.blue.wins||0)+1;
+  showPop('🏆 '+(w==='red'?'အနီ':'အပြာ')+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
+  setTimeout(newRound, 6000); syncHud(); }
+function newRound(){ round++; S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
+function syncHud(){
+  $('mR').textContent=num(M.red.members); $('mB').textContent=num(M.blue.members);
+  $('gR').textContent=num(M.red.gifts); $('gB').textContent=num(M.blue.gifts);
+  $('sc').textContent = num(M.red.wins||0)+' — '+num(M.blue.wins||0);
+  var pctR=50, pctB=50;
+  if (CFG.metric==='p'){ pctR=50+S.p*50; pctB=100-pctR; }
+  else if (CFG.metric==='h'){ pctR=S.hR*100; pctB=S.hB*100; }
+  else if (CFG.metric==='hp'){ pctR=S.hpR; pctB=S.hpB; }
+  else if (CFG.metric==='bal'){ pctR=S.balR; pctB=S.balB; }
+  else if (CFG.metric==='goal'){ pctR=50+S.p*50; pctB=100-pctR; $('sc').textContent=num(S.scoreR)+' — '+num(S.scoreB); }
+  $('bR').style.width=pctR+'%'; $('bB').style.width=pctB+'%';
+}
+// ---------- events ----------
+function onEvent(ev){
+  if (!ev || !ev.kind) return;
+  var team = ev.team==='blue' ? 'blue' : 'red';
+  if (ev.kind==='join'){ M[team].members++; if(ev.name && M[team].names.indexOf(ev.name)<0) M[team].names.push(ev.name); if(game) game.onJoin(team); tick('👋 '+ev.name+' → '+(team==='red'?'အနီ':'အပြာ')+' ဝင်တယ်'); }
+  else if (ev.kind==='gift'){ applyGift(team, tierOf(ev.coins||1), ev.name||'ပရိသတ်', ev.gift||'Gift'); }
+  else if (ev.kind==='like'){ if(game) game.onLike(team); var tr = (M.red.power<M.blue.power)?'red':(M.blue.power<M.red.power?'blue':null); if(tr && CFG.metric==='p') S.p += (tr==='red'?1:-1)*0.02; }
+  else if (ev.kind==='chat'){ tick('💬 '+ev.name+': '+(ev.text||'').slice(0,40)); }
+  syncHud();
+}
+addEventListener('message', function(e){ var d=e.data; if(d && d.nlo===1) onEvent(d); });
+if (parent && parent!==window) parent.postMessage({nlo:1, kind:'ready', game:CFG.id}, '*');
+// ---------- demo (standalone debug) ----------
+if (window.parent===window){
+  $('demo').classList.add('show');
+  var names=['Aung Aung','May May','Ko Ko','Thiri','Zaw Zaw','Nilar'];
+  [['R1','အနီ ၁ join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
+   ['B1','အပြာ ၂ join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }],
+   ['GR','အနီ gift',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }],
+   ['GB','အပြာ gift',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }]
+  ].forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $('demo').appendChild(btn); });
+}
+// ---------- loop ----------
+S.running = true;
+var last = performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  var dt = Math.min(0.05, (now-last)/1000); last = now;
+  if (S.running && !S.over){
+    S.t += dt; timeLeft -= dt;
+    if (CFG.metric==='bal'){ ['red','blue'].forEach(function(tm){ var k=tm==='red'?'balR':'balB'; if (S.t-lastHit[tm]>2.5) S[k]=Math.min(100, S[k]+dt*2.2); }); }
+    if (timeLeft<=0 && CFG.metric!=='goal'){ var w=null;
+      if(CFG.metric==='p') w = S.p===0?null:(S.p>0?'red':'blue');
+      else if(CFG.metric==='h') w = S.hR===S.hB?null:(S.hR>S.hB?'red':'blue');
+      else if(CFG.metric==='hp') w = S.hpR===S.hpB?null:(S.hpR>S.hpB?'red':'blue');
+      else if(CFG.metric==='bal') w = S.balR===S.balB?null:(S.balR>S.balB?'red':'blue');
+      if (w) endRound(w); else { timeLeft=30; tick('အချိန်စေ့ — သရေ! နောက်ထပ် ၃၀ စက္ကန့်'); }
+    }
+    if (timeLeft<=0 && CFG.metric==='goal') winCheck();
+    winCheck();
+    var mm = Math.max(0, Math.ceil(timeLeft)); $('tm').textContent = Math.floor(mm/60)+':'+('0'+(mm%60)).slice(-2);
+    if ((frame._s||0) < S.t-0.25){ frame._s = S.t; syncHud(); }
+  }
+  if (game){ game.update(dt, S); renderer.render(game.scene, game.camera); }
+}
+resize(); syncHud(); requestAnimationFrame(frame);
+})();
+</script>
+</body></html>
