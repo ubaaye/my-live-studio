@@ -41,8 +41,11 @@
  border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(10px) saturate(1.3);-webkit-backdrop-filter:blur(10px) saturate(1.3);
  text-shadow:0 1px 4px #0009}
 #popup .sub{display:block;margin-top:4px;font-size:11.5px;color:#fff;text-shadow:0 1px 4px #000}
-#giftsR,#giftsB{position:fixed;top:150px;z-index:5;display:none;flex-direction:column;gap:3px;pointer-events:none;min-width:106px}
-#giftsR{left:8px} #giftsB{right:8px}
+#sideR,#sideB{position:fixed;top:150px;z-index:5;display:flex;flex-direction:column;gap:3px;pointer-events:none;min-width:106px}
+#sideR{left:8px} #sideB{right:8px}
+#giftsR,#giftsB{display:none;flex-direction:column;gap:3px}
+.qbox{display:none;background:rgba(255,255,255,.10);border:1px dashed #ffffff70;border-radius:8px;padding:3px 7px;
+ font-size:10.5px;color:#fff;text-shadow:0 1px 3px #000a;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);max-width:158px}
 .grow{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.13);border:1px solid #ffffff45;border-radius:8px;
  padding:2.5px 7px;font-size:11px;color:#fff;text-shadow:0 1px 3px #000a;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .grow .n{opacity:.92;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -70,12 +73,13 @@
 </style></head><body>
 <div id="stage"></div>
 <div class="hud">
-  <div class="team red"><div class="nm" id="nmR">🔴 အနီ</div><div class="st"><span id="mR">0</span> ယောက် · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
+  <div class="team red"><div class="nm" id="nmR">🔴 အနီ</div><div class="st">🎮 <span id="pR">0</span> · 👀 <span id="sR">0</span> · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
   <div class="mid"><div class="tm" id="tm">1:30</div><div class="sc" id="sc">0 — 0</div><div class="rd">ပွဲစဉ် <span id="rd">1</span></div></div>
-  <div class="team blue"><div class="nm" id="nmB">🔵 အပြာ</div><div class="st"><span id="mB">0</span> ယောက် · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
+  <div class="team blue"><div class="nm" id="nmB">🔵 အပြာ</div><div class="st">🎮 <span id="pB">0</span> · 👀 <span id="sB">0</span> · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
 </div>
 <div id="vsbar"><div id="vsR" style="width:50%"></div><div id="vsB" style="width:50%"></div><span class="pc" id="vsL">၅၀%</span><span class="pc" id="vsRp">၅၀%</span></div>
-<div id="giftsR"></div><div id="giftsB"></div>
+<div id="sideR"><div id="giftsR"></div><div class="qbox" id="qR"></div></div>
+<div id="sideB"><div id="giftsB"></div><div class="qbox" id="qB"></div></div>
 <div id="howto"><span id="howtoTx">မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
 <div id="ticker"></div>
 <div id="flash"></div><div id="fx"></div>
@@ -177,8 +181,9 @@ const GEO = {
   bill: new T.BoxGeometry(0.15, 0.34, 0.015),
   flashRing: new T.TorusGeometry(0.6, 0.08, 8, 20),
   boltSpiral: new T.CylinderGeometry(0.36, 0.24, 2.2, 8, 1, true),
-  crowdBody: new T.CylinderGeometry(0.16, 0.20, 0.62, 7),
-  crowdHead: new T.SphereGeometry(0.15, 7, 6),
+  crowdBody: new T.CylinderGeometry(0.175, 0.195, 0.66, 7),
+  crowdHead: new T.SphereGeometry(0.15, 8, 6),
+  crowdArm: new T.CylinderGeometry(0.038, 0.045, 0.46, 5).translate(0, 0.23, 0),
   trunkSeg: new T.CylinderGeometry(0.14, 0.22, 1.0, 7),
   frond: new T.ConeGeometry(0.28, 2.3, 4),
   fencePost: new T.CylinderGeometry(0.055, 0.06, 1.0, 6),
@@ -585,6 +590,8 @@ scene.add(bannerTrim);
 const CROWD_N = 42;
 const crowdBody = new T.InstancedMesh(GEO.crowdBody, MAT.whiteInst, CROWD_N);
 const crowdHead = new T.InstancedMesh(GEO.crowdHead, MAT.skin, CROWD_N);
+const crowdArmL = new T.InstancedMesh(GEO.crowdArm, MAT.skin, CROWD_N);
+const crowdArmR = new T.InstancedMesh(GEO.crowdArm, MAT.skin, CROWD_N);
 const crowdData = [];
 const crowdPalette = [0xe83b3b, 0xf2b729, 0x2e86de, 0x29a86b, 0xd6459a, 0xf26f29, 0x8a4be0, 0xf0e6c8];
 for (let i = 0; i < CROWD_N; i++) {
@@ -593,23 +600,36 @@ for (let i = 0; i < CROWD_N; i++) {
   const cx = -4.6 + col * 0.46 + ((i * 37) % 10 - 5) * 0.015;
   const cz = row === 0 ? -4.95 : -5.98;
   const cy = row === 0 ? 0.86 : 1.56;
-  crowdData.push({ x: cx, y: cy, z: cz, ph: i * 1.37, sp: 3.6 + (i % 5) * 0.45 });
+  const csc = 0.92 + ((i * 29) % 10) * 0.018;
+  crowdData.push({ x: cx, y: cy, z: cz, ph: i * 1.37, sp: 3.6 + (i % 5) * 0.45, sc: csc });
   tmpCol.setHex(crowdPalette[i % crowdPalette.length]);
   crowdBody.setColorAt(i, tmpCol);
   dummy.position.set(cx, cy, cz);
   dummy.rotation.set(0, 0, 0);
-  dummy.scale.set(1, 1, 1);
+  dummy.scale.set(csc, csc, csc);
   dummy.updateMatrix();
   crowdBody.setMatrixAt(i, dummy.matrix);
-  dummy.position.set(cx, cy + 0.42, cz);
+  dummy.position.set(cx, cy + 0.44 * csc, cz);
   dummy.updateMatrix();
   crowdHead.setMatrixAt(i, dummy.matrix);
+  dummy.position.set(cx - 0.20 * csc, cy + 0.26 * csc, cz);
+  dummy.rotation.set(0, 0, 0.6);
+  dummy.updateMatrix();
+  crowdArmL.setMatrixAt(i, dummy.matrix);
+  dummy.position.set(cx + 0.20 * csc, cy + 0.26 * csc, cz);
+  dummy.rotation.set(0, 0, -0.6);
+  dummy.updateMatrix();
+  crowdArmR.setMatrixAt(i, dummy.matrix);
 }
 crowdBody.instanceMatrix.needsUpdate = true;
 crowdBody.instanceColor.needsUpdate = true;
 crowdHead.instanceMatrix.needsUpdate = true;
+crowdArmL.instanceMatrix.needsUpdate = true;
+crowdArmR.instanceMatrix.needsUpdate = true;
 scene.add(crowdBody);
 scene.add(crowdHead);
+scene.add(crowdArmL);
+scene.add(crowdArmR);
 
 // Palm trees
 const palms = [
@@ -1035,16 +1055,27 @@ const game = {
       const hop = Math.abs(Math.sin(timeAcc * cd.sp * crowdMult + cd.ph)) * (over ? 0.16 : 0.07);
       dummy.position.set(cd.x, cd.y + hop, cd.z);
       dummy.rotation.set(0, 0, Math.sin(timeAcc * 2.4 + cd.ph) * 0.06);
-      dummy.scale.set(1, 1, 1);
+      dummy.scale.set(cd.sc, cd.sc, cd.sc);
       dummy.updateMatrix();
       crowdBody.setMatrixAt(i, dummy.matrix);
-      dummy.position.set(cd.x, cd.y + 0.42 + hop, cd.z);
+      dummy.position.set(cd.x, cd.y + 0.44 * cd.sc + hop, cd.z);
       dummy.rotation.set(0, 0, 0);
       dummy.updateMatrix();
       crowdHead.setMatrixAt(i, dummy.matrix);
+      const wv = Math.sin(timeAcc * cd.sp * crowdMult + cd.ph) * 0.28;
+      dummy.position.set(cd.x - 0.20 * cd.sc, cd.y + 0.26 * cd.sc + hop, cd.z);
+      dummy.rotation.set(0, 0, 0.6 + wv);
+      dummy.updateMatrix();
+      crowdArmL.setMatrixAt(i, dummy.matrix);
+      dummy.position.set(cd.x + 0.20 * cd.sc, cd.y + 0.26 * cd.sc + hop, cd.z);
+      dummy.rotation.set(0, 0, -0.6 + wv);
+      dummy.updateMatrix();
+      crowdArmR.setMatrixAt(i, dummy.matrix);
     }
     crowdBody.instanceMatrix.needsUpdate = true;
     crowdHead.instanceMatrix.needsUpdate = true;
+    crowdArmL.instanceMatrix.needsUpdate = true;
+    crowdArmR.instanceMatrix.needsUpdate = true;
 
     // Palm fronds breeze
     for (let i = 0; i < frondData.length; i++) {
@@ -1271,7 +1302,7 @@ try { TN.red = localStorage.getItem('nlo_team_red') || TN.red; TN.blue = localSt
 function tn(t){ return t==='red' ? TN.red : TN.blue; }
 function applyNames(){
   $('nmR').textContent = '🔴 ' + TN.red; $('nmB').textContent = '🔵 ' + TN.blue;
-  $('howtoTx').textContent = 'မန့် ၁ = ' + TN.red + ' · မန့် ၂ = ' + TN.blue + ' ဝင်ပါ';
+  $('howtoTx').textContent = 'မန့် ၁ = ' + TN.red + ' · မန့် ၂ = ' + TN.blue + ' ပရိတ်သတ် — Gift ပို့ရင် ကစားသမား';
 }
 $('gEdit').addEventListener('click', function(e){ e.stopPropagation(); $('tnR').value = TN.red; $('tnB').value = TN.blue; $('tedit').classList.add('show'); });
 $('tnCancel').addEventListener('click', function(){ $('tedit').classList.remove('show'); });
@@ -1310,6 +1341,30 @@ function renderGifts(team){
     d.querySelector('.n').textContent = it[0]; box.appendChild(d); });
   box.style.display = items.length ? 'flex' : 'none';
 }
+// ---------- roster: spectators / players / queue ----------
+var SLOTS = 5;
+var ROSTER = { red:{spec:[], play:[], queue:[]}, blue:{spec:[], play:[], queue:[]} };
+function rOther(team){ return team==='red' ? 'blue' : 'red'; }
+function rFind(team, name){ var R=ROSTER[team]; if (R.play.indexOf(name)>=0) return 'play'; if (R.queue.indexOf(name)>=0) return 'queue'; if (R.spec.indexOf(name)>=0) return 'spec'; return null; }
+function rRemove(team, name){ var R=ROSTER[team]; ['play','queue','spec'].forEach(function(k){ var i=R[k].indexOf(name); if (i>=0) R[k].splice(i,1); }); }
+function tryPromote(team, name){
+  var R = ROSTER[team];
+  if (R.play.length < SLOTS){
+    var i = R.spec.indexOf(name); if (i>=0) R.spec.splice(i,1);
+    var q = R.queue.indexOf(name); if (q>=0) R.queue.splice(q,1);
+    R.play.push(name); tick('🎮 '+name+' → '+tn(team)+' ကစားသမား ဖြစ်ပြီ!');
+    return true;
+  }
+  if (R.queue.indexOf(name)<0){ R.queue.push(name); tick('⏳ '+name+' → '+tn(team)+' တန်းစီ နံပါတ် '+num(R.queue.length)); }
+  return false;
+}
+function renderQueue(team){
+  var box = $(team==='red' ? 'qR' : 'qB'); var q = ROSTER[team].queue;
+  if (!q.length){ box.style.display='none'; box.textContent=''; return; }
+  box.style.display = 'block';
+  box.textContent = '⏳ တန်းစီ: ' + q.slice(0,3).join(', ') + (q.length>3 ? ' နောက် +'+num(q.length-3) : '');
+}
+function renderSide(team){ renderGifts(team); renderQueue(team); }
 function showPop(big, sub, ms){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, ms||2100); }
 var FXC = ['#ffd54d','#ff5a8a','#4da3ff','#7dff8a','#ff9d2e','#ffffff'];
 function burst(team, tier){
@@ -1367,9 +1422,16 @@ function winCheck(){
 function endRound(w){ S.over=true; S.winner=w; S.running=false; if(w==='red') M.red.wins=(M.red.wins||0)+1; else M.blue.wins=(M.blue.wins||0)+1;
   showPop('🏆 '+tn(w)+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
   setTimeout(newRound, 6000); syncHud(); }
-function newRound(){ round++; S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
+function newRound(){ round++;
+  ['red','blue'].forEach(function(team){ var R=ROSTER[team];
+    R.spec = R.spec.concat(R.play); R.play = [];
+    while (R.play.length < SLOTS && R.queue.length){ var qn = R.queue.shift(); var si = R.spec.indexOf(qn); if (si>=0) R.spec.splice(si,1); R.play.push(qn); tick('🎮 '+qn+' → '+tn(team)+' ကစားသမား ဝင်ပြီ (တန်းစီမှ)'); }
+    renderSide(team);
+  });
+  S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
 function syncHud(){
-  $('mR').textContent=num(M.red.members); $('mB').textContent=num(M.blue.members);
+  $('pR').textContent=num(ROSTER.red.play.length); $('pB').textContent=num(ROSTER.blue.play.length);
+  $('sR').textContent=num(ROSTER.red.spec.length+ROSTER.red.queue.length); $('sB').textContent=num(ROSTER.blue.spec.length+ROSTER.blue.queue.length);
   $('gR').textContent=num(M.red.gifts); $('gB').textContent=num(M.blue.gifts);
   $('sc').textContent = num(M.red.wins||0)+' — '+num(M.blue.wins||0);
   var pctR=50, pctB=50;
@@ -1388,8 +1450,16 @@ function syncHud(){
 function onEvent(ev){
   if (!ev || !ev.kind) return;
   var team = ev.team==='blue' ? 'blue' : 'red';
-  if (ev.kind==='join'){ M[team].members++; if(ev.name && M[team].names.indexOf(ev.name)<0) M[team].names.push(ev.name); if(game) game.onJoin(team); tick('👋 '+ev.name+' → '+tn(team)+' ဝင်တယ်'); }
-  else if (ev.kind==='gift'){ applyGift(team, tierOf(ev.coins||1), ev.name||'ပရိသတ်', ev.gift||'Gift'); }
+  if (ev.kind==='join'){ var jn = ev.name||'ပရိသတ်'; var jo = rOther(team);
+    if (rFind(jo, jn)) rRemove(jo, jn);
+    if (!rFind(team, jn)){ ROSTER[team].spec.push(jn); tick('👀 '+jn+' → '+tn(team)+' ပရိတ်သတ် ဝင်တယ်'); }
+    if(game) game.onJoin(team); renderSide(team); renderSide(jo); }
+  else if (ev.kind==='gift'){ var gn = ev.name||'ပရိသတ်'; var go = rOther(team);
+    if (rFind(go, gn)){ rRemove(go, gn); ROSTER[team].spec.push(gn); renderSide(go); }
+    if (!rFind(team, gn)) ROSTER[team].spec.push(gn);
+    if (rFind(team, gn)==='spec') tryPromote(team, gn);
+    renderSide(team);
+    applyGift(team, tierOf(ev.coins||1), gn, ev.gift||'Gift'); }
   else if (ev.kind==='like'){ if(game) game.onLike(team); var tr = (M.red.power<M.blue.power)?'red':(M.blue.power<M.red.power?'blue':null); if(tr && CFG.metric==='p') S.p += (tr==='red'?1:-1)*0.02; }
   else if (ev.kind==='chat'){ tick('💬 '+ev.name+': '+(ev.text||'').slice(0,40)); }
   syncHud();
