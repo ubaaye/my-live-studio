@@ -106,7 +106,9 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
   /* ===== MY LIVE STUDIO — real TikTok LIVE wiring (added by NLO) =====
      Two routes into the app's own addEvent() pipeline:
      A) Euler Stream direct from this browser (phone-only, no PC, no server)
-     B) Optional Cloudflare Worker relay (worker.js in this repo), once deployed */
+     B) Optional Cloudflare Worker relay (worker.js in this repo), once deployed
+     C) Backup server relay: the owner's own TTS server (/api/live/ws)
+        proxies the same Euler socket when the direct route is unreliable */
   var card = document.createElement('div');
   card.className = 'card span12';
   card.id = 'mlsLiveCard';
@@ -119,6 +121,10 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
       '<button class="primary" id="mlsBtn">Euler နဲ့ ချိတ်မယ်</button>' +
     '</div>' +
     '<div class="mlsRow">' +
+      '<button id="mlsRBtn">🛟 Backup server နဲ့ ချိတ်မယ်</button>' +
+      '<span class="muted" style="font-size:12.5px">တိုက်ရိုက် Euler ပြတ်တတ်ရင် ကိုယ်ပိုင် server က ကြားခံ ချိတ်ပေးမယ် (ပထမ အကြိမ် server နိုးချိန် ~၁ မိနစ် ကြာနိုင်ပါတယ်)</span>' +
+    '</div>' +
+    '<div class="mlsRow">' +
       '<input id="mlsWorker" placeholder="(ရွေးချယ်ခွင့်) Worker URL — https://my-live-studio-api.xxx.workers.dev" style="flex:2;min-width:200px">' +
       '<input id="mlsRoom" placeholder="Room ID" value="main" style="flex:1;min-width:110px">' +
       '<button id="mlsWBtn">Worker နဲ့ ချိတ်မယ်</button>' +
@@ -129,7 +135,8 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
 
   var $i = function(id){ return document.getElementById(id); };
   var comboSeen = new Map();
-  var eulerWs = null, eulerRetry = null, eulerWanted = false;
+  var eulerWs = null, eulerRetry = null, eulerWanted = false, relayMode = false;
+  var RELAY_BASE = 'wss://burmese-voice-tts.onrender.com/api/live/ws';
   var workerWs = null;
   var CLOSE_MSG = { 4401:'API Key မှားနေပါတယ် — key ပြန်စစ်ပါ', 4404:'အကောင့် LIVE မရှိသေးပါ — LIVE စတာနဲ့ ပြန်ချိတ်ပါမယ်', 4429:'ချိတ်ဆက်မှု များနေပါတယ်', 4005:'LIVE ပြီးသွားပါပြီ', 4555:'၈ နာရီ ပြည့်လို့ ပြန်ချိတ်ပါမယ်' };
 
@@ -137,7 +144,8 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
     $i('mlsDot').classList.toggle('on', on);
     $i('mlsStatus').textContent = msg;
     $i('mlsPill').textContent = on ? 'LIVE CONNECTED' : 'NOT CONNECTED';
-    $i('mlsBtn').textContent = eulerWanted ? 'Euler ဖြုတ်မယ်' : 'Euler နဲ့ ချိတ်မယ်';
+    $i('mlsBtn').textContent = (eulerWanted && !relayMode) ? 'Euler ဖြုတ်မယ်' : 'Euler နဲ့ ချိတ်မယ်';
+    $i('mlsRBtn').textContent = (eulerWanted && relayMode) ? '🛟 Backup ဖြုတ်မယ်' : '🛟 Backup server နဲ့ ချိတ်မယ်';
   }
   function saveCfg(){
     try { localStorage.setItem('mls_live_cfg', JSON.stringify({ u:$i('mlsUser').value.trim(), k:$i('mlsKey').value.trim(), w:$i('mlsWorker').value.trim(), r:$i('mlsRoom').value.trim() })); } catch(e){}
@@ -185,12 +193,15 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
     try { if (eulerWs) { eulerWs.onclose = null; eulerWs.close(); } } catch(e){}
     clearTimeout(eulerRetry);
     eulerWanted = true;
-    setStatus(false, 'Euler နဲ့ ချိတ်နေပါတယ်…');
+    setStatus(false, relayMode ? 'Backup server နဲ့ ချိတ်နေပါတယ်… (server နိုးချိန် ကြာနိုင်ပါတယ်)' : 'Euler နဲ့ ချိတ်နေပါတယ်…');
+    var url = relayMode
+      ? RELAY_BASE + '?username=' + encodeURIComponent(user) + '&key=' + encodeURIComponent(key)
+      : 'wss://ws.eulerstream.com?uniqueId=' + encodeURIComponent(user) + '&apiKey=' + encodeURIComponent(key);
     var sock;
-    try { sock = new WebSocket('wss://ws.eulerstream.com?uniqueId=' + encodeURIComponent(user) + '&apiKey=' + encodeURIComponent(key)); }
+    try { sock = new WebSocket(url); }
     catch(e){ setStatus(false, 'ချိတ်မရပါ — ' + e.message); return; }
     eulerWs = sock;
-    sock.onopen = function(){ setStatus(true, 'ချိတ်ပြီးပြီ — LIVE စတာနဲ့ events ဝင်လာပါမယ်'); };
+    sock.onopen = function(){ setStatus(true, (relayMode ? 'Backup server ကနေ ချိတ်ပြီးပြီ' : 'ချိတ်ပြီးပြီ') + ' — LIVE စတာနဲ့ events ဝင်လာပါမယ်'); };
     sock.onmessage = function(e){ if (typeof e.data === 'string') handleFrame(e.data); };
     sock.onerror = function(){ try { sock.close(); } catch(e){} };
     sock.onclose = function(e){
@@ -201,12 +212,18 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
       eulerRetry = setTimeout(connectEuler, e.code === 4404 ? 20000 : 6000);
     };
   }
+  function stopEuler(){
+    eulerWanted = false; clearTimeout(eulerRetry);
+    try { if (eulerWs) { eulerWs.onclose = null; eulerWs.close(); } } catch(e){}
+    setStatus(false, 'ပိတ်ထားပါတယ်');
+  }
   $i('mlsBtn').addEventListener('click', function(){
-    if (eulerWanted) {
-      eulerWanted = false; clearTimeout(eulerRetry);
-      try { if (eulerWs) { eulerWs.onclose = null; eulerWs.close(); } } catch(e){}
-      setStatus(false, 'ပိတ်ထားပါတယ်');
-    } else connectEuler();
+    if (eulerWanted && !relayMode) stopEuler();
+    else { relayMode = false; connectEuler(); }
+  });
+  $i('mlsRBtn').addEventListener('click', function(){
+    if (eulerWanted && relayMode) stopEuler();
+    else { relayMode = true; connectEuler(); }
   });
 
   /* ----- Route B: Cloudflare Worker relay ----- */
@@ -243,7 +260,7 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
     }
   } catch(e){}
 
-  window.MLS_LIVE = { handleFrame: handleFrame, connectEuler: connectEuler };
+  window.MLS_LIVE = { handleFrame: handleFrame, connectEuler: connectEuler, setRelay: function(on){ relayMode = !!on; } };
 })();
 </script>
 </body></html>
