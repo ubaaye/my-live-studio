@@ -48,433 +48,1175 @@
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
 <script>
-GAME3D['pole'] = {
-  create: function(THREE) {
-    const T = THREE;
-    const scene = new T.Scene();
-    scene.background = new T.Color(0xF5A665);
-    scene.fog = new T.FogExp2(0xF5A665, 0.022);
+GAME3D['pole'] = { create: function(THREE) { const T = THREE; const scene = new T.Scene(); const SKY_COL = 0xffcb8c; scene.background = new T.Color(SKY_COL); scene.fog = new T.Fog(SKY_COL, 22, 46);
 
-    const camera = new T.PerspectiveCamera(55, 0.5, 0.1, 100);
-    camera.position.set(0, 6.5, 17);
-    camera.lookAt(0, 4.6, 0);
 
-    const hemi = new T.HemisphereLight(0xFFF3E0, 0x5D4037, 0.85);
-    scene.add(hemi);
 
-    const dir = new T.DirectionalLight(0xFFF8E1, 1.25);
-    dir.position.set(6, 16, 10);
-    dir.castShadow = true;
-    dir.shadow.mapSize.width = 1024;
-    dir.shadow.mapSize.height = 1024;
-    dir.shadow.camera.near = 0.5;
-    dir.shadow.camera.far = 32;
-    const d = 9;
-    dir.shadow.camera.left = -d; dir.shadow.camera.right = d;
-    dir.shadow.camera.top = d; dir.shadow.camera.bottom = -d;
-    scene.add(dir);
+const camera = new T.PerspectiveCamera(55, 0.5625, 0.2, 80);
+camera.position.set(0, 6.5, 17);
+camera.lookAt(0, 4.6, 0);
 
-    const boxGeo = new T.BoxGeometry(1, 1, 1);
-    const sphereGeo = new T.SphereGeometry(1, 12, 12);
-    const cylGeo = new T.CylinderGeometry(1, 1, 1, 12);
-    const torusGeo = new T.TorusGeometry(1, 0.15, 8, 16);
+const hemi = new T.HemisphereLight(0xffe9c4, 0x996238, 0.95);
+scene.add(hemi);
 
-    const matGround = new T.MeshStandardMaterial({ color: 0xD99B66, roughness: 0.9 });
-    const matBamboo = new T.MeshStandardMaterial({ color: 0x8DAE39, roughness: 0.3, metalness: 0.1 });
-    const matGold = new T.MeshStandardMaterial({ color: 0xFFD700, roughness: 0.4, metalness: 0.6 });
-    const matSkin = new T.MeshStandardMaterial({ color: 0xFFCC99, roughness: 0.8 });
-    const matThanaka = new T.MeshStandardMaterial({ color: 0xF5F0C8, roughness: 0.9 });
-    const matRed = new T.MeshStandardMaterial({ color: 0xE74C3C, roughness: 0.75 });
-    const matRedDark = new T.MeshStandardMaterial({ color: 0x900C3F, roughness: 0.85 });
-    const matBlue = new T.MeshStandardMaterial({ color: 0x3498DB, roughness: 0.75 });
-    const matBlueDark = new T.MeshStandardMaterial({ color: 0x1B4F72, roughness: 0.85 });
-    const matWood = new T.MeshStandardMaterial({ color: 0x795548, roughness: 0.85 });
+const sun = new T.DirectionalLight(0xfff1d0, 1.45);
+sun.position.set(7.5, 15.5, 10.5);
+sun.castShadow = true;
+sun.shadow.mapSize.width = 1024;
+sun.shadow.mapSize.height = 1024;
+sun.shadow.camera.left = -5.5;
+sun.shadow.camera.right = 5.5;
+sun.shadow.camera.top = 12.2;
+sun.shadow.camera.bottom = -1.5;
+sun.shadow.camera.near = 2;
+sun.shadow.camera.far = 32;
+sun.shadow.bias = -0.0012;
+sun.target.position.set(0, 4.5, 0);
+scene.add(sun);
+scene.add(sun.target);
 
-    const ground = new T.Mesh(new T.PlaneGeometry(35, 35), matGround);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
+const matCache = {};
+function stdMat(key, color, rough, metal, dbl) {
+  if (!matCache[key]) {
+    matCache[key] = new T.MeshStandardMaterial({
+      color: color,
+      roughness: rough !== undefined ? rough : 0.82,
+      metalness: metal || 0,
+      side: dbl ? T.DoubleSide : T.FrontSide
+    });
+  }
+  return matCache[key];
+}
 
-    function makePerson(team) {
-      const isRed = team === 'red';
-      const bodyMat = isRed ? matRed : matBlue;
-      const skirtMat = isRed ? matRedDark : matBlueDark;
+const MAT = {
+  ground: stdMat('ground', 0xdba86c, 0.9),
+  dirt: stdMat('dirt', 0xc2894c, 0.9),
+  wood: stdMat('wood', 0x8b5630, 0.86),
+  bambooDry: stdMat('bambooDry', 0xbca258, 0.82),
+  skin: stdMat('skin', 0xe2a878, 0.8),
+  thanaka: stdMat('thanaka', 0xf9ebb0, 0.85),
+  eye: stdMat('eye', 0x241914, 0.6),
+  redTop: stdMat('redTop', 0xe53434, 0.8),
+  redLongyi: stdMat('redLongyi', 0x911820, 0.85, 0, true),
+  blueTop: stdMat('blueTop', 0x2472e8, 0.8),
+  blueLongyi: stdMat('blueLongyi', 0x153e8c, 0.85, 0, true),
+  gold: new T.MeshPhongMaterial({ color: 0xffc628, specular: 0xfff5c0, shininess: 90 }),
+  goldTrim: stdMat('goldTrim', 0xf5b822, 0.76),
+  tentRed: stdMat('tentRed', 0xd4312c, 0.82, 0, true),
+  tentGold: stdMat('tentGold', 0xe89f24, 0.82, 0, true),
+  poleGrease: new T.MeshPhongMaterial({ color: 0xb7c954, specular: 0xffffff, shininess: 120 }),
+  poleRing: new T.MeshPhongMaterial({ color: 0x899a36, specular: 0xf4ffd4, shininess: 80 }),
+  palmTrunk: stdMat('palmTrunk', 0x7a5638, 0.88),
+  palmLeaf: stdMat('palmLeaf', 0x42913e, 0.82, 0, true),
+  rope: stdMat('rope', 0x5c3e26, 0.9),
+  whiteInst: new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82, side: T.DoubleSide }),
+  partMat: new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide }),
+  flashRed: new T.MeshBasicMaterial({ color: 0xffd84a, transparent: true, opacity: 0, side: T.DoubleSide }),
+  flashBlue: new T.MeshBasicMaterial({ color: 0xffd84a, transparent: true, opacity: 0, side: T.DoubleSide }),
+  boltRed: new T.MeshBasicMaterial({ color: 0xfff07a, transparent: true, opacity: 0, side: T.DoubleSide }),
+  boltBlue: new T.MeshBasicMaterial({ color: 0x8ae8ff, transparent: true, opacity: 0, side: T.DoubleSide })
+};
 
-      const group = new T.Group();
-      const torsoGroup = new T.Group();
-      group.add(torsoGroup);
+const GEO = {
+  head: new T.SphereGeometry(0.185, 10, 8),
+  eye: new T.SphereGeometry(0.024, 6, 5),
+  thanaka: new T.CylinderGeometry(0.056, 0.056, 0.016, 8),
+  gaung: new T.TorusGeometry(0.172, 0.044, 7, 14),
+  torso: new T.CylinderGeometry(0.20, 0.175, 0.54, 10),
+  longyi: new T.CylinderGeometry(0.195, 0.255, 0.52, 10, 1, true),
+  armSeg: new T.CylinderGeometry(0.054, 0.048, 0.30, 7),
+  armFull: new T.CylinderGeometry(0.054, 0.045, 0.54, 7),
+  legSeg: new T.CylinderGeometry(0.072, 0.058, 0.37, 7),
+  legFull: new T.CylinderGeometry(0.072, 0.052, 0.70, 7),
+  pole: new T.CylinderGeometry(0.16, 0.175, 10, 14),
+  poleRing: new T.TorusGeometry(0.168, 0.022, 6, 14),
+  collar: new T.CylinderGeometry(0.28, 0.42, 0.24, 10),
+  crossbar: new T.CylinderGeometry(0.032, 0.032, 0.92, 8),
+  flagStick: new T.CylinderGeometry(0.022, 0.022, 0.95, 6),
+  bill: new T.BoxGeometry(0.15, 0.34, 0.015),
+  flashRing: new T.TorusGeometry(0.6, 0.08, 8, 20),
+  boltSpiral: new T.CylinderGeometry(0.36, 0.24, 2.2, 8, 1, true),
+  crowdBody: new T.CylinderGeometry(0.16, 0.20, 0.62, 7),
+  crowdHead: new T.SphereGeometry(0.15, 7, 6),
+  trunkSeg: new T.CylinderGeometry(0.14, 0.22, 1.0, 7),
+  frond: new T.ConeGeometry(0.28, 2.3, 4),
+  fencePost: new T.CylinderGeometry(0.055, 0.06, 1.0, 6),
+  partBox: new T.BoxGeometry(0.14, 0.14, 0.14)
+};
 
-      const torso = new T.Mesh(boxGeo, bodyMat);
-      torso.scale.set(0.42, 0.48, 0.25);
-      torso.position.y = 0.24;
-      torso.castShadow = true;
-      torsoGroup.add(torso);
+const bagPts = [
+  new T.Vector2(0.01, -0.26),
+  new T.Vector2(0.20, -0.22),
+  new T.Vector2(0.25, -0.05),
+  new T.Vector2(0.17, 0.10),
+  new T.Vector2(0.08, 0.16),
+  new T.Vector2(0.15, 0.25),
+  new T.Vector2(0.04, 0.26)
+];
+GEO.bag = new T.LatheGeometry(bagPts, 10);
 
-      const longyi = new T.Mesh(cylGeo, skirtMat);
-      longyi.scale.set(0.22, 0.45, 0.22);
-      longyi.position.y = -0.15;
-      longyi.castShadow = true;
-      torsoGroup.add(longyi);
+const triGeo = new T.BufferGeometry();
+triGeo.setAttribute('position', new T.BufferAttribute(new Float32Array([
+  -0.21, 0, 0,
+   0.21, 0, 0,
+   0, -0.46, 0
+]), 3));
+triGeo.computeVertexNormals();
+GEO.pennant = triGeo;
 
-      const headGroup = new T.Group();
-      headGroup.position.y = 0.62;
-      torsoGroup.add(headGroup);
+const flagGeo = new T.BufferGeometry();
+flagGeo.setAttribute('position', new T.BufferAttribute(new Float32Array([
+  0, 0.22, 0,
+  0.62, 0.04, 0,
+  0, -0.18, 0
+]), 3));
+flagGeo.computeVertexNormals();
+GEO.flag = flagGeo;
 
-      const head = new T.Mesh(sphereGeo, matSkin);
-      head.scale.set(0.19, 0.19, 0.19);
-      head.castShadow = true;
-      headGroup.add(head);
+const dummy = new T.Object3D();
+const tmpCol = new T.Color();
 
-      const gb = new T.Mesh(torusGeo, bodyMat);
-      gb.scale.set(0.18, 0.18, 0.18);
-      gb.rotation.x = Math.PI / 2;
-      gb.position.y = 0.05;
-      headGroup.add(gb);
+// Ground & arena
+const ground = new T.Mesh(new T.PlaneGeometry(46, 46), MAT.ground);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
 
-      const thL = new T.Mesh(sphereGeo, matThanaka);
-      thL.scale.set(0.045, 0.045, 0.02);
-      thL.position.set(-0.11, -0.02, 0.15);
-      const thR = thL.clone();
-      thR.position.x = 0.11;
-      headGroup.add(thL, thR);
+const arena = new T.Mesh(new T.CircleGeometry(4.3, 28), MAT.dirt);
+arena.rotation.x = -Math.PI / 2;
+arena.position.set(0, 0.01, 0.2);
+arena.receiveShadow = true;
+scene.add(arena);
 
-      function makeLimb(w, h, d, mat) {
-        const p = new T.Group();
-        const m = new T.Mesh(boxGeo, mat);
-        m.scale.set(w, h, d);
-        m.position.y = -h / 2;
-        m.castShadow = true;
-        p.add(m);
-        return { pivot: p, mesh: m };
-      }
+function makePerson(team, articulatedLimbs) {
+  const topMat = team === 'red' ? MAT.redTop : MAT.blueTop;
+  const longyiMat = team === 'red' ? MAT.redLongyi : MAT.blueLongyi;
+  const root = new T.Group();
+  const hips = new T.Group();
+  hips.position.y = 0.72;
+  root.add(hips);
 
-      const armL = makeLimb(0.1, 0.42, 0.1, matSkin);
-      armL.pivot.position.set(-0.25, 0.42, 0);
-      torsoGroup.add(armL.pivot);
+  const torso = new T.Group();
+  hips.add(torso);
+  const torsoMesh = new T.Mesh(GEO.torso, topMat);
+  torsoMesh.position.y = 0.27;
+  torsoMesh.castShadow = true;
+  torso.add(torsoMesh);
 
-      const armR = makeLimb(0.1, 0.42, 0.1, matSkin);
-      armR.pivot.position.set(0.25, 0.42, 0);
-      torsoGroup.add(armR.pivot);
+  const longyiMesh = new T.Mesh(GEO.longyi, longyiMat);
+  longyiMesh.position.y = -0.18;
+  longyiMesh.castShadow = true;
+  hips.add(longyiMesh);
 
-      const legL = makeLimb(0.12, 0.45, 0.12, matSkin);
-      legL.pivot.position.set(-0.12, -0.35, 0);
-      torsoGroup.add(legL.pivot);
+  const head = new T.Group();
+  head.position.y = 0.56;
+  torso.add(head);
+  const headMesh = new T.Mesh(GEO.head, MAT.skin);
+  headMesh.position.y = 0.185;
+  headMesh.castShadow = true;
+  head.add(headMesh);
 
-      const legR = makeLimb(0.12, 0.45, 0.12, matSkin);
-      legR.pivot.position.set(0.12, -0.35, 0);
-      torsoGroup.add(legR.pivot);
+  const eyeL = new T.Mesh(GEO.eye, MAT.eye);
+  eyeL.position.set(-0.068, 0.205, 0.165);
+  head.add(eyeL);
+  const eyeR = new T.Mesh(GEO.eye, MAT.eye);
+  eyeR.position.set(0.068, 0.205, 0.165);
+  head.add(eyeR);
 
-      return { root: group, torsoGroup, headGroup, armL: armL.pivot, armR: armR.pivot, legL: legL.pivot, legR: legR.pivot };
+  const thL = new T.Mesh(GEO.thanaka, MAT.thanaka);
+  thL.position.set(-0.115, 0.15, 0.135);
+  thL.rotation.set(Math.PI / 2, 0, 0.58);
+  head.add(thL);
+  const thR = new T.Mesh(GEO.thanaka, MAT.thanaka);
+  thR.position.set(0.115, 0.15, 0.135);
+  thR.rotation.set(Math.PI / 2, 0, -0.58);
+  head.add(thR);
+
+  const gb = new T.Mesh(GEO.gaung, topMat);
+  gb.position.set(0, 0.275, -0.01);
+  gb.rotation.set(Math.PI / 2 - 0.18, 0, 0.08);
+  head.add(gb);
+
+  const armL = new T.Group();
+  armL.position.set(-0.24, 0.48, 0);
+  torso.add(armL);
+  const armR = new T.Group();
+  armR.position.set(0.24, 0.48, 0);
+  torso.add(armR);
+
+  let handL = armL;
+  let handR = armR;
+
+  if (articulatedLimbs) {
+    const uL = new T.Mesh(GEO.armSeg, MAT.skin);
+    uL.position.set(0, -0.14, 0.03);
+    uL.rotation.x = -0.2;
+    uL.castShadow = true;
+    armL.add(uL);
+    const fL = new T.Mesh(GEO.armSeg, MAT.skin);
+    fL.position.set(0.08, -0.34, 0.15);
+    fL.rotation.set(-0.75, 0, 0.45);
+    fL.castShadow = true;
+    armL.add(fL);
+    handL = new T.Group();
+    handL.position.set(0.12, -0.44, 0.24);
+    armL.add(handL);
+
+    const uR = new T.Mesh(GEO.armSeg, MAT.skin);
+    uR.position.set(0, -0.14, 0.03);
+    uR.rotation.x = -0.2;
+    uR.castShadow = true;
+    armR.add(uR);
+    const fR = new T.Mesh(GEO.armSeg, MAT.skin);
+    fR.position.set(-0.08, -0.34, 0.15);
+    fR.rotation.set(-0.75, 0, -0.45);
+    fR.castShadow = true;
+    armR.add(fR);
+    handR = new T.Group();
+    handR.position.set(-0.12, -0.44, 0.24);
+    armR.add(handR);
+  } else {
+    const mAL = new T.Mesh(GEO.armFull, MAT.skin);
+    mAL.position.y = -0.26;
+    mAL.castShadow = true;
+    armL.add(mAL);
+    const mAR = new T.Mesh(GEO.armFull, MAT.skin);
+    mAR.position.y = -0.26;
+    mAR.castShadow = true;
+    armR.add(mAR);
+  }
+
+  const legL = new T.Group();
+  legL.position.set(-0.12, 0, 0);
+  hips.add(legL);
+  const legR = new T.Group();
+  legR.position.set(0.12, 0, 0);
+  hips.add(legR);
+
+  if (articulatedLimbs) {
+    const tL = new T.Mesh(GEO.legSeg, MAT.skin);
+    tL.position.set(-0.03, -0.17, 0.05);
+    tL.rotation.set(-0.35, 0, -0.15);
+    tL.castShadow = true;
+    legL.add(tL);
+    const sL = new T.Mesh(GEO.legSeg, MAT.skin);
+    sL.position.set(0.02, -0.48, 0.04);
+    sL.rotation.set(0.32, 0, 0.22);
+    sL.castShadow = true;
+    legL.add(sL);
+
+    const tR = new T.Mesh(GEO.legSeg, MAT.skin);
+    tR.position.set(0.03, -0.17, 0.05);
+    tR.rotation.set(-0.35, 0, 0.15);
+    tR.castShadow = true;
+    legR.add(tR);
+    const sR = new T.Mesh(GEO.legSeg, MAT.skin);
+    sR.position.set(-0.02, -0.48, 0.04);
+    sR.rotation.set(0.32, 0, -0.22);
+    sR.castShadow = true;
+    legR.add(sR);
+  } else {
+    const mLL = new T.Mesh(GEO.legFull, MAT.skin);
+    mLL.position.y = -0.35;
+    mLL.castShadow = true;
+    legL.add(mLL);
+    const mLR = new T.Mesh(GEO.legFull, MAT.skin);
+    mLR.position.y = -0.35;
+    mLR.castShadow = true;
+    legR.add(mLR);
+  }
+
+  return { root: root, hips: hips, torso: torso, head: head, armL: armL, armR: armR, legL: legL, legR: legR, handL: handL, handR: handR };
+}
+
+// Two greased bamboo poles & prizes
+const POLE_H = 10.0;
+const POLE_X = { red: -1.6, blue: 1.6 };
+const sides = {};
+const billInst = new T.InstancedMesh(GEO.bill, MAT.whiteInst, 10);
+const billBase = [];
+const ringInst = new T.InstancedMesh(GEO.poleRing, MAT.poleRing, 18);
+let ringIdx = 0;
+let billIdx = 0;
+const billColors = [0x4cc462, 0xf27ea9, 0x52b6e8, 0xf2c94c, 0x62d478];
+
+['red', 'blue'].forEach(function(team) {
+  const sign = team === 'red' ? -1 : 1;
+  const px = POLE_X[team];
+  const poleGroup = new T.Group();
+  poleGroup.position.set(px, 0, 0);
+  scene.add(poleGroup);
+
+  const shaft = new T.Mesh(GEO.pole, MAT.poleGrease);
+  shaft.position.y = POLE_H * 0.5;
+  shaft.castShadow = true;
+  shaft.receiveShadow = true;
+  poleGroup.add(shaft);
+
+  const collar = new T.Mesh(GEO.collar, MAT.wood);
+  collar.position.y = 0.12;
+  collar.receiveShadow = true;
+  poleGroup.add(collar);
+
+  for (let r = 1; r <= 9; r++) {
+    dummy.position.set(px, r, 0);
+    dummy.rotation.set(Math.PI / 2, 0, 0);
+    dummy.scale.set(1, 1, 1);
+    dummy.updateMatrix();
+    ringInst.setMatrixAt(ringIdx++, dummy.matrix);
+  }
+
+  // Prize top at y=10
+  const bar = new T.Mesh(GEO.crossbar, MAT.bambooDry);
+  bar.position.y = 9.96;
+  bar.rotation.z = Math.PI / 2;
+  poleGroup.add(bar);
+
+  const fStick = new T.Mesh(GEO.flagStick, MAT.bambooDry);
+  fStick.position.y = 10.45;
+  poleGroup.add(fStick);
+
+  const flag = new T.Mesh(GEO.flag, team === 'red' ? MAT.redTop : MAT.blueTop);
+  flag.material = new T.MeshStandardMaterial({
+    color: team === 'red' ? 0xe53434 : 0x2472e8,
+    roughness: 0.78,
+    side: T.DoubleSide
+  });
+  flag.position.set(0, 10.72, 0);
+  poleGroup.add(flag);
+
+  const bag = new T.Mesh(GEO.bag, MAT.gold);
+  const bagHomeX = sign * 0.30;
+  bag.position.set(bagHomeX, 9.72, 0.04);
+  bag.castShadow = true;
+  poleGroup.add(bag);
+
+  // Banknote fan on inner side
+  for (let b = 0; b < 5; b++) {
+    const ang = (b - 2) * 0.24;
+    const bx = px - sign * 0.30 + Math.sin(ang) * 0.12;
+    const by = 9.72 - Math.cos(ang) * 0.08;
+    billBase.push({ idx: billIdx, x: bx, y: by, z: 0.03 + b * 0.008, ang: ang, phase: b * 0.8 + (team === 'red' ? 0 : 2) });
+    dummy.position.set(bx, by, 0.03 + b * 0.008);
+    dummy.rotation.set(0, 0, ang);
+    dummy.scale.set(1, 1, 1);
+    dummy.updateMatrix();
+    billInst.setMatrixAt(billIdx, dummy.matrix);
+    tmpCol.setHex(billColors[b]);
+    billInst.setColorAt(billIdx, tmpCol);
+    billIdx++;
+  }
+
+  // Flash ring & lightning aura
+  const flashRing = new T.Mesh(GEO.flashRing, team === 'red' ? MAT.flashRed : MAT.flashBlue);
+  flashRing.position.set(0, 9.9, 0);
+  flashRing.rotation.x = Math.PI / 2;
+  flashRing.visible = false;
+  poleGroup.add(flashRing);
+
+  const boltGlow = new T.Mesh(GEO.boltSpiral, team === 'red' ? MAT.boltRed : MAT.boltBlue);
+  boltGlow.visible = false;
+  poleGroup.add(boltGlow);
+
+  // Climber
+  const climberPivot = new T.Group();
+  poleGroup.add(climberPivot);
+  const climber = makePerson(team, true);
+  climber.root.position.set(0, 0, 0.38);
+  climber.root.rotation.y = Math.PI;
+  climberPivot.add(climber.root);
+  const baseYaw = sign * 1.15;
+  climberPivot.rotation.y = baseYaw;
+
+  // Two cheering/boost-ready supporters at base
+  const supA = makePerson(team, false);
+  supA.root.position.set(px + sign * 0.88, 0, 0.55);
+  supA.root.rotation.y = -sign * 0.35;
+  supA.root.scale.setScalar(0.92);
+  scene.add(supA.root);
+
+  const supB = makePerson(team, false);
+  supB.root.position.set(px - sign * 0.72, 0, 0.72);
+  supB.root.rotation.y = sign * 0.45;
+  supB.root.scale.setScalar(0.88);
+  scene.add(supB.root);
+
+  sides[team] = {
+    team: team,
+    sign: sign,
+    px: px,
+    poleGroup: poleGroup,
+    flag: flag,
+    bag: bag,
+    bagHomeX: bagHomeX,
+    bagHeld: false,
+    flashRing: flashRing,
+    boltGlow: boltGlow,
+    climberPivot: climberPivot,
+    climber: climber,
+    baseYaw: baseYaw,
+    supA: supA,
+    supB: supB,
+    hSmooth: 0,
+    prevH: 0,
+    climbVel: 0,
+    climbPhase: team === 'red' ? 0 : 1.7,
+    scrambleT: 0,
+    greaseT: 0,
+    greaseDip: 0,
+    windT: 0,
+    lightningT: 0,
+    flashT: 0,
+    cheerT: 0,
+    tugT: 0,
+    slideToBase: false
+  };
+});
+
+ringInst.instanceMatrix.needsUpdate = true;
+scene.add(ringInst);
+billInst.instanceMatrix.needsUpdate = true;
+billInst.instanceColor.needsUpdate = true;
+scene.add(billInst);
+
+// Fair stands, bamboo fence & tents
+const bench1 = new T.Mesh(new T.BoxGeometry(10.8, 0.55, 0.9), MAT.wood);
+bench1.position.set(0, 0.275, -5.0);
+scene.add(bench1);
+const bench2 = new T.Mesh(new T.BoxGeometry(10.8, 1.25, 0.95), MAT.wood);
+bench2.position.set(0, 0.625, -6.05);
+scene.add(bench2);
+
+// Bamboo fence + tent poles (InstancedMesh)
+const bambooCount = 17;
+const bambooInst = new T.InstancedMesh(GEO.fencePost, MAT.bambooDry, bambooCount);
+let bIdx = 0;
+for (let i = 0; i < 11; i++) {
+  const fx = -5.0 + i * 1.0;
+  dummy.position.set(fx, 0.65, -3.9);
+  dummy.rotation.set(0, 0, 0);
+  dummy.scale.set(1, 1.3, 1);
+  dummy.updateMatrix();
+  bambooInst.setMatrixAt(bIdx++, dummy.matrix);
+}
+// 2 horizontal fence rails
+for (let r = 0; r < 2; r++) {
+  dummy.position.set(0, 0.45 + r * 0.55, -3.86);
+  dummy.rotation.set(0, 0, Math.PI / 2);
+  dummy.scale.set(0.85, 10.4, 0.85);
+  dummy.updateMatrix();
+  bambooInst.setMatrixAt(bIdx++, dummy.matrix);
+}
+// 4 tent posts
+const tentPosts = [[-4.7, -4.6], [-2.5, -4.6], [2.5, -4.6], [4.7, -4.6]];
+for (let i = 0; i < 4; i++) {
+  dummy.position.set(tentPosts[i][0], 1.65, tentPosts[i][1]);
+  dummy.rotation.set(0, 0, 0);
+  dummy.scale.set(1.25, 3.3, 1.25);
+  dummy.updateMatrix();
+  bambooInst.setMatrixAt(bIdx++, dummy.matrix);
+}
+bambooInst.instanceMatrix.needsUpdate = true;
+scene.add(bambooInst);
+
+// Festival side tents & red/gold banner accents
+const roofGeo = new T.ConeGeometry(1.75, 1.15, 4);
+const trimGeo = new T.BoxGeometry(2.5, 0.22, 2.5);
+[-3.6, 3.6].forEach(function(tx, idx) {
+  const roof = new T.Mesh(roofGeo, idx === 0 ? MAT.tentRed : MAT.tentGold);
+  roof.position.set(tx, 3.75, -5.6);
+  roof.rotation.y = Math.PI / 4;
+  scene.add(roof);
+
+  const trim = new T.Mesh(trimGeo, idx === 0 ? MAT.goldTrim : MAT.tentRed);
+  trim.position.set(tx, 3.15, -5.6);
+  scene.add(trim);
+});
+
+const bannerMain = new T.Mesh(new T.BoxGeometry(5.2, 0.48, 0.08), MAT.tentRed);
+bannerMain.position.set(0, 2.85, -6.5);
+scene.add(bannerMain);
+const bannerTrim = new T.Mesh(new T.BoxGeometry(5.36, 0.12, 0.1), MAT.goldTrim);
+bannerTrim.position.set(0, 2.6, -6.48);
+scene.add(bannerTrim);
+
+// Crowd on stands
+const CROWD_N = 42;
+const crowdBody = new T.InstancedMesh(GEO.crowdBody, MAT.whiteInst, CROWD_N);
+const crowdHead = new T.InstancedMesh(GEO.crowdHead, MAT.skin, CROWD_N);
+const crowdData = [];
+const crowdPalette = [0xe83b3b, 0xf2b729, 0x2e86de, 0x29a86b, 0xd6459a, 0xf26f29, 0x8a4be0, 0xf0e6c8];
+for (let i = 0; i < CROWD_N; i++) {
+  const row = i < 21 ? 0 : 1;
+  const col = i % 21;
+  const cx = -4.6 + col * 0.46 + ((i * 37) % 10 - 5) * 0.015;
+  const cz = row === 0 ? -4.95 : -5.98;
+  const cy = row === 0 ? 0.86 : 1.56;
+  crowdData.push({ x: cx, y: cy, z: cz, ph: i * 1.37, sp: 3.6 + (i % 5) * 0.45 });
+  tmpCol.setHex(crowdPalette[i % crowdPalette.length]);
+  crowdBody.setColorAt(i, tmpCol);
+  dummy.position.set(cx, cy, cz);
+  dummy.rotation.set(0, 0, 0);
+  dummy.scale.set(1, 1, 1);
+  dummy.updateMatrix();
+  crowdBody.setMatrixAt(i, dummy.matrix);
+  dummy.position.set(cx, cy + 0.42, cz);
+  dummy.updateMatrix();
+  crowdHead.setMatrixAt(i, dummy.matrix);
+}
+crowdBody.instanceMatrix.needsUpdate = true;
+crowdBody.instanceColor.needsUpdate = true;
+crowdHead.instanceMatrix.needsUpdate = true;
+scene.add(crowdBody);
+scene.add(crowdHead);
+
+// Palm trees
+const palms = [
+  { x: -4.6, z: -7.5, h: 7.4, lean: -0.18 },
+  { x: -2.8, z: -8.6, h: 8.6, lean: 0.12 },
+  { x: 2.9, z: -8.5, h: 8.2, lean: -0.14 },
+  { x: 4.7, z: -7.4, h: 7.2, lean: 0.18 }
+];
+const trunkInst = new T.InstancedMesh(GEO.trunkSeg, MAT.palmTrunk, palms.length * 4);
+const frondInst = new T.InstancedMesh(GEO.frond, MAT.palmLeaf, palms.length * 6);
+const frondData = [];
+let tIdx = 0;
+let fIdx = 0;
+for (let p = 0; p < palms.length; p++) {
+  const pm = palms[p];
+  let tx = pm.x;
+  let ty = 0;
+  const segH = pm.h / 4;
+  for (let s = 0; s < 4; s++) {
+    const tilt = pm.lean * (s + 0.5);
+    dummy.position.set(tx + Math.sin(tilt) * segH * 0.5, ty + segH * 0.5, pm.z);
+    dummy.rotation.set(0, 0, -tilt);
+    dummy.scale.set(1 - s * 0.14, segH * 1.05, 1 - s * 0.14);
+    dummy.updateMatrix();
+    trunkInst.setMatrixAt(tIdx++, dummy.matrix);
+    tx += Math.sin(tilt) * segH;
+    ty += Math.cos(tilt) * segH;
+  }
+  for (let f = 0; f < 6; f++) {
+    const yaw = (f / 6) * Math.PI * 2 + p * 0.4;
+    frondData.push({ idx: fIdx, x: tx, y: ty, z: pm.z, yaw: yaw, ph: p * 1.2 + f * 0.6 });
+    fIdx++;
+  }
+}
+trunkInst.instanceMatrix.needsUpdate = true;
+scene.add(trunkInst);
+scene.add(frondInst);
+
+// Overhead pennant strings
+const stringDefs = [
+  { y: 12.1, z: -1.8, sag: 0.85, count: 16, span: 9.6 },
+  { y: 12.9, z: -3.6, sag: 0.95, count: 18, span: 11.4 }
+];
+const totalPennants = 34;
+const penInst = new T.InstancedMesh(GEO.pennant, MAT.whiteInst, totalPennants);
+const penData = [];
+const penCols = [0xe83434, 0xf7c52b, 0x267be6, 0xffffff, 0x35b558];
+let pIdx = 0;
+stringDefs.forEach(function(sd, sIdx) {
+  const pts = [];
+  for (let k = 0; k <= 12; k++) {
+    const u = k / 12;
+    const x = (u - 0.5) * sd.span;
+    const y = sd.y - Math.sin(u * Math.PI) * sd.sag;
+    pts.push(new T.Vector3(x, y, sd.z));
+  }
+  const curve = new T.CatmullRomCurve3(pts);
+  const rope = new T.Mesh(new T.TubeGeometry(curve, 16, 0.025, 4, false), MAT.rope);
+  scene.add(rope);
+
+  for (let i = 0; i < sd.count; i++) {
+    const u = (i + 0.5) / sd.count;
+    const x = (u - 0.5) * sd.span;
+    const y = sd.y - Math.sin(u * Math.PI) * sd.sag;
+    penData.push({ idx: pIdx, x: x, y: y, z: sd.z, ph: i * 0.55 + sIdx * 2.1 });
+    tmpCol.setHex(penCols[(i + sIdx) % penCols.length]);
+    penInst.setColorAt(pIdx, tmpCol);
+    pIdx++;
+  }
+});
+penInst.instanceColor.needsUpdate = true;
+scene.add(penInst);
+
+// Particle pool
+const MAX_P = 110;
+const partInst = new T.InstancedMesh(GEO.partBox, MAT.partMat, MAX_P);
+const pAct = new Uint8Array(MAX_P);
+const pX = new Float32Array(MAX_P);
+const pY = new Float32Array(MAX_P);
+const pZ = new Float32Array(MAX_P);
+const pVx = new Float32Array(MAX_P);
+const pVy = new Float32Array(MAX_P);
+const pVz = new Float32Array(MAX_P);
+const pLife = new Float32Array(MAX_P);
+const pMax = new Float32Array(MAX_P);
+const pGrav = new Float32Array(MAX_P);
+const pSpin = new Float32Array(MAX_P);
+const pSx = new Float32Array(MAX_P);
+const pSy = new Float32Array(MAX_P);
+const pSz = new Float32Array(MAX_P);
+let pCursor = 0;
+for (let i = 0; i < MAX_P; i++) {
+  dummy.position.set(0, -50, 0);
+  dummy.scale.set(0.001, 0.001, 0.001);
+  dummy.updateMatrix();
+  partInst.setMatrixAt(i, dummy.matrix);
+  tmpCol.setHex(0xffffff);
+  partInst.setColorAt(i, tmpCol);
+}
+partInst.instanceMatrix.needsUpdate = true;
+partInst.instanceColor.needsUpdate = true;
+partInst.frustumCulled = false;
+scene.add(partInst);
+
+function spawnP(x, y, z, vx, vy, vz, life, hex, sx, sy, sz, grav, spin) {
+  const i = pCursor;
+  pCursor = (pCursor + 1) % MAX_P;
+  pAct[i] = 1;
+  pX[i] = x; pY[i] = y; pZ[i] = z;
+  pVx[i] = vx; pVy[i] = vy; pVz[i] = vz;
+  pLife[i] = life; pMax[i] = life;
+  pGrav[i] = grav; pSpin[i] = spin;
+  pSx[i] = sx; pSy[i] = sy; pSz[i] = sz;
+  tmpCol.setHex(hex);
+  partInst.setColorAt(i, tmpCol);
+  partInst.instanceColor.needsUpdate = true;
+}
+
+const confettiCols = [0xff3b3b, 0xffd22b, 0x2e86ff, 0x3ad46a, 0xff6ec7, 0xffffff];
+function burstConfetti(px, py, count) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const spd = 1.2 + Math.random() * 2.6;
+    spawnP(
+      px + (Math.random() - 0.5) * 0.4,
+      py + (Math.random() - 0.5) * 0.3,
+      (Math.random() - 0.5) * 0.4,
+      Math.cos(a) * spd,
+      2.2 + Math.random() * 3.0,
+      Math.sin(a) * spd,
+      1.4 + Math.random() * 1.1,
+      confettiCols[i % confettiCols.length],
+      1.5, 0.9, 0.15,
+      3.2,
+      7 + Math.random() * 6
+    );
+  }
+}
+
+let timeAcc = 0;
+let winDone = false;
+let winConfettiCD = 0;
+
+function resetBag(st) {
+  if (st.bagHeld) {
+    st.poleGroup.add(st.bag);
+    st.bag.position.set(st.bagHomeX, 9.72, 0.04);
+    st.bag.rotation.set(0, 0, 0);
+    st.bagHeld = false;
+  }
+}
+
+function updateSide(st, targetH, dt, running, over, winner) {
+  const isWin = over && winner === st.team;
+  const isLose = over && winner && winner !== st.team;
+
+  if (st.slideToBase) {
+    st.hSmooth = Math.max(0, st.hSmooth - dt * 1.9);
+    if (st.hSmooth <= 0.002) {
+      st.hSmooth = 0;
+      st.slideToBase = false;
     }
+  } else {
+    const desired = isWin ? 1.0 : Math.min(1, Math.max(0, targetH));
+    const rate = st.lightningT > 0 ? 12 : 7;
+    st.hSmooth += (desired - st.hSmooth) * Math.min(1, dt * rate);
+  }
 
-    function createPole(xPos, team) {
-      const g = new T.Group();
-      g.position.x = xPos;
+  const rawVel = dt > 0.0001 ? (targetH - st.prevH) / dt : 0;
+  st.prevH = targetH;
+  st.climbVel += (rawVel - st.climbVel) * Math.min(1, dt * 8);
 
-      const pole = new T.Mesh(cylGeo, matBamboo);
-      pole.scale.set(0.14, 10, 0.14);
-      pole.position.y = 5;
-      pole.castShadow = true;
-      g.add(pole);
+  if (st.scrambleT > 0) st.scrambleT = Math.max(0, st.scrambleT - dt);
+  if (st.greaseT > 0) st.greaseT = Math.max(0, st.greaseT - dt);
+  if (st.windT > 0) st.windT = Math.max(0, st.windT - dt);
+  if (st.lightningT > 0) st.lightningT = Math.max(0, st.lightningT - dt);
+  if (st.flashT > 0) st.flashT = Math.max(0, st.flashT - dt);
+  if (st.cheerT > 0) st.cheerT = Math.max(0, st.cheerT - dt);
+  if (st.tugT > 0) st.tugT = Math.max(0, st.tugT - dt);
 
-      for (let y = 1; y < 10; y += 1.1) {
-        const ring = new T.Mesh(torusGeo, matBamboo);
-        ring.scale.set(0.15, 0.15, 0.15);
-        ring.rotation.x = Math.PI / 2;
-        ring.position.y = y;
-        g.add(ring);
-      }
-
-      const prizeGroup = new T.Group();
-      prizeGroup.position.y = 10;
-
-      const bag = new T.Mesh(sphereGeo, matGold);
-      bag.scale.set(0.4, 0.45, 0.4);
-      bag.castShadow = true;
-      prizeGroup.add(bag);
-
-      const flagMat = team === 'red' ? matRed : matBlue;
-      const flag = new T.Mesh(boxGeo, flagMat);
-      flag.scale.set(0.6, 0.35, 0.04);
-      flag.position.set(0.35, 0.3, 0);
-      flag.castShadow = true;
-      prizeGroup.add(flag);
-
-      for (let i = 0; i < 5; i++) {
-        const fan = new T.Mesh(boxGeo, matGold);
-        fan.scale.set(0.1, 0.3, 0.02);
-        fan.rotation.z = (i - 2) * 0.3;
-        fan.position.set(0, -0.2, 0.2);
-        prizeGroup.add(fan);
-      }
-
-      g.add(prizeGroup);
-      scene.add(g);
-      return { group: g, prize: prizeGroup };
+  // Visual grease dip
+  if (st.greaseT > 0) {
+    const gProg = 1 - st.greaseT / 0.8;
+    st.greaseDip = Math.sin(Math.min(1, gProg) * Math.PI) * 0.85;
+    if (Math.random() < dt * 24) {
+      const cy = Math.max(0.4, st.hSmooth * 8.4 - st.greaseDip + 0.9);
+      spawnP(
+        st.px + (Math.random() - 0.5) * 0.45,
+        cy,
+        (Math.random() - 0.5) * 0.45,
+        (Math.random() - 0.5) * 1.4,
+        0.5 + Math.random() * 1.2,
+        (Math.random() - 0.5) * 1.4,
+        0.55,
+        0xf6f7b0,
+        0.65, 0.9, 0.65,
+        6.5, 4
+      );
     }
+  } else {
+    st.greaseDip *= Math.max(0, 1 - dt * 10);
+  }
 
-    createPole(-1.6, 'red');
-    createPole(1.6, 'blue');
+  // Wind leaf/sparkle particles
+  if (st.windT > 0 && Math.random() < dt * 32) {
+    const a = timeAcc * 8 + Math.random() * 6.28;
+    const cy = st.hSmooth * 8.4 + 0.5;
+    const isLeaf = Math.random() < 0.55;
+    spawnP(
+      st.px + Math.cos(a) * 0.55,
+      cy + (Math.random() - 0.5) * 0.8,
+      Math.sin(a) * 0.55,
+      -Math.sin(a) * 1.4,
+      2.4 + Math.random() * 1.6,
+      Math.cos(a) * 1.4,
+      0.75,
+      isLeaf ? 0x52c44e : 0xfff5b8,
+      isLeaf ? 1.2 : 0.7, isLeaf ? 0.65 : 0.7, 0.2,
+      -0.6, 8
+    );
+  }
 
-    const climberR = makePerson('red');
-    const climberB = makePerson('blue');
-    scene.add(climberR.root);
-    scene.add(climberB.root);
-
-    const supporterR1 = makePerson('red');
-    supporterR1.root.position.set(-2.3, 0.5, 0.3);
-    scene.add(supporterR1.root);
-    const supporterR2 = makePerson('red');
-    supporterR2.root.position.set(-0.9, 0.5, 0.3);
-    scene.add(supporterR2.root);
-
-    const supporterB1 = makePerson('blue');
-    supporterB1.root.position.set(0.9, 0.5, 0.3);
-    scene.add(supporterB1.root);
-    const supporterB2 = makePerson('blue');
-    supporterB2.root.position.set(2.3, 0.5, 0.3);
-    scene.add(supporterB2.root);
-
-    const backdrop = new T.Group();
-    backdrop.position.z = -5;
-
-    for (let i = -3; i <= 3; i++) {
-      const bench = new T.Mesh(boxGeo, matWood);
-      bench.scale.set(2.2, 0.15, 0.5);
-      bench.position.set(i * 2.3, 1.2, 0);
-      backdrop.add(bench);
-
-      const bench2 = bench.clone();
-      bench2.position.set(i * 2.3, 2.2, -0.6);
-      backdrop.add(bench2);
+  // Lightning spiral particles & aura
+  if (st.lightningT > 0) {
+    st.climberPivot.rotation.y += dt * 13.5 * st.sign;
+    st.boltGlow.visible = true;
+    st.boltGlow.position.y = Math.min(9.2, Math.max(1.2, st.hSmooth * 8.4 + 0.9));
+    st.boltGlow.rotation.y += dt * 14;
+    st.boltGlow.material.opacity = 0.55 * Math.min(1, st.lightningT * 2);
+    if (Math.random() < dt * 42) {
+      const a = timeAcc * 14 + Math.random() * 6.28;
+      spawnP(
+        st.px + Math.cos(a) * 0.45,
+        st.hSmooth * 8.4 + 0.6 + Math.random() * 0.9,
+        Math.sin(a) * 0.45,
+        Math.cos(a) * 1.5,
+        1.6 + Math.random() * 2.2,
+        Math.sin(a) * 1.5,
+        0.55,
+        Math.random() < 0.6 ? 0xffdf38 : 0xffffff,
+        0.85, 0.85, 0.85,
+        1.5, 10
+      );
     }
+  } else {
+    st.boltGlow.visible = false;
+    const targetYaw = isWin ? st.sign * 0.68 : st.baseYaw;
+    let diff = targetYaw - st.climberPivot.rotation.y;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    st.climberPivot.rotation.y += diff * Math.min(1, dt * 8);
+  }
 
-    const crowdGroup = new T.Group();
-    for (let i = -7; i <= 7; i++) {
-      const cPerson = new T.Mesh(sphereGeo, (i % 2 === 0) ? matRed : matBlue);
-      cPerson.scale.set(0.25, 0.35, 0.25);
-      cPerson.position.set(i * 0.9 + (Math.random() * 0.2), 1.6 + (i % 2) * 1.0, (i % 2 === 0) ? 0 : -0.6);
-      crowdGroup.add(cPerson);
+  // Top flash ring (T4)
+  if (st.flashT > 0) {
+    st.flashRing.visible = true;
+    const p = 1 - st.flashT / 0.7;
+    const sc = 0.5 + p * 2.4;
+    st.flashRing.scale.set(sc, sc, sc);
+    st.flashRing.material.opacity = (1 - p) * 0.9;
+  } else {
+    st.flashRing.visible = false;
+  }
+
+  // Position climber on 0..9 range (feet at 0..8.45, hands reach 10)
+  const c = st.climber;
+  let yPos = Math.max(0, st.hSmooth * 8.45 - st.greaseDip);
+  const isClimbing = st.scrambleT > 0 || st.windT > 0 || st.lightningT > 0 || st.tugT > 0 || st.climbVel > 0.015;
+
+  if (isWin) {
+    yPos = 8.45;
+    if (!st.bagHeld) {
+      const grabHand = st.team === 'red' ? c.handL : c.handR;
+      grabHand.add(st.bag);
+      st.bag.position.set(0, -0.05, 0.08);
+      st.bag.rotation.set(0.3, 0, 0);
+      st.bagHeld = true;
     }
-    backdrop.add(crowdGroup);
-
-    function createPalm(x, z) {
-      const palm = new T.Group();
-      palm.position.set(x, 0, z);
-
-      const trunk = new T.Mesh(cylGeo, matWood);
-      trunk.scale.set(0.2, 6, 0.2);
-      trunk.position.y = 3;
-      palm.add(trunk);
-
-      for (let i = 0; i < 5; i++) {
-        const leaf = new T.Mesh(boxGeo, matBamboo);
-        leaf.scale.set(1.8, 0.05, 0.4);
-        leaf.position.set(0, 5.8, 0);
-        leaf.rotation.y = (i / 5) * Math.PI * 2;
-        leaf.rotation.z = -0.35;
-        palm.add(leaf);
-      }
-      return palm;
+    const wave = Math.sin(timeAcc * 9);
+    c.hips.position.y = 0.72 + Math.abs(wave) * 0.06;
+    c.torso.rotation.set(0.08, st.sign * 0.35, wave * 0.08);
+    c.head.rotation.set(-0.1, st.sign * 0.4, wave * 0.1);
+    if (st.team === 'red') {
+      c.armR.rotation.set(-1.65, 0, 0.15);
+      c.armL.rotation.set(-2.65 + wave * 0.35, 0, -0.55 + wave * 0.25);
+    } else {
+      c.armL.rotation.set(-1.65, 0, -0.15);
+      c.armR.rotation.set(-2.65 + wave * 0.35, 0, 0.55 - wave * 0.25);
     }
-    scene.add(createPalm(-6, -3));
-    scene.add(createPalm(6, -3));
-    scene.add(backdrop);
+    c.legL.rotation.set(-0.95, 0, -0.25);
+    c.legR.rotation.set(-0.95, 0, 0.25);
+  } else if (st.greaseT > 0) {
+    // Squeak-flail wobble
+    const fl = Math.sin(timeAcc * 32);
+    c.hips.position.y = 0.72;
+    c.torso.rotation.set(0.18, fl * 0.18, fl * 0.26);
+    c.head.rotation.set(0.25, -fl * 0.35, fl * 0.2);
+    c.armL.rotation.set(-1.35 + fl * 0.75, 0, -0.55 - Math.abs(fl) * 0.45);
+    c.armR.rotation.set(-1.35 - fl * 0.75, 0, 0.55 + Math.abs(fl) * 0.45);
+    c.legL.rotation.set(-0.6 - fl * 0.65, 0, -0.5);
+    c.legR.rotation.set(-0.6 + fl * 0.65, 0, 0.5);
+  } else if (isClimbing) {
+    const speed = st.lightningT > 0 ? 22 : (st.scrambleT > 0 || st.windT > 0 ? 18 : 11);
+    st.climbPhase += dt * speed;
+    const ph = st.climbPhase;
+    const s1 = Math.sin(ph);
+    const c1 = Math.cos(ph);
+    c.hips.position.y = 0.72 + Math.abs(s1) * 0.08;
+    c.torso.rotation.set(0.08, s1 * 0.14, s1 * 0.11);
+    c.head.rotation.set(-0.32, st.sign * 0.35, -s1 * 0.08);
+    c.armL.rotation.set(-1.65 + s1 * 0.55, 0, -0.1 + c1 * 0.12);
+    c.armR.rotation.set(-1.65 - s1 * 0.55, 0, 0.1 - c1 * 0.12);
+    c.legL.rotation.set(-0.95 - s1 * 0.42, 0, -0.28);
+    c.legR.rotation.set(-0.95 + s1 * 0.42, 0, 0.28);
+  } else if (isLose) {
+    const sl = Math.sin(timeAcc * 2.5);
+    c.hips.position.y = 0.68;
+    c.torso.rotation.set(0.22, 0, sl * 0.05);
+    c.head.rotation.set(0.32, sl * 0.35, 0);
+    c.armL.rotation.set(-1.35, 0, -0.12);
+    c.armR.rotation.set(-1.35, 0, 0.12);
+    c.legL.rotation.set(-0.78, 0, -0.22);
+    c.legR.rotation.set(-0.78, 0, 0.22);
+  } else {
+    // Grease sliding shiver or breathing idle
+    const shiv = running && st.hSmooth > 0.02 ? Math.sin(timeAcc * 28) * 0.035 : 0;
+    const br = Math.sin(timeAcc * 3.4 + (st.team === 'red' ? 0 : 1.5));
+    c.hips.position.y = 0.72 + br * 0.025;
+    c.torso.rotation.set(0.06, shiv, shiv * 1.4);
+    c.head.rotation.set(-0.22 + br * 0.04, st.sign * 0.38, 0);
+    c.armL.rotation.set(-1.62 + br * 0.05 + shiv, 0, -0.14);
+    c.armR.rotation.set(-1.62 - br * 0.05 - shiv, 0, 0.14);
+    c.legL.rotation.set(-0.92 + shiv, 0, -0.25);
+    c.legR.rotation.set(-0.92 - shiv, 0, 0.25);
+  }
 
-    const flagsGroup = new T.Group();
-    const flagColors = [matRed, matBlue, matGold, matBamboo];
-    for (let i = -10; i <= 10; i++) {
-      const pf = new T.Mesh(boxGeo, flagColors[Math.abs(i) % 4]);
-      pf.scale.set(0.3, 0.4, 0.02);
-      const x = i * 0.65;
-      const y = 9.2 - Math.cos(i * 0.15) * 0.6;
-      pf.position.set(x, y, 1);
-      flagsGroup.add(pf);
-    }
-    scene.add(flagsGroup);
+  st.climberPivot.position.y = yPos;
 
-    const MAX_PARTICLES = 50;
-    const particles = [];
-    const partGeo = new T.BoxGeometry(0.1, 0.1, 0.1);
-    const partMatWhite = new T.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.5 });
+  // Pole top flag & hanging bag sway
+  st.flag.rotation.y = Math.sin(timeAcc * 4.5 + st.px) * 0.32;
+  if (!st.bagHeld) {
+    st.bag.rotation.z = Math.sin(timeAcc * 2.6 + st.px) * 0.12;
+  }
 
-    for (let i = 0; i < MAX_PARTICLES; i++) {
-      const pMesh = new T.Mesh(partGeo, matGold);
-      pMesh.visible = false;
-      scene.add(pMesh);
-      particles.push({ mesh: pMesh, active: false, life: 0, maxLife: 1, vel: new T.Vector3(), rotVel: new T.Vector3() });
-    }
+  // Supporters cheering & boost-ready bounce
+  const boost = isWin ? 1.8 : (st.cheerT > 0 ? 1.6 : 1.0);
+  const bA = Math.abs(Math.sin(timeAcc * (4.8 * boost) + (st.team === 'red' ? 0 : 1.1)));
+  const bB = Math.abs(Math.sin(timeAcc * (5.3 * boost) + (st.team === 'red' ? 1.4 : 2.5)));
 
-    function spawnParticle(x, y, z, vx, vy, vz, type) {
-      const p = particles.find(pt => !pt.active);
-      if (!p) return;
-      p.active = true;
-      p.life = 0;
-      p.maxLife = 0.6 + Math.random() * 0.5;
-      p.mesh.position.set(x, y, z);
-      p.vel.set(vx, vy, vz);
-      p.rotVel.set(Math.random() * 5, Math.random() * 5, Math.random() * 5);
-      p.mesh.material = type === 'leaf' ? matBamboo : (type === 'white' ? partMatWhite : matGold);
-      p.mesh.scale.setScalar(0.08 + Math.random() * 0.1);
-      p.mesh.visible = true;
-    }
+  // Supporter A: shoulders-ready boost stance with arms up bounce
+  const sA = st.supA;
+  sA.root.position.y = bA * (isWin || st.cheerT > 0 ? 0.26 : 0.09);
+  sA.hips.position.y = 0.66 + bA * 0.06;
+  sA.torso.rotation.set(0.14, 0, Math.sin(timeAcc * 5) * 0.07);
+  sA.head.rotation.set(-0.28, 0, 0);
+  sA.armL.rotation.set(-0.4, 0, -2.35 - bA * 0.35);
+  sA.armR.rotation.set(-0.4, 0, 2.35 + bA * 0.35);
+  sA.legL.rotation.set(-0.22, 0, -0.16);
+  sA.legR.rotation.set(-0.22, 0, 0.16);
 
-    const effR = { t1: 0, t2: 0, t3: 0, t4: 0, angle: 0 };
-    const effB = { t1: 0, t2: 0, t3: 0, t4: 0, angle: 0 };
-    let curHR = 0, curHB = 0;
+  // Supporter B: energetic cheering bounce
+  const sB = st.supB;
+  sB.root.position.y = bB * (isWin || st.cheerT > 0 ? 0.32 : 0.12);
+  sB.hips.position.y = 0.72;
+  sB.torso.rotation.set(-0.06, Math.sin(timeAcc * 4) * 0.12, Math.sin(timeAcc * 6) * 0.08);
+  sB.head.rotation.set(-0.32, 0, 0);
+  sB.armL.rotation.set(0, 0, -2.55 - bB * 0.35);
+  sB.armR.rotation.set(0, 0, 2.55 + bB * 0.35);
+  sB.legL.rotation.set(bB * 0.18, 0, -0.08);
+  sB.legR.rotation.set(-bB * 0.18, 0, 0.08);
+}
 
-    function animateClimber(climber, xBase, heightProgress, dt, eff, isWinner) {
-      const targetY = 0.8 + heightProgress * 8.4;
-      eff.angle += dt * 8;
+const game = {
+  scene: scene,
+  camera: camera,
 
-      let posX = xBase;
-      let posZ = 0;
-      let posY = targetY;
+  update: function(dt, S) {
+    dt = Math.min(Math.max(dt || 0, 0), 0.05);
+    timeAcc += dt;
 
-      if (eff.t4 > 0) {
-        posX = xBase + Math.cos(eff.angle * 2) * 0.45;
-        posZ = Math.sin(eff.angle * 2) * 0.45;
-        if (Math.random() < 0.4) {
-          spawnParticle(posX, posY, posZ, (Math.random() - 0.5) * 2, 2, (Math.random() - 0.5) * 2, 'gold');
-        }
-      }
+    const hR = S && typeof S.hR === 'number' ? S.hR : 0;
+    const hB = S && typeof S.hB === 'number' ? S.hB : 0;
+    const running = !!(S && S.running);
+    const over = !!(S && S.over);
+    const winner = S && S.winner ? S.winner : null;
 
-      climber.root.position.set(posX, posY, posZ);
+    updateSide(sides.red, hR, dt, running, over, winner);
+    updateSide(sides.blue, hB, dt, running, over, winner);
 
-      const cycleSpeed = eff.t1 > 0 ? 25 : (eff.t3 > 0 ? 18 : 10);
-      const climbCycle = Math.sin(eff.angle * cycleSpeed);
-
-      if (isWinner) {
-        climber.armL.rotation.set(-2.5, 0, 0);
-        climber.armR.rotation.set(-2.5, 0.4 * Math.sin(eff.angle * 2), 0);
-        climber.legL.rotation.set(0.3, 0, 0);
-        climber.legR.rotation.set(0.3, 0, 0);
-        climber.torsoGroup.rotation.y = Math.sin(eff.angle) * 0.3;
-      } else if (eff.t2 > 0) {
-        climber.armL.rotation.set(climbCycle * 1.5, 0, climbCycle);
-        climber.armR.rotation.set(-climbCycle * 1.5, 0, -climbCycle);
-        climber.legL.rotation.set(climbCycle, 0, 0);
-        climber.legR.rotation.set(-climbCycle, 0, 0);
-        climber.torsoGroup.rotation.z = Math.sin(eff.angle * 15) * 0.25;
-        if (Math.random() < 0.3) {
-          spawnParticle(posX, posY, posZ, 0, -1, 0, 'white');
-        }
+    // Win confetti burst
+    if (over && winner && (winner === 'red' || winner === 'blue')) {
+      const wpx = POLE_X[winner];
+      if (!winDone) {
+        winDone = true;
+        burstConfetti(wpx, 10.1, 46);
+        winConfettiCD = 0.65;
       } else {
-        climber.armL.rotation.set(-1.2 + climbCycle * 0.3, 0.8, -0.4);
-        climber.armR.rotation.set(-1.2 - climbCycle * 0.3, -0.8, 0.4);
-        climber.legL.rotation.set(0.6 + climbCycle * 0.2, -0.4, 0.2);
-        climber.legR.rotation.set(0.6 - climbCycle * 0.2, 0.4, -0.2);
-        climber.torsoGroup.rotation.z = climbCycle * 0.08;
+        winConfettiCD -= dt;
+        if (winConfettiCD <= 0) {
+          winConfettiCD = 0.85;
+          burstConfetti(wpx, 10.1, 14);
+        }
       }
-
-      if (eff.t3 > 0 && Math.random() < 0.5) {
-        spawnParticle(posX + (Math.random() - 0.5) * 0.5, posY - 0.5, posZ, 0, 2 + Math.random() * 2, 0, 'leaf');
-      }
+    } else if (!over) {
+      winDone = false;
     }
 
-    return {
-      scene,
-      camera,
-      update: function(dt, S) {
-        dt = Math.min(dt || 0.016, 0.05);
+    // Banknote fan flutter
+    for (let i = 0; i < billBase.length; i++) {
+      const b = billBase[i];
+      dummy.position.set(b.x, b.y, b.z);
+      dummy.rotation.set(Math.sin(timeAcc * 3.8 + b.phase) * 0.18, 0, b.ang + Math.sin(timeAcc * 2.5 + b.phase) * 0.05);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      billInst.setMatrixAt(b.idx, dummy.matrix);
+    }
+    billInst.instanceMatrix.needsUpdate = true;
 
-        const hR = (S && S.hR !== undefined) ? S.hR : curHR;
-        const hB = (S && S.hB !== undefined) ? S.hB : curHB;
-        curHR = hR; curHB = hB;
+    // Crowd gentle bounce
+    const crowdMult = over ? 1.8 : 1.0;
+    for (let i = 0; i < CROWD_N; i++) {
+      const cd = crowdData[i];
+      const hop = Math.abs(Math.sin(timeAcc * cd.sp * crowdMult + cd.ph)) * (over ? 0.16 : 0.07);
+      dummy.position.set(cd.x, cd.y + hop, cd.z);
+      dummy.rotation.set(0, 0, Math.sin(timeAcc * 2.4 + cd.ph) * 0.06);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      crowdBody.setMatrixAt(i, dummy.matrix);
+      dummy.position.set(cd.x, cd.y + 0.42 + hop, cd.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      crowdHead.setMatrixAt(i, dummy.matrix);
+    }
+    crowdBody.instanceMatrix.needsUpdate = true;
+    crowdHead.instanceMatrix.needsUpdate = true;
 
-        if (effR.t1 > 0) effR.t1 -= dt;
-        if (effR.t2 > 0) effR.t2 -= dt;
-        if (effR.t3 > 0) effR.t3 -= dt;
-        if (effR.t4 > 0) effR.t4 -= dt;
+    // Palm fronds breeze
+    for (let i = 0; i < frondData.length; i++) {
+      const fd = frondData[i];
+      const sw = Math.sin(timeAcc * 1.9 + fd.ph) * 0.1;
+      dummy.position.set(fd.x + Math.cos(fd.yaw) * 0.85, fd.y + 0.15, fd.z + Math.sin(fd.yaw) * 0.85);
+      dummy.rotation.set(0, -fd.yaw, -1.25 + sw);
+      dummy.scale.set(1, 1, 0.15);
+      dummy.updateMatrix();
+      frondInst.setMatrixAt(fd.idx, dummy.matrix);
+    }
+    frondInst.instanceMatrix.needsUpdate = true;
 
-        if (effB.t1 > 0) effB.t1 -= dt;
-        if (effB.t2 > 0) effB.t2 -= dt;
-        if (effB.t3 > 0) effB.t3 -= dt;
-        if (effB.t4 > 0) effB.t4 -= dt;
+    // Pennants waving
+    for (let i = 0; i < penData.length; i++) {
+      const pd = penData[i];
+      dummy.position.set(pd.x, pd.y, pd.z);
+      dummy.rotation.set(Math.sin(timeAcc * 3.8 + pd.ph) * 0.34, Math.cos(timeAcc * 2.2 + pd.ph) * 0.16, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      penInst.setMatrixAt(pd.idx, dummy.matrix);
+    }
+    penInst.instanceMatrix.needsUpdate = true;
 
-        const isWinR = S && S.over && S.winner === 'red';
-        const isWinB = S && S.over && S.winner === 'blue';
-
-        animateClimber(climberR, -1.6, hR, dt, effR, isWinR);
-        animateClimber(climberB, 1.6, hB, dt, effB, isWinB);
-
-        const time = S ? S.t : 0;
-        const bounceR = Math.abs(Math.sin(time * 8));
-        const bounceB = Math.abs(Math.sin(time * 8 + 1));
-        supporterR1.root.position.y = 0.5 + bounceR * 0.15;
-        supporterR2.root.position.y = 0.5 + bounceR * 0.15;
-        supporterR1.armL.rotation.z = -2.2 + Math.sin(time * 10) * 0.3;
-        supporterR2.armR.rotation.z = 2.2 + Math.cos(time * 10) * 0.3;
-
-        supporterB1.root.position.y = 0.5 + bounceB * 0.15;
-        supporterB2.root.position.y = 0.5 + bounceB * 0.15;
-        supporterB1.armL.rotation.z = -2.2 + Math.sin(time * 10) * 0.3;
-        supporterB2.armR.rotation.z = 2.2 + Math.cos(time * 10) * 0.3;
-
-        crowdGroup.children.forEach((c, idx) => {
-          c.position.y = (idx % 2 === 0 ? 1.6 : 2.6) + Math.abs(Math.sin(time * 5 + idx)) * 0.1;
-        });
-
-        flagsGroup.children.forEach((f, idx) => {
-          f.rotation.z = Math.sin(time * 3 + idx) * 0.15;
-        });
-
-        if (S && S.over && S.winner) {
-          const winX = S.winner === 'red' ? -1.6 : 1.6;
-          for (let i = 0; i < 3; i++) {
-            spawnParticle(
-              winX + (Math.random() - 0.5) * 1.5,
-              9.8 + Math.random() * 0.5,
-              (Math.random() - 0.5) * 1.5,
-              (Math.random() - 0.5) * 3,
-              -Math.random() * 2,
-              (Math.random() - 0.5) * 3,
-              i % 2 === 0 ? 'gold' : 'white'
-            );
-          }
-        }
-
-        particles.forEach(p => {
-          if (!p.active) return;
-          p.life += dt;
-          if (p.life >= p.maxLife) {
-            p.active = false;
-            p.mesh.visible = false;
-            return;
-          }
-          p.mesh.position.addScaledVector(p.vel, dt);
-          p.mesh.rotation.x += p.rotVel.x * dt;
-          p.mesh.rotation.y += p.rotVel.y * dt;
-          const s = (1 - p.life / p.maxLife);
-          p.mesh.scale.setScalar(s * 0.12);
-        });
-      },
-
-      onJoin: function(team) {},
-
-      onGift: function(team, tier) {
-        const eff = team === 'red' ? effR : effB;
-        const oppEff = team === 'red' ? effB : effR;
-        if (tier === 1) eff.t1 = 0.6;
-        else if (tier === 2) oppEff.t2 = 0.8;
-        else if (tier === 3) eff.t3 = 1.2;
-        else if (tier === 4) eff.t4 = 1.5;
-      },
-
-      onLike: function(team) {
-        const eff = team === 'red' ? effR : effB;
-        eff.t1 = 0.3;
-      },
-
-      reset: function() {
-        curHR = 0; curHB = 0;
-        effR.t1 = 0; effR.t2 = 0; effR.t3 = 0; effR.t4 = 0;
-        effB.t1 = 0; effB.t2 = 0; effB.t3 = 0; effB.t4 = 0;
-        particles.forEach(p => { p.active = false; p.mesh.visible = false; });
+    // Update particles
+    let pDirty = false;
+    for (let i = 0; i < MAX_P; i++) {
+      if (!pAct[i]) continue;
+      pDirty = true;
+      pLife[i] -= dt;
+      if (pLife[i] <= 0) {
+        pAct[i] = 0;
+        dummy.position.set(0, -50, 0);
+        dummy.scale.set(0.001, 0.001, 0.001);
+        dummy.updateMatrix();
+        partInst.setMatrixAt(i, dummy.matrix);
+        continue;
       }
-    };
+      pVy[i] -= pGrav[i] * dt;
+      pX[i] += pVx[i] * dt;
+      pY[i] += pVy[i] * dt;
+      pZ[i] += pVz[i] * dt;
+      const sc = Math.min(1, (pLife[i] / pMax[i]) * 2.2);
+      dummy.position.set(pX[i], pY[i], pZ[i]);
+      const sp = timeAcc * pSpin[i] + i;
+      dummy.rotation.set(sp, sp * 0.7, sp * 0.4);
+      dummy.scale.set(pSx[i] * sc, pSy[i] * sc, pSz[i] * sc);
+      dummy.updateMatrix();
+      partInst.setMatrixAt(i, dummy.matrix);
+    }
+    if (pDirty) partInst.instanceMatrix.needsUpdate = true;
+  },
+
+  onJoin: function(team) {
+    const st = sides[team === 'blue' ? 'blue' : 'red'];
+    st.cheerT = 0.7;
+    const col = st.team === 'red' ? 0xff5a5a : 0x5aa0ff;
+    for (let i = 0; i < 6; i++) {
+      spawnP(
+        st.px + (Math.random() - 0.5) * 1.6,
+        0.3 + Math.random() * 0.5,
+        0.6 + (Math.random() - 0.5) * 0.5,
+        (Math.random() - 0.5) * 1.2,
+        1.4 + Math.random() * 1.2,
+        (Math.random() - 0.5) * 0.8,
+        0.55,
+        i % 2 === 0 ? col : 0xffe066,
+        0.75, 0.75, 0.75,
+        2.2, 6
+      );
+    }
+  },
+
+  onLike: function(team) {
+    const st = sides[team === 'blue' ? 'blue' : 'red'];
+    st.cheerT = Math.max(st.cheerT, 0.45);
+    st.tugT = Math.max(st.tugT, 0.25);
+    const col = st.team === 'red' ? 0xff4d6a : 0x4da6ff;
+    const cy = st.hSmooth * 8.45 + 1.2;
+    for (let i = 0; i < 4; i++) {
+      spawnP(
+        st.px + (Math.random() - 0.5) * 0.6,
+        cy,
+        0.3 + (Math.random() - 0.5) * 0.3,
+        (Math.random() - 0.5) * 1.1,
+        1.6 + Math.random() * 1.2,
+        (Math.random() - 0.5) * 0.6,
+        0.5,
+        col,
+        0.7, 0.7, 0.7,
+        1.8, 5
+      );
+    }
+  },
+
+  onGift: function(team, tier) {
+    const tk = team === 'blue' ? 'blue' : 'red';
+    const ok = tk === 'red' ? 'blue' : 'red';
+    const st = sides[tk];
+    const ost = sides[ok];
+    st.cheerT = Math.max(st.cheerT, 0.9);
+
+    if (tier === 1) {
+      st.scrambleT = Math.max(st.scrambleT, 0.6);
+      const col = tk === 'red' ? 0xff6247 : 0x47a0ff;
+      for (let i = 0; i < 8; i++) {
+        spawnP(
+          st.px + (Math.random() - 0.5) * 0.6,
+          st.hSmooth * 8.45 + 0.8,
+          (Math.random() - 0.5) * 0.6,
+          (Math.random() - 0.5) * 1.8,
+          1.6 + Math.random() * 1.6,
+          (Math.random() - 0.5) * 1.4,
+          0.55,
+          i % 2 === 0 ? col : 0xffe266,
+          0.8, 0.8, 0.8,
+          2.5, 7
+        );
+      }
+    } else if (tier === 2) {
+      // Grease attack on OTHER pole
+      ost.greaseT = Math.max(ost.greaseT, 0.8);
+      for (let i = 0; i < 14; i++) {
+        spawnP(
+          ost.px + (Math.random() - 0.5) * 0.5,
+          ost.hSmooth * 8.45 + 1.0 + (Math.random() - 0.5) * 0.6,
+          (Math.random() - 0.5) * 0.5,
+          (Math.random() - 0.5) * 2.2,
+          0.8 + Math.random() * 1.8,
+          (Math.random() - 0.5) * 2.2,
+          0.65,
+          i % 2 === 0 ? 0xf5f59c : 0xffffff,
+          0.7, 1.05, 0.7,
+          7.0, 5
+        );
+      }
+    } else if (tier === 3) {
+      // Wind boost
+      st.windT = Math.max(st.windT, 1.2);
+      st.scrambleT = Math.max(st.scrambleT, 1.2);
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        spawnP(
+          st.px + Math.cos(a) * 0.6,
+          st.hSmooth * 8.45 + 0.5,
+          Math.sin(a) * 0.6,
+          -Math.sin(a) * 1.8,
+          2.6 + Math.random() * 1.8,
+          Math.cos(a) * 1.8,
+          0.85,
+          i % 2 === 0 ? 0x54cc50 : 0xfff5b0,
+          1.1, 0.65, 0.2,
+          -0.4, 9
+        );
+      }
+    } else {
+      // Tier 4 lightning spiral climb
+      st.lightningT = Math.max(st.lightningT, 1.4);
+      st.scrambleT = Math.max(st.scrambleT, 1.4);
+      st.flashT = 0.7;
+      for (let i = 0; i < 18; i++) {
+        const a = (i / 18) * Math.PI * 2;
+        spawnP(
+          st.px + Math.cos(a) * 0.4,
+          9.9,
+          Math.sin(a) * 0.4,
+          Math.cos(a) * 2.6,
+          0.8 + Math.random() * 2.0,
+          Math.sin(a) * 2.6,
+          0.75,
+          i % 2 === 0 ? 0xffd838 : 0xffffff,
+          0.95, 0.95, 0.95,
+          2.8, 10
+        );
+      }
+    }
+  },
+
+  reset: function() {
+    winDone = false;
+    winConfettiCD = 0;
+    ['red', 'blue'].forEach(function(tk) {
+      const st = sides[tk];
+      resetBag(st);
+      st.slideToBase = st.hSmooth > 0.01;
+      st.prevH = 0;
+      st.climbVel = 0;
+      st.scrambleT = 0;
+      st.greaseT = 0;
+      st.greaseDip = 0;
+      st.windT = 0;
+      st.lightningT = 0;
+      st.flashT = 0;
+      st.cheerT = 0;
+      st.tugT = 0;
+      st.flashRing.visible = false;
+      st.boltGlow.visible = false;
+      st.climberPivot.rotation.y = st.baseYaw;
+    });
+    for (let i = 0; i < MAX_P; i++) {
+      pAct[i] = 0;
+      dummy.position.set(0, -50, 0);
+      dummy.scale.set(0.001, 0.001, 0.001);
+      dummy.updateMatrix();
+      partInst.setMatrixAt(i, dummy.matrix);
+    }
+    partInst.instanceMatrix.needsUpdate = true;
   }
 };
+
+return game;
+
+} };
 
 </script>
 <script>
