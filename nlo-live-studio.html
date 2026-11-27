@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NLO Live Studio — LIVE ဂိမ်းများ</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { font-family:"Segoe UI", system-ui, sans-serif; background:#0b0d1a; color:#f2f3fa; overflow-x:hidden; }
+  .hidden { display:none !important; }
+
+  /* ================= HUB ================= */
+  #hub { max-width:640px; margin:0 auto; padding:18px 14px 50px; }
+  .hubHead { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .logoBadge {
+    width:52px; height:52px; border-radius:16px; flex:none;
+    background:linear-gradient(135deg,#ffd740,#ff8a5a); color:#231303;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:19px; letter-spacing:.5px;
+    box-shadow:0 6px 18px rgba(255,160,60,.35);
+  }
+  .hubHead h1 { font-size:23px; font-weight:800; }
+  .hubHead .sub { font-size:13px; opacity:.75; margin-top:2px; }
+  .connChips { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 4px; }
+  .chip { display:flex; align-items:center; gap:7px; background:#171a2e; border:1px solid #2a2e4a; border-radius:99px; padding:7px 13px; font-size:13.5px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#ff5252; flex:none; }
+  .dot.on { background:#69f0ae; }
+  .catTitle { font-size:17px; font-weight:800; margin:22px 2px 11px; color:#ffe082; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .gameCard {
+    background:#14172a; border:1px solid #2a2e4a; border-radius:18px; overflow:hidden;
+    cursor:pointer; transition:transform .12s, border-color .12s;
+  }
+  .gameCard:active { transform:scale(.97); }
+  .gameCard:hover { border-color:#ffd740; }
+  .gameCard canvas { width:100%; height:190px; display:block; object-fit:cover; }
+  .gameCard .gcBody { padding:10px 12px 13px; }
+  .gameCard .gcName { font-size:16.5px; font-weight:800; }
+  .gameCard .gcDesc { font-size:12.5px; opacity:.78; margin-top:3px; line-height:1.5; }
+  .gameCard .gcTag { display:inline-block; margin-top:8px; font-size:11.5px; font-weight:700; background:#262a45; color:#ffe082; border-radius:99px; padding:3px 10px; }
+
+  /* ================= shared cards / controls ================= */
+  .card { background:#171a2e; border:1px solid #2a2e4a; border-radius:16px; padding:13px 14px; margin-bottom:12px; }
+  .card h3 { font-size:16px; margin-bottom:9px; color:#ffe082; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  button {
+    font-family:inherit; font-size:15px; font-weight:600; cursor:pointer;
+    border:none; border-radius:11px; padding:10px 14px; color:#10121f; background:#ffd740;
+  }
+  button.red  { background:#ff5a5a; color:#fff; }
+  button.blue { background:#5aa2ff; color:#fff; }
+  button.green{ background:#43a047; color:#fff; }
+  button.ghost{ background:#262a45; color:#e8eaf6; border:1px solid #3a3f63; }
+  button:active { transform:scale(.97); }
+  input[type=text] {
+    font-family:inherit; font-size:15px; padding:9px 11px; border-radius:10px;
+    border:1px solid #3a3f63; background:#10121f; color:#fff; flex:1; min-width:110px;
+  }
+  .small { font-size:13px; opacity:.85; line-height:1.55; }
+  .feedBox { max-height:150px; overflow-y:auto; font-size:13.5px; line-height:1.65; background:#10121f; border-radius:10px; padding:8px 11px; }
+  .feedBox div { border-bottom:1px dashed #262a45; padding:2px 0; }
+  .feedBox div:last-child { border-bottom:none; }
+  .switch { position:relative; width:52px; height:29px; flex:none; display:inline-block; }
+  .switch input { opacity:0; width:0; height:0; }
+  .track { position:absolute; inset:0; background:#262a45; border-radius:99px; transition:.2s; }
+  .track:before { content:""; position:absolute; width:23px; height:23px; border-radius:50%; left:3px; top:3px; background:#fff; transition:.2s; }
+  .switch input:checked + .track { background:#43a047; }
+  .switch input:checked + .track:before { transform:translateX(23px); }
+  table.gifts { width:100%; font-size:13.5px; border-collapse:collapse; }
+  table.gifts td { padding:4px 2px; border-bottom:1px dashed #262a45; }
+
+  /* ================= GAME SCREEN ================= */
+  #stageWrap { width:100%; display:flex; justify-content:center; }
+  #stage {
+    position:relative; aspect-ratio:9/16; height:60dvh; max-width:100vw;
+    background:#87b7e8; overflow:hidden; border-radius:0 0 18px 18px;
+    box-shadow:0 10px 40px rgba(0,0,0,.5);
+  }
+  body.output #stage { height:100dvh; border-radius:0; }
+  body.output #panel { display:none; }
+  body.output #hub { display:none; }
+  #game { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .hud { position:absolute; top:10px; left:8px; right:8px; display:flex; gap:6px; align-items:stretch; pointer-events:none; z-index:5; }
+  .teamPanel { flex:1; border-radius:14px; padding:7px 9px; color:#fff; background:rgba(10,10,20,.55); backdrop-filter:blur(3px); border:2px solid rgba(255,255,255,.25); }
+  .teamPanel.red  { border-color:#ff5a5a; }
+  .teamPanel.blue { border-color:#5aa2ff; text-align:right; }
+  .teamPanel .tname { font-size:15.5px; font-weight:800; line-height:1.15; white-space:nowrap; overflow:hidden; }
+  .teamPanel .tsub  { font-size:11.5px; opacity:.92; margin-top:1px; white-space:nowrap; overflow:hidden; }
+  .powerBar { height:8px; border-radius:99px; background:rgba(255,255,255,.22); margin-top:5px; overflow:hidden; }
+  .powerFill { height:100%; width:0%; border-radius:99px; transition:width .18s; }
+  .red  .powerFill { background:linear-gradient(90deg,#ff8a5a,#ff3d3d); }
+  .blue .powerFill { background:linear-gradient(90deg,#3d8bff,#5ac8ff); margin-left:auto; }
+  .midPanel { width:104px; border-radius:14px; padding:6px 4px; text-align:center; background:rgba(10,10,20,.55); backdrop-filter:blur(3px); border:2px solid rgba(255,215,64,.55); color:#fff; }
+  .midPanel .timer { font-size:23px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .midPanel .score { font-size:14.5px; margin-top:1px; }
+  .midPanel .round { font-size:11.5px; opacity:.85; }
+  /* horse HUD */
+  #horseHud { position:absolute; top:10px; left:8px; right:8px; z-index:5; pointer-events:none; display:flex; flex-direction:column; gap:5px; }
+  .hRow { display:flex; align-items:center; gap:8px; background:rgba(10,10,20,.55); backdrop-filter:blur(3px); border-radius:11px; padding:5px 10px; color:#fff; font-size:13.5px; }
+  .hRow .hDot { width:14px; height:14px; border-radius:50%; flex:none; border:2px solid rgba(255,255,255,.7); }
+  .hRow .hName { font-weight:800; width:86px; white-space:nowrap; overflow:hidden; }
+  .hRow .hBar { flex:1; height:9px; background:rgba(255,255,255,.22); border-radius:99px; overflow:hidden; }
+  .hRow .hFill { height:100%; width:0%; border-radius:99px; }
+  .hRow .hMeta { width:104px; text-align:right; font-size:12px; opacity:.95; white-space:nowrap; }
+  #banner { position:absolute; left:50%; top:34%; transform:translate(-50%,-50%) scale(.6); z-index:6; pointer-events:none; text-align:center; opacity:0; transition:transform .18s ease-out, opacity .18s; width:92%; }
+  #banner.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  #banner .bCard { display:inline-block; background:rgba(12,12,26,.85); border:2.5px solid #ffd740; border-radius:18px; padding:12px 20px; color:#fff; box-shadow:0 8px 30px rgba(0,0,0,.45); }
+  #banner .bMain { font-size:26px; font-weight:800; line-height:1.25; }
+  #banner .bSub  { font-size:16px; margin-top:3px; color:#ffe082; }
+  #ticker { position:absolute; left:50%; bottom:12px; transform:translateX(-50%); z-index:5; pointer-events:none; max-width:94%; background:rgba(12,12,26,.62); color:#fff; border-radius:99px; padding:6px 16px; font-size:15.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:0; transition:opacity .3s; }
+  #ticker.show { opacity:1; }
+  #exitOutput { position:absolute; z-index:9; display:none; background:rgba(0,0,0,.45); color:#fff; border:none; border-radius:99px; width:34px; height:34px; font-size:16px; bottom:8px; right:8px; }
+  body.output #exitOutput { display:block; }
+  #panel { width:100%; max-width:560px; margin:0 auto; padding:14px 14px 40px; }
+  .bigOut { width:100%; font-size:18px; padding:14px; background:linear-gradient(90deg,#ff8a5a,#ff3d7f); color:#fff; }
+</style>
+</head>
+<body>
+
+<!-- ================= HUB ================= -->
+<div id="hub">
+  <div class="hubHead">
+    <div class="logoBadge">NLO</div>
+    <div>
+      <h1>NLO Live Studio</h1>
+      <div class="sub">TikTok LIVE အတွက် အပြန်အလှန် ဂိမ်းများ — gift ဝင်ရင် ဂိမ်း တုံ့ပြန်တယ်</div>
+    </div>
+  </div>
+
+  <div class="connChips">
+    <div class="chip"><span class="dot" id="hubLiveDot"></span><span id="hubLiveText">LIVE မချိတ်ရသေး</span></div>
+    <div class="chip"><span class="dot" id="hubBridgeDot"></span><span>PC Bridge</span></div>
+  </div>
+
+  <div class="card">
+    <h3>📱 ဖုန်းသက်သက် LIVE ချိတ်နည်း (PC မလို)</h3>
+    <div class="row">
+      <span class="dot" id="liveDot"></span>
+      <span id="liveText" style="font-size:14.5px">မချိတ်ရသေးပါ</span>
+    </div>
+    <div class="row" style="margin-top:9px">
+      <input type="text" id="eulerUser" value="old.burma.com" placeholder="TikTok username">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="btnRelay" style="flex:1">🛟 Backup server နဲ့ ချိတ်မယ် (Key မလိုပါ)</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input type="text" id="eulerKey" placeholder="Euler Stream API Key" autocomplete="off">
+      <button class="ghost" id="btnLive">ချိတ်မယ်</button>
+    </div>
+    <div class="small" style="margin-top:8px">
+      <b>Backup server (အကြံပြုထား):</b> Key က ကိုယ်ပိုင် server ထဲမှာ သိမ်းထားပြီးသားမို့ ဘာမှ ထည့်စရာ မလိုပါ — ခလုတ် တစ်ချက် နှိပ်ရုံပါပဲ။<br>
+      တိုက်ရိုက် ချိတ်ချင်ရင် အောက်မှာ Euler API Key ကူးထည့်ပြီး "ချိတ်မယ်" နှိပ်ပါ (key က ဒီဖုန်းထဲမှာပဲ သိမ်းပါတယ်)။ ချိတ်ထားရင် ဘယ်ဂိမ်းဖွင့်ဖွင့် gift အစစ် ဝင်ပါမယ်။
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="speakCode" placeholder="အသံဖတ် code" autocomplete="off">
+      <button class="ghost" id="btnSpeak">🔊 အသံဖတ်: ပိတ်</button>
+    </div>
+    <div class="small" style="margin-top:6px">အသံဖတ် ဖွင့်ထားရင် comment နဲ့ gift ဝင်တိုင်း <b>Thiha အသံ</b>နဲ့ ဖတ်ပြပါမယ်။ Code ကို <b>burmese-voice-tts.onrender.com/speak-setup</b> မှာ တစ်ခါ သတ်မှတ်ပြီး ဒီမှာ တစ်ခါ ထည့်ပါ (ဖုန်းထဲမှာပဲ သိမ်းပါတယ်)။</div>
+    <div class="row" style="margin-top:8px">
+      <span class="small">အသံ ရွေးရန်:</span>
+      <button class="ghost" id="btnVoice">Gemini (Kore)</button>
+      <span class="small">Gemini quota ကုန်ရင် Thiha နဲ့ အလိုအလျောက် ဆက်ဖတ်ပါမယ်</span>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <label class="switch"><input type="checkbox" id="demoToggle"><span class="track"></span></label>
+      <span style="font-size:15px">Demo လူအုပ် (ဂိမ်းထဲမှာ အလိုအလျောက် စမ်းဆော့ပေးမယ်)</span>
+    </div>
+    <div class="row" style="margin-top:9px">
+      <label class="switch"><input type="checkbox" id="soundToggle" checked><span class="track"></span></label>
+      <span style="font-size:15px">အသံ</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🔌 PC Bridge (ရွေးချယ်ခွင့်)</h3>
+    <div class="row">
+      <span class="dot" id="bridgeDot"></span>
+      <span id="bridgeText" style="font-size:14.5px">မချိတ်ရသေးပါ</span>
+    </div>
+    <div class="row" style="margin-top:9px">
+      <input type="text" id="bridgeUrl" value="ws://localhost:21213">
+      <button class="ghost" id="btnBridge">ချိတ်မယ်</button>
+    </div>
+  </div>
+
+  <div class="catTitle">🏆 အသင်းလိုက် ဂိမ်းများ</div>
+  <div class="grid" id="gridTeams"></div>
+
+  <div class="catTitle">🐎 အပြိုင်အဆိုင် ဂိမ်းများ</div>
+  <div class="grid" id="gridRace"></div>
+
+  <div class="small" style="text-align:center; opacity:.6; margin-top:26px">NLO Live Studio · v1.0 · ဂိမ်းအားလုံး ဖုန်းသက်သက် screen share နဲ့ လွှင့်လို့ရပါတယ်</div>
+</div>
+
+<!-- ================= GAME SCREEN ================= -->
+<div id="gameScreen" class="hidden">
+  <div id="stageWrap">
+    <div id="stage">
+      <canvas id="game" width="1080" height="1920"></canvas>
+
+      <div class="hud" id="teamsHud">
+        <div class="teamPanel red">
+          <div class="tname" id="redName">🔴 အနီအသင်း</div>
+          <div class="tsub"><span id="redMembers">0</span> ယောက် · 🎁 <span id="redCoins">0</span></div>
+          <div class="powerBar"><div class="powerFill" id="redPower"></div></div>
+        </div>
+        <div class="midPanel">
+          <div class="timer" id="timer">1:30</div>
+          <div class="score"><span id="redWins">0</span> — <span id="blueWins">0</span></div>
+          <div class="round">ပွဲစဉ် <span id="roundNo">1</span></div>
+        </div>
+        <div class="teamPanel blue">
+          <div class="tname" id="blueName">အပြာအသင်း 🔵</div>
+          <div class="tsub">🎁 <span id="blueCoins">0</span> · <span id="blueMembers">0</span> ယောက်</div>
+          <div class="powerBar"><div class="powerFill" id="bluePower"></div></div>
+        </div>
+      </div>
+
+      <div id="horseHud" class="hidden"></div>
+
+      <div id="banner"><div class="bCard"><div class="bMain" id="bannerMain"></div><div class="bSub" id="bannerSub"></div></div></div>
+      <div id="ticker"></div>
+      <button id="exitOutput" title="ထွက်">✕</button>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div class="card">
+      <div class="row">
+        <button class="ghost" id="btnBack">← ဂိမ်းများ ပြန်ရွေး</button>
+        <span id="nowPlaying" style="font-size:16px; font-weight:800"></span>
+      </div>
+      <button class="bigOut" id="btnOutput" style="margin-top:11px">📺 LIVE Output — အပြည့်မြင်ကွင်း ဖွင့်မယ်</button>
+      <div class="small" style="margin-top:8px">LIVE လွှင့်တဲ့အခါ ဒီခလုတ်ကို နှိပ်ပြီး ဖုန်း screen share / Mobile gaming နဲ့ လွှင့်ပါ။</div>
+    </div>
+
+    <div class="card">
+      <h3>🎮 ဆော့နည်း (ကြည့်သူတွေအတွက်)</h3>
+      <table class="gifts" id="howtoTable"></table>
+    </div>
+
+    <div class="card">
+      <h3>🧪 စမ်းသပ်ရန်</h3>
+      <div class="row" id="simRow"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="btnResetGame">ပွဲအသစ် ပြန်စမယ်</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📜 ဖြစ်ရပ်များ</h3>
+      <div class="feedBox" id="feedBox"><div>Studio အသင့်ဖြစ်ပါပြီ</div></div>
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+/* ================= CORE ================= */
+const W = 1080, H = 1920;
+const $ = id => document.getElementById(id);
+const mainCtx = $('game').getContext('2d');
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ---------- audio ---------- */
+let AC = null, soundOn = true;
+function audio(){ if (!AC) { try { AC = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} } if (AC && AC.state==='suspended') AC.resume(); }
+function tone(f, t0, d, type, g){
+  if (!AC || !soundOn) return;
+  const o = AC.createOscillator(), gn = AC.createGain();
+  o.type = type || 'sine'; o.frequency.value = f;
+  gn.gain.setValueAtTime(g || 0.12, AC.currentTime + t0);
+  gn.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + t0 + d);
+  o.connect(gn); gn.connect(AC.destination);
+  o.start(AC.currentTime + t0); o.stop(AC.currentTime + t0 + d);
+}
+const sndGift = () => { tone(880,0,.12,'sine',.10); tone(1318,.09,.18,'sine',.10); };
+const sndJoin = () => { tone(523,0,.09,'triangle',.07); };
+const sndWin  = () => { [523,659,784,1046].forEach((f,i)=>tone(f,i*.11,.22,'triangle',.11)); };
+const sndPop  = () => { tone(190,0,.10,'square',.10); tone(90,.02,.14,'sine',.14); };
+const sndKick = () => { tone(140,0,.09,'sine',.16); tone(700,.03,.06,'triangle',.05); };
+
+/* ---------- banner / ticker / feed ---------- */
+let bannerTimer = null, tickerTimer = null;
+function banner(main, sub, holdMs){
+  $('bannerMain').textContent = main;
+  $('bannerSub').textContent = sub || '';
+  $('banner').classList.add('show');
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(()=>$('banner').classList.remove('show'), holdMs || 2400);
+}
+function ticker(text){
+  const t = $('ticker'); t.textContent = text; t.classList.add('show');
+  clearTimeout(tickerTimer);
+  tickerTimer = setTimeout(()=>t.classList.remove('show'), 3400);
+}
+function feed(text){
+  const box = $('feedBox'); if (!box) return;
+  const d = document.createElement('div');
+  d.textContent = text; box.prepend(d);
+  while (box.children.length > 30) box.lastChild.remove();
+}
+
+/* ---------- shared FX (confetti + floaters) ---------- */
+const FX = {
+  confetti: [], floaters: [],
+  spawn(color){
+    for (let i = 0; i < 130; i++)
+      this.confetti.push({ x: Math.random()*W, y: -30 - Math.random()*300, vx:(Math.random()-.5)*60,
+        vy: 130 + Math.random()*190, rot: Math.random()*6.3, vr:(Math.random()-.5)*7,
+        c: [color, '#ffd740', '#ffffff', '#69f0ae'][i % 4], s: 9 + Math.random()*11 });
+  },
+  floater(x, y, text, color){ this.floaters.push({ x, y, text, color, life: 1 }); },
+  update(dt){
+    for (const c of this.confetti) { c.x += c.vx*dt; c.y += c.vy*dt; c.rot += c.vr*dt; }
+    this.confetti = this.confetti.filter(c => c.y < H + 40);
+    for (const f of this.floaters) { f.y -= 62*dt; f.life -= dt * .8; }
+    this.floaters = this.floaters.filter(f => f.life > 0);
+  },
+  draw(c){
+    for (const f of this.floaters) {
+      c.globalAlpha = Math.max(0, f.life);
+      c.font = '800 52px sans-serif'; c.textAlign = 'center';
+      c.lineWidth = 7; c.strokeStyle = 'rgba(0,0,0,.5)';
+      c.strokeText(f.text, f.x, f.y); c.fillStyle = f.color; c.fillText(f.text, f.x, f.y);
+      c.globalAlpha = 1;
+    }
+    for (const cf of this.confetti) {
+      c.save(); c.translate(cf.x, cf.y); c.rotate(cf.rot);
+      c.fillStyle = cf.c; c.fillRect(-cf.s/2, -cf.s/2, cf.s, cf.s * .62); c.restore();
+    }
+  }
+};
+
+/* ---------- 2-team match primitives ---------- */
+function makeMatch(redName, blueName){
+  return {
+    round: 1, phase: 'play', phaseT: 0, timeLeft: 90,
+    red:  { key:'red',  name: redName,  color:'#e53935', dark:'#b71c1c', members:new Map(), coins:0, wins:0, force:0, heave:0 },
+    blue: { key:'blue', name: blueName, color:'#1e6fe0', dark:'#0d47a1', members:new Map(), coins:0, wins:0, force:0, heave:0 }
+  };
+}
+const otherKey = k => k === 'red' ? 'blue' : 'red';
+function teamOf(match, name){ for (const k of ['red','blue']) if (match[k].members.has(name)) return k; return null; }
+function joinTeam(match, name, tk, silent){
+  const T = match[tk];
+  if (!T.members.has(name)) {
+    T.members.set(name, { gifts: 0 });
+    if (!silent) { feed('👋 ' + name + ' → ' + T.name + ' ဝင်လာပါတယ်'); ticker(name + ' → ' + T.name + ' ဝင်လာပြီ'); sndJoin(); }
+  }
+  return tk;
+}
+function giftTeam(match, name, giftName, count, coins){
+  let tk = teamOf(match, name);
+  if (!tk) {
+    tk = match.red.members.size <= match.blue.members.size ? 'red' : 'blue';
+    joinTeam(match, name, tk, true);
+    feed('👋 ' + name + ' → ' + match[tk].name + ' (gift နဲ့ အလိုအလျောက် ဝင်)');
+  }
+  const T = match[tk];
+  T.members.get(name).gifts += count;
+  T.coins += coins * count;
+  return tk;
+}
+function commentTeam(match, name, text){
+  const t = String(text || '').trim();
+  if (t === '1' || t === '၁' || t.includes('အနီ')) return joinTeam(match, name, 'red');
+  if (t === '2' || t === '၂' || t.includes('အပြာ')) return joinTeam(match, name, 'blue');
+  return null;
+}
+const fmt = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); };
+
+/* ================= ROUTER ================= */
+const G = { current: null };
+function routeComment(name, text){
+  if (G.current && G.current.onComment) G.current.onComment(name, text);
+  else feed('💬 ' + name + ': ' + String(text || '').slice(0, 60));
+}
+function routeGift(name, giftName, count, coins){ if (G.current && G.current.onGift) G.current.onGift(name, giftName, count, coins); }
+function routeLike(name, count){ if (G.current && G.current.onLike) G.current.onLike(name, count); }
+function routeMember(name){ feed('👀 ' + name + ' ဝင်ကြည့်ပါတယ်'); }
+
+/* ================= CONNECTIONS ================= */
+function setDot(id, on){ const el = $(id); if (el) el.classList.toggle('on', on); }
+
+/* ----- PC bridge ----- */
+let ws = null, bridgeRetry = null;
+function setBridge(on, msg){
+  setDot('bridgeDot', on); setDot('hubBridgeDot', on);
+  $('bridgeText').textContent = msg;
+}
+function connectBridge(){
+  const url = $('bridgeUrl').value.trim() || 'ws://localhost:21213';
+  try { if (ws) { ws.onclose = null; ws.close(); } } catch(e){}
+  clearTimeout(bridgeRetry);
+  setBridge(false, 'ချိတ်နေပါတယ်…');
+  let sock;
+  try { sock = new WebSocket(url); } catch(e){ setBridge(false, 'ချိတ်မရပါ'); return; }
+  ws = sock;
+  sock.onopen = () => setBridge(true, 'ချိတ်ထားတယ် — LIVE အစစ်တွေ ဝင်လာပါမယ်');
+  sock.onclose = () => { setBridge(false, 'မချိတ်ရသေးပါ — PC bridge မဖွင့်ထားရင် ဖုန်းသက်သက် နည်းနဲ့ ဆော့ပါ'); bridgeRetry = setTimeout(connectBridge, 6000); };
+  sock.onerror = () => { try { sock.close(); } catch(e){} };
+  sock.onmessage = e => {
+    let m; try { m = JSON.parse(e.data); } catch(err){ return; }
+    const name = String(m.name || 'Viewer').slice(0, 40);
+    if (m.type === 'join')    routeMember(name);
+    if (m.type === 'comment') routeComment(name, m.text || '');
+    if (m.type === 'like')    routeLike(name, m.count || 1);
+    if (m.type === 'gift')    routeGift(name, String(m.gift || m.giftName || 'Gift'), m.count || 1, m.coins || 0);
+  };
+}
+$('btnBridge').addEventListener('click', () => { audio(); connectBridge(); });
+
+/* ----- Euler Stream (phone-only) ----- */
+let liveWs = null, liveRetry = null, liveWanted = false, liveViaRelay = false;
+const giftComboSeen = new Map();
+const LIVE_CLOSE = {
+  4401: 'API Key မှားနေပါတယ် — Dashboard က key အတိအကျ ပြန်ကူးထည့်ပါ',
+  4404: 'အကောင့် LIVE မရှိသေးပါ — LIVE စတာနဲ့ အလိုအလျောက် ပြန်ချိတ်ပါမယ်',
+  4429: 'ချိတ်ဆက်မှု များနေပါတယ် — ခဏစောင့်ပြီး ပြန်ချိတ်ပါမယ်',
+  4005: 'LIVE ပြီးသွားပါပြီ',
+  4555: 'ချိတ်ဆက်မှု ၈ နာရီ ပြည့်လို့ ပြန်ချိတ်ပါမယ်'
+};
+function setLive(on, msg){
+  setDot('liveDot', on); setDot('hubLiveDot', on);
+  $('liveText').textContent = msg;
+  $('hubLiveText').textContent = on ? 'LIVE ချိတ်ထားတယ်' : 'LIVE မချိတ်ရသေး';
+  $('btnLive').textContent = (liveWanted && !liveViaRelay) ? 'ဖြုတ်မယ်' : 'ချိတ်မယ်';
+  const rb = $('btnRelay'); if (rb) rb.textContent = (liveWanted && liveViaRelay) ? '🛟 Backup ဖြုတ်မယ်' : '🛟 Backup server နဲ့ ချိတ်မယ် (Key မလိုပါ)';
+}
+function liveUserName(u){
+  if (!u) return 'Viewer';
+  return String(u.nickname || u.displayId || u.uniqueId || 'Viewer').slice(0, 40);
+}
+function handleLiveEvent(m){
+  if (!m || !m.type) return;
+  const d = m.data || {};
+  switch (m.type) {
+    case 'roomInfo':
+      setLive(true, 'LIVE ချိတ်ပြီးပြီ — gift / မန့် စောင့်နေပါတယ် 🎉');
+      feed('🟢 LIVE အခန်းနဲ့ ချိတ်မိပါပြီ');
+      break;
+    case 'WebcastChatMessage': {
+      const nm = liveUserName(d.user), cm = d.comment || '';
+      routeComment(nm, cm);
+      const t = cm.trim();
+      if (t.length >= 3 && t !== '၁' && t !== '၂' && t !== '1' && t !== '2') speakSay(nm + ' — ' + digitsToMy(t.slice(0, 80)));
+      break;
+    }
+    case 'WebcastGiftMessage': {
+      const g = d.gift || {};
+      const giftName = g.name || d.giftName || 'Gift';
+      const coins = (g.diamondCount != null ? g.diamondCount : d.diamondCount) || 0;
+      const count = d.repeatCount || 1;
+      const name = liveUserName(d.user);
+      if ('repeatEnd' in d && d.repeatEnd === false) break;
+      const ck = name + '|' + giftName;
+      if (giftComboSeen.get(ck) === count) break;
+      giftComboSeen.set(ck, count);
+      routeGift(name, giftName, count, coins);
+      speakSay(name + ' က ' + giftName + ' ' + numToMy(Math.min(count, 999)) + ' ခု ပို့ပါတယ် — ကျေးဇူးပါ', true);
+      break;
+    }
+    case 'WebcastLikeMessage': routeLike(liveUserName(d.user), d.likeCount || 1); break;
+    case 'WebcastMemberMessage': routeMember(liveUserName(d.user)); break;
+    default:
+      if (m.type.indexOf('Follow') >= 0) feed('⭐ ' + liveUserName(d.user) + ' follow လုပ်ပါတယ်');
+      if (m.type === 'room.status' && d.state === 'ended') setLive(false, 'LIVE ပြီးသွားပါပြီ');
+  }
+}
+function handleLiveFrame(raw){
+  let obj; try { obj = JSON.parse(raw); } catch(e){ return; }
+  if (obj && Array.isArray(obj.messages)) obj.messages.forEach(handleLiveEvent);
+  else handleLiveEvent(obj);
+}
+/* ---------- comment အသံဖတ် (TTS reader) ---------- */
+const SPEAK_URL = 'https://burmese-voice-tts.onrender.com/api/live/speak';
+let speakOn = false, speakPlaying = false;
+const speakQueue = [], speakSeen = new Map();
+try { const sc = localStorage.getItem('nlo_speak_code'); if (sc) $('speakCode').value = sc; } catch(e){}
+let speakEngine = 'gemini';
+try { speakEngine = localStorage.getItem('nlo_speak_engine') || 'gemini'; } catch(e){}
+function syncVoiceBtn(){ $('btnVoice').textContent = speakEngine === 'gemini' ? 'Gemini (Kore)' : 'Edge (Thiha)'; }
+syncVoiceBtn();
+$('btnVoice').addEventListener('click', () => {
+  audio();
+  speakEngine = speakEngine === 'gemini' ? 'edge' : 'gemini';
+  try { localStorage.setItem('nlo_speak_engine', speakEngine); } catch(e){}
+  syncVoiceBtn();
+});
+const MY_DIGITS = ['သုည','တစ်','နှစ်','သုံး','လေး','ငါး','ခြောက်','ခုနစ်','ရှစ်','ကိုး'];
+function numToMy(n){
+  n = Math.floor(Math.abs(n));
+  if (n < 10) return MY_DIGITS[n];
+  if (n < 100) { const t = Math.floor(n / 10), o = n % 10; return MY_DIGITS[t] + 'ဆယ်' + (o ? MY_DIGITS[o] : ''); }
+  if (n < 1000) { const h = Math.floor(n / 100), r = n % 100; return MY_DIGITS[h] + 'ရာ' + (r ? numToMy(r) : ''); }
+  return String(n).split('').map(d => MY_DIGITS[+d]).join(' ');
+}
+function digitsToMy(s){ return String(s).replace(/\d+/g, m => numToMy(parseInt(m, 10))); }
+function speakSay(text, priority){
+  if (!speakOn) return;
+  text = (text || '').trim(); if (!text) return;
+  const now = Date.now();
+  if (speakSeen.get(text) && now - speakSeen.get(text) < 20000) return;
+  speakSeen.set(text, now);
+  if (speakSeen.size > 80) speakSeen.clear();
+  if (priority) speakQueue.unshift(text);
+  else { if (speakQueue.length >= 4) return; speakQueue.push(text); }
+  speakNext();
+}
+function speakNext(){
+  if (speakPlaying || !speakQueue.length) return;
+  const text = speakQueue.shift();
+  speakPlaying = true;
+  const done = () => { speakPlaying = false; speakNext(); };
+  const code = ($('speakCode').value || '').trim();
+  const fallback = () => {
+    try {
+      const u = new SpeechSynthesisUtterance(text); u.lang = 'my-MM'; u.rate = 1.05;
+      u.onend = done; u.onerror = done;
+      speechSynthesis.speak(u);
+    } catch(e){ done(); }
+  };
+  if (!code) { fallback(); return; }
+  fetch(SPEAK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code, text: text, engine: speakEngine }) })
+    .then(r => { if (!r.ok) throw new Error('speak ' + r.status); return r.blob(); })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const au = new Audio(url);
+      au.onended = () => { URL.revokeObjectURL(url); done(); };
+      au.onerror = () => { URL.revokeObjectURL(url); done(); };
+      au.play().catch(() => { URL.revokeObjectURL(url); fallback(); });
+    })
+    .catch(fallback);
+}
+$('btnSpeak').addEventListener('click', () => {
+  audio();
+  speakOn = !speakOn;
+  try { localStorage.setItem('nlo_speak_code', ($('speakCode').value || '').trim()); } catch(e){}
+  $('btnSpeak').textContent = speakOn ? '🔊 အသံဖတ်: ဖွင့်' : '🔊 အသံဖတ်: ပိတ်';
+  if (speakOn) speakSay('အသံဖတ် စပါပြီ', true);
+  else { speakQueue.length = 0; try { speechSynthesis.cancel(); } catch(e){} }
+});
+
+function connectLive(useRelay){
+  const user = ($('eulerUser').value.trim() || 'old.burma.com').replace(/^@/, '');
+  const key = $('eulerKey').value.trim();
+  liveViaRelay = !!useRelay;
+  if (!liveViaRelay && !key) { setLive(false, 'API Key အရင် ထည့်ပါ (သို့မဟုတ် Backup server ခလုတ်ကို သုံးပါ)'); return; }
+  try { localStorage.setItem('nlo_euler', JSON.stringify([user, key])); localStorage.setItem('nlo_live_route', liveViaRelay ? 'relay' : 'direct'); } catch(e){}
+  try { if (liveWs) { liveWs.onclose = null; liveWs.close(); } } catch(e){}
+  clearTimeout(liveRetry);
+  liveWanted = true;
+  setLive(false, liveViaRelay ? 'Backup server နဲ့ ချိတ်နေပါတယ်… (server နိုးချိန် ကြာနိုင်ပါတယ်)' : 'ချိတ်နေပါတယ်…');
+  let sock;
+  try { sock = new WebSocket(liveViaRelay
+      ? 'wss://burmese-voice-tts.onrender.com/api/live/ws?username=' + encodeURIComponent(user)
+      : 'wss://ws.eulerstream.com?uniqueId=' + encodeURIComponent(user) + '&apiKey=' + encodeURIComponent(key)); }
+  catch(e){ setLive(false, 'ချိတ်မရပါ — ' + e.message); return; }
+  liveWs = sock;
+  sock.onopen = () => setLive(true, (liveViaRelay ? 'Backup server ကနေ ချိတ်ပြီးပြီ' : 'ချိတ်ပြီးပြီ') + ' — LIVE စတာနဲ့ gift ဝင်လာပါမယ်');
+  sock.onmessage = e => { if (typeof e.data === 'string') handleLiveFrame(e.data); };
+  sock.onerror = () => { try { sock.close(); } catch(e){} };
+  sock.onclose = e => {
+    if (!liveWanted) { setLive(false, 'ပိတ်ထားပါတယ်'); return; }
+    let msg = LIVE_CLOSE[e.code] || ('ပြတ်သွားပါတယ် (code ' + e.code + ') — ပြန်ချိတ်နေပါတယ်…');
+    if (e.code === 4401 && liveViaRelay) msg = 'Server က key ကို Euler က ငြင်းပါတယ် — Nelo ကို ပြောပါ';
+    if (e.code === 4401) { liveWanted = false; setLive(false, msg); return; }
+    setLive(false, msg);
+    liveRetry = setTimeout(() => connectLive(liveViaRelay), e.code === 4404 ? 20000 : 6000);
+  };
+}
+function stopLive(){
+  liveWanted = false; clearTimeout(liveRetry);
+  try { localStorage.removeItem('nlo_live_route'); } catch(e){}
+  try { if (liveWs) { liveWs.onclose = null; liveWs.close(); } } catch(e){}
+  setLive(false, 'ပိတ်ထားပါတယ်');
+}
+$('btnLive').addEventListener('click', () => {
+  audio();
+  if (liveWanted && !liveViaRelay) stopLive(); else connectLive(false);
+});
+$('btnRelay').addEventListener('click', () => {
+  audio();
+  if (liveWanted && liveViaRelay) stopLive(); else connectLive(true);
+});
+
+/* ================= DEMO CROWD ================= */
+const FAKE = ['မောင်မောင်','ဇော်လင်း','အောင်သူ','ကျော်စွာ','သူရဇော်','နှင်းဝေ','မေသူ','စုစု','သီဟ','နေလင်း','မျိုးမင်း','ခင်မောင်','ဝင်းနိုင်','တင်မောင်','အေးအေး','ဖြိုးဖြိုး','လှလှ','စန်းစန်း','ရဲရဲ','သက်ထား','ထက်ထက်','ငြိမ်း','သန့်ဇင်','ပိုင်ပိုင်'];
+const GIFTS = [ ['Rose',1],['Rose',1],['TikTok',1],['Heart',5],['Finger Heart',5],['Ice Cream',10],['Perfume',20],['Galaxy',100],['Lion',299] ];
+let simN = 0;
+function simName(){ return FAKE[simN++ % FAKE.length] + (simN > FAKE.length ? ' ' + Math.ceil(simN / FAKE.length) : ''); }
+let demoTimer = null;
+$('demoToggle').addEventListener('change', e => {
+  clearInterval(demoTimer); demoTimer = null;
+  if (e.target.checked) {
+    feed('🤖 Demo လူအုပ် ဖွင့်ထားပါတယ်');
+    demoTimer = setInterval(() => { if (G.current && G.current.demoTick) G.current.demoTick(); }, 2100);
+  } else feed('🤖 Demo လူအုပ် ပိတ်ထားပါတယ်');
+});
+$('soundToggle').addEventListener('change', e => { soundOn = e.target.checked; if (soundOn) audio(); });
+document.addEventListener('pointerdown', () => audio(), { once: true });
+
+/* ================= HUB / GAME SWITCHING ================= */
+const GAMES = {};
+function buildHub(){
+  for (const id of Object.keys(GAMES)) {
+    const g = GAMES[id];
+    const grid = $(g.cat === 'race' ? 'gridRace' : 'gridTeams');
+    const card = document.createElement('div');
+    card.className = 'gameCard';
+    card.innerHTML = '<canvas width="360" height="640"></canvas><div class="gcBody"><div class="gcName"></div><div class="gcDesc"></div><span class="gcTag"></span></div>';
+    card.querySelector('.gcName').textContent = g.title;
+    card.querySelector('.gcDesc').textContent = g.desc;
+    card.querySelector('.gcTag').textContent = g.tag;
+    card.addEventListener('click', () => { audio(); openGame(id); });
+    grid.appendChild(card);
+    g._thumb = card.querySelector('canvas');
+  }
+  // render thumbnails after first paint
+  setTimeout(() => {
+    for (const id of Object.keys(GAMES)) {
+      const g = GAMES[id], tc = g._thumb.getContext('2d');
+      tc.save(); tc.scale(360 / W, 640 / H);
+      try { g.draw(tc, 1.4); } catch(e){}
+      tc.restore();
+    }
+  }, 60);
+}
+function openGame(id){
+  const g = GAMES[id]; if (!g) return;
+  G.current = g;
+  $('hub').classList.add('hidden');
+  $('gameScreen').classList.remove('hidden');
+  $('nowPlaying').textContent = g.title;
+  $('teamsHud').classList.toggle('hidden', g.hud !== 'teams');
+  $('horseHud').classList.toggle('hidden', g.hud !== 'horse');
+  const ht = $('howtoTable');
+  ht.innerHTML = '';
+  for (const row of g.howto) {
+    const tr = document.createElement('tr');
+    const a = document.createElement('td'); a.innerHTML = row[0];
+    const b = document.createElement('td'); b.textContent = row[1];
+    tr.appendChild(a); tr.appendChild(b); ht.appendChild(tr);
+  }
+  const sr = $('simRow'); sr.innerHTML = '';
+  for (const s of g.sim) {
+    const b = document.createElement('button');
+    b.className = s.cls || 'ghost'; b.textContent = s.label;
+    b.addEventListener('click', () => { audio(); s.fn(); });
+    sr.appendChild(b);
+  }
+  if (g.enter) g.enter();
+  window.scrollTo(0, 0);
+  feed('🎮 ' + g.title + ' ဖွင့်ထားပါတယ်');
+}
+function closeGame(){
+  G.current = null;
+  document.body.classList.remove('output');
+  $('gameScreen').classList.add('hidden');
+  $('hub').classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+$('btnBack').addEventListener('click', closeGame);
+$('btnResetGame').addEventListener('click', () => { if (G.current && G.current.resetAll) G.current.resetAll(); });
+function setOutput(on){
+  document.body.classList.toggle('output', on);
+  if (on) { audio(); const el = document.documentElement; if (el.requestFullscreen) el.requestFullscreen().catch(()=>{}); }
+  else if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+}
+$('btnOutput').addEventListener('click', () => setOutput(true));
+$('exitOutput').addEventListener('click', () => setOutput(false));
+
+/* ================= MAIN LOOP + HUD SYNC ================= */
+let lastT = performance.now(), hudTick = 0;
+function step(now){
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  const g = G.current;
+  if (g && !$('gameScreen').classList.contains('hidden')) {
+    if (g.update) g.update(dt);
+    FX.update(dt);
+    g.draw(mainCtx, now / 1000);
+    FX.draw(mainCtx);
+    if (++hudTick % 6 === 0) syncHud(g);
+  }
+  requestAnimationFrame(step);
+}
+function syncHud(g){
+  if (g.hud === 'teams' && g.getHud) {
+    const h = g.getHud();
+    $('redName').textContent = '🔴 ' + h.redName;
+    $('blueName').textContent = h.blueName + ' 🔵';
+    $('redMembers').textContent = h.redMembers;
+    $('blueMembers').textContent = h.blueMembers;
+    $('redCoins').textContent = h.redCoins;
+    $('blueCoins').textContent = h.blueCoins;
+    $('redPower').style.width = clamp(h.redPower * 100, 0, 100) + '%';
+    $('bluePower').style.width = clamp(h.bluePower * 100, 0, 100) + '%';
+    $('timer').textContent = h.timerText;
+    $('redWins').textContent = h.redWins;
+    $('blueWins').textContent = h.blueWins;
+    $('roundNo').textContent = h.round;
+  }
+  if (g.hud === 'horse' && g.syncHorseHud) g.syncHorseHud();
+}
+/* ================= GAME: ကြိုးဆွဲပြိုင်ပွဲ ================= */
+GAMES.tug = (() => {
+  const S = {
+    match: makeMatch('အနီအသင်း', 'အပြာအသင်း'),
+    p: 0, pullAnim: 0, likeAcc: { red: 0, blue: 0 }, lastWinner: null
+  };
+  const M = S.match;
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('tow_names') || 'null'); } catch(e){}
+  if (saved) { M.red.name = saved[0]; M.blue.name = saved[1]; }
+
+  function endRound(winnerKey, byTimeout){
+    const Wm = M[winnerKey], Lm = M[otherKey(winnerKey)];
+    Wm.wins++; M.phase = 'ended'; M.phaseT = 4.2;
+    banner('🏆 ' + Wm.name + ' နိုင်ပါတယ်!', (byTimeout ? 'အချိန်ကုန် — ရှေ့ရောက်နေလို့ အနိုင်ရ' : 'ကြိုးအမှတ် ဖြတ်ကျော်ပြီး အနိုင်ရ') + ' · ပွဲစဉ် ' + M.round, 3800);
+    feed('🏆 ပွဲစဉ် ' + M.round + ' — ' + Wm.name + ' နိုင် (စုစုပေါင်း ' + Wm.wins + ' — ' + Lm.wins + ')');
+    FX.spawn(Wm.color);
+    sndWin();
+  }
+  function newRound(){
+    M.round++; M.phase = 'play'; M.timeLeft = 90;
+    S.p = 0; S.likeAcc = { red: 0, blue: 0 };
+    M.red.force = M.blue.force = 0;
+    feed('🔔 ပွဲစဉ် ' + M.round + ' စပါပြီ — မန့် ၁ / ၂ နဲ့ အသင်းဝင်ပါ');
+    ticker('ပွဲစဉ် ' + M.round + ' စပြီ! ၁ = အနီ · ၂ = အပြာ');
+  }
+  function doComment(name, text){
+    const tk = commentTeam(M, name, text);
+    if (tk && M.phase === 'play') { M[tk].force = clamp(M[tk].force + 1.4, -6, 26); S.pullAnim = 1; }
+  }
+  function doGift(name, giftName, count, coins){
+    if (M.phase !== 'play') return;
+    const tk = giftTeam(M, name, giftName, count, coins);
+    const T = M[tk];
+    const power = Math.min(34, 5 + coins * 0.55) * Math.sqrt(count);
+    T.force = clamp(T.force + power, -6, 34);
+    S.pullAnim = 1;
+    banner('🎁 ' + name, giftName + ' ×' + count + ' → ' + T.name + ' အားတက်!', 1500);
+    ticker('🎁 ' + name + ' — ' + giftName + ' ×' + count + ' → ' + T.name);
+    feed('🎁 ' + name + ' — ' + giftName + ' ×' + count + ' (' + (coins*count) + ' coins) → ' + T.name);
+    FX.floater(tk === 'red' ? 300 : 780, 700, '+' + Math.round(power), T.color);
+    sndGift();
+  }
+  function doLike(name, count){
+    if (M.phase !== 'play') return;
+    const tk = teamOf(M, name);
+    const target = tk || (S.p > 0 ? 'blue' : 'red');
+    S.likeAcc[target] += count;
+    while (S.likeAcc[target] >= 10) { S.likeAcc[target] -= 10; M[target].force = clamp(M[target].force + 2.2, -6, 26); }
+  }
+  function update(dt){
+    for (const k of ['red','blue']) { M[k].force *= Math.pow(0.45, dt); M[k].heave = Math.max(0, (M[k].heave || 0) - dt * 2); }
+    if (M.phase === 'play') {
+      const diff = M.red.force - M.blue.force;
+      S.p += diff * dt * 1.55;
+      S.p = clamp(S.p, -100, 100);
+      if (Math.abs(diff) > 2.5) S.pullAnim = Math.max(0, S.pullAnim - dt * 1.4); else S.pullAnim = Math.max(0, S.pullAnim - dt * 3);
+      M.timeLeft -= dt;
+      if (S.p >= 88) endRound('red');
+      else if (S.p <= -88) endRound('blue');
+      else if (M.timeLeft <= 0) endRound(S.p > 0 ? 'red' : 'blue', true);
+    } else {
+      M.phaseT -= dt;
+      if (M.phaseT <= 0) newRound();
+    }
+  }
+  /* ----- drawing ----- */
+  function rr(c, x, y, w, h, r){ c.beginPath(); c.roundRect(x, y, w, h, r); }
+  function drawFigure(c, x, y, s, color, dark, lean, bob, hat){
+    c.save(); c.translate(x, y + bob); c.rotate(lean);
+    c.strokeStyle = 'rgba(40,30,20,.35)'; c.lineWidth = 7*s;
+    c.beginPath(); c.ellipse(0, 8*s, 30*s, 8*s, 0, 0, 6.3); c.fillStyle = 'rgba(40,30,20,.22)'; c.fill();
+    c.lineCap = 'round';
+    c.strokeStyle = '#37474f'; c.lineWidth = 11*s;
+    c.beginPath(); c.moveTo(0, -38*s); c.lineTo(-20*s, 2*s); c.moveTo(0, -38*s); c.lineTo(22*s, 2*s); c.stroke();
+    c.strokeStyle = color; c.lineWidth = 15*s;
+    c.beginPath(); c.moveTo(0, -82*s); c.lineTo(0, -36*s); c.stroke();
+    c.strokeStyle = color; c.lineWidth = 9*s;
+    c.beginPath(); c.moveTo(0, -74*s); c.lineTo(30*s, -62*s); c.stroke();
+    c.fillStyle = '#f1c27d';
+    c.beginPath(); c.arc(0, -102*s, 17*s, 0, 6.3); c.fill();
+    c.fillStyle = dark;
+    c.beginPath(); c.arc(0, -110*s, 17.5*s, 3.4, 6.0); c.fill();
+    if (hat) { c.fillStyle = hat; c.fillRect(-19*s, -116*s, 38*s, 7*s); }
+    c.restore();
+  }
+  function nameTag(c, x, y, name, color){
+    c.font = '700 25px sans-serif';
+    const w = c.measureText(name).width + 22;
+    c.fillStyle = 'rgba(10,10,22,.68)';
+    rr(c, x - w/2, y - 20, w, 40, 20); c.fill();
+    c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(name, x, y + 2);
+  }
+  function draw(c, t){
+    const sky = c.createLinearGradient(0, 0, 0, 760);
+    sky.addColorStop(0, '#6fa8e8'); sky.addColorStop(1, '#a8cdf2');
+    c.fillStyle = sky; c.fillRect(0, 0, W, 780);
+    c.fillStyle = 'rgba(255,255,255,.92)';
+    for (const [cx, cy, s] of [[180,240,1],[820,180,.8],[560,320,.6],[940,380,.55]]) {
+      c.beginPath();
+      c.ellipse(cx + Math.sin(t*.1 + cx)*8, cy, 95*s, 34*s, 0, 0, 6.3);
+      c.ellipse(cx + 55*s, cy + 8*s, 70*s, 27*s, 0, 0, 6.3);
+      c.ellipse(cx - 60*s, cy + 10*s, 60*s, 23*s, 0, 0, 6.3);
+      c.fill();
+    }
+    c.fillStyle = '#7cc47f';
+    c.beginPath(); c.ellipse(180, 800, 560, 130, 0, 3.14, 6.3); c.fill();
+    c.beginPath(); c.ellipse(950, 810, 520, 120, 0, 3.14, 6.3); c.fill();
+    c.fillStyle = '#26304d'; c.fillRect(0, 130, W, 300);
+    c.fillStyle = 'rgba(255,255,255,.07)'; c.fillRect(0, 130, W, 8); c.fillRect(0, 275, W, 8); c.fillRect(0, 420, W, 8);
+    const dotCols = ['#ff8a80','#ffd180','#ffff8d','#ccff90','#a7ffeb','#82b1ff','#ff80ab'];
+    for (let rI = 0; rI < 3; rI++) for (let i = 0; i < 26; i++) {
+      const x = 28 + i * 41, y = 182 + rI * 108;
+      c.fillStyle = dotCols[(i + rI * 3) % 7];
+      c.beginPath(); c.arc(x, y + Math.sin(t * 3 + i * .8 + rI) * 4, 13, 0, 6.3); c.fill();
+      c.fillStyle = 'rgba(241,194,125,.95)';
+      c.beginPath(); c.arc(x, y - 17 + Math.sin(t * 3 + i * .8 + rI) * 4, 8.5, 0, 6.3); c.fill();
+    }
+    const grd = c.createLinearGradient(0, 120, 0, 210);
+    grd.addColorStop(0, '#ffe082'); grd.addColorStop(1, '#ffb300');
+    c.fillStyle = grd; rr(c, 300, 128, 480, 82, 16); c.fill();
+    c.strokeStyle = '#8d6e00'; c.lineWidth = 3; c.stroke();
+    c.fillStyle = '#4e342e'; c.font = '800 44px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('ကြိုးဆွဲ ပြိုင်ပွဲ', 540, 171);
+    const sand = c.createLinearGradient(0, 740, 0, H);
+    sand.addColorStop(0, '#dcb87f'); sand.addColorStop(1, '#c9a35f');
+    c.fillStyle = sand; c.fillRect(0, 740, W, H - 740);
+    c.fillStyle = 'rgba(120,85,30,.18)';
+    for (let i = 0; i < 130; i++) { const x = (i * 173) % W, y = 780 + (i * 389) % 1080; c.fillRect(x, y, 5, 5); }
+    c.fillStyle = '#8d6e63';
+    c.beginPath(); c.ellipse(540, 1330, 130, 34, 0, 0, 6.3); c.fill();
+    c.fillStyle = '#6d4c41';
+    c.beginPath(); c.ellipse(540, 1324, 95, 24, 0, 0, 6.3); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 5; c.setLineDash([22, 18]);
+    c.beginPath(); c.moveTo(540, 780); c.lineTo(540, 1700); c.stroke(); c.setLineDash([]);
+    c.lineWidth = 9;
+    c.strokeStyle = '#ff5a5a'; c.beginPath(); c.moveTo(150, 800); c.lineTo(150, 1690); c.stroke();
+    c.strokeStyle = '#5aa2ff'; c.beginPath(); c.moveTo(930, 800); c.lineTo(930, 1690); c.stroke();
+    const cx = 540 + S.p * 3.9;
+    const heave = Math.sin(t * 7) * (2 + S.pullAnim * 7);
+    const leanR = -0.20 - S.pullAnim * .10 - Math.max(0, M.red.force - M.blue.force) * .004;
+    const leanB =  0.20 + S.pullAnim * .10 + Math.max(0, M.blue.force - M.red.force) * .004;
+    c.strokeStyle = '#8d6e00'; c.lineWidth = 13; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(cx - 400, 1085 + heave * .4); c.lineTo(cx + 400, 1085 - heave * .4); c.stroke();
+    c.fillStyle = '#ffd740';
+    c.beginPath(); c.moveTo(cx, 1050); c.lineTo(cx + 34, 1085); c.lineTo(cx, 1120); c.closePath(); c.fill();
+    c.strokeStyle = '#8d6e00'; c.lineWidth = 3; c.stroke();
+    const redNames  = [...M.red.members.keys()].slice(-5);
+    const blueNames = [...M.blue.members.keys()].slice(-5);
+    for (let i = 4; i >= 0; i--) {
+      const x = cx - 120 - i * 68, bob = Math.sin(t * 7 + i) * (1.5 + S.pullAnim * 3.5);
+      drawFigure(c, x, 1150, 1.06, '#e53935', '#7f0000', leanR, bob, '#ffd740');
+      if (redNames[i]) nameTag(c, x, 950, redNames[i], '#ff9d9d');
+    }
+    for (let i = 0; i < 5; i++) {
+      const x = cx + 120 + i * 68, bob = Math.sin(t * 7 + i + 2) * (1.5 + S.pullAnim * 3.5);
+      drawFigure(c, x, 1150, 1.06, '#1e6fe0', '#0d2a57', leanB, bob, '#ffffff');
+      if (blueNames[i]) nameTag(c, x, 950, blueNames[i], '#a9ccff');
+    }
+    c.font = '800 34px sans-serif'; c.textAlign = 'center';
+    c.fillStyle = '#c62828'; c.fillText(M.red.name, 150, 1750);
+    c.fillStyle = '#1565c0'; c.fillText(M.blue.name, 930, 1750);
+    if (M.phase === 'ended') {
+      c.fillStyle = 'rgba(10,10,25,.35)'; c.fillRect(0, 0, W, H);
+    }
+  }
+  return {
+    title: 'ကြိုးဆွဲပြိုင်ပွဲ', cat: 'teams', hud: 'teams',
+    desc: 'အနီ vs အပြာ — မန့် ၁/၂ နဲ့ ဝင်ပြီး gift နဲ့ အားဖြည့်ဆွဲပါ',
+    tag: 'အသင်း ၂ ဖွဲ့ · ၉၀ စက္ကန့်',
+    howto: [
+      ['မန့် <b>၁</b>', 'အနီအသင်း ဝင်မယ်'],
+      ['မန့် <b>၂</b>', 'အပြာအသင်း ဝင်မယ်'],
+      ['🎁 Gift ပို့ပါ', 'ကိုယ့်အသင်း အားပြင်းပြင်း ဆွဲမယ်'],
+      ['❤️ Like နှိပ်ပါ', '၁၀ ခါပြည့်ရင် နောက်ကျနေတဲ့အသင်း အားရမယ်']
+    ],
+    sim: [
+      { label: '🎁 အနီ Galaxy', cls: 'red',  fn: () => doGift(simName(), 'Galaxy', 1, 100) },
+      { label: '🎁 အပြာ Lion',  cls: 'blue', fn: () => doGift(simName(), 'Lion', 1, 299) },
+      { label: 'မန့် ၁', fn: () => doComment(simName(), '၁') },
+      { label: 'မန့် ၂', fn: () => doComment(simName(), '၂') },
+      { label: '❤️ Like ×25', fn: () => doLike('စမ်းသူ', 25) }
+    ],
+    onComment: doComment, onGift: doGift, onLike: doLike,
+    demoTick(){
+      const r = Math.random();
+      if (r < .45) doComment(simName(), Math.random() < .5 ? '၁' : '၂');
+      else if (r < .72) { const g = pick(GIFTS); doGift(simName(), g[0], 1 + Math.floor(Math.random() * 3), g[1]); }
+      else doLike(simName(), 5 + Math.floor(Math.random() * 15));
+    },
+    getHud(){
+      const total = Math.abs(M.red.force) + Math.abs(M.blue.force) + 8;
+      return { redName: M.red.name, blueName: M.blue.name,
+        redMembers: M.red.members.size, blueMembers: M.blue.members.size,
+        redCoins: M.red.coins, blueCoins: M.blue.coins,
+        redPower: M.red.force / total + .18, bluePower: M.blue.force / total + .18,
+        timerText: M.phase === 'play' ? fmt(M.timeLeft) : 'ခဏစောင့်',
+        redWins: M.red.wins, blueWins: M.blue.wins, round: M.round };
+    },
+    resetAll(){ M.red.wins = M.blue.wins = 0; M.red.coins = M.blue.coins = 0; M.red.members.clear(); M.blue.members.clear(); M.round = 0; newRound(); },
+    update, draw
+  };
+})();
+/* ================= GAME: မြင်းပြိုင်ပွဲ ================= */
+GAMES.horse = (() => {
+  const DEFS = [
+    { name: 'ရွှေနီ',   color: '#e53935', body: '#a1887f', dark: '#6d4c41' },
+    { name: 'မြစိမ်း',  color: '#43a047', body: '#8d6e63', dark: '#4e342e' },
+    { name: 'လေပြေ',   color: '#1e6fe0', body: '#bcaaa4', dark: '#5d4037' },
+    { name: 'မီးတောက်', color: '#fb8c00', body: '#795548', dark: '#3e2723' }
+  ];
+  const S = { race: 1, phase: 'play', phaseT: 0, likeAcc: 0,
+    horses: DEFS.map((d, i) => ({ ...d, idx: i, prog: 0, boostT: 0, boostPow: 0, seed: i * 1.7 + 1, supporters: new Map(), wins: 0, gallop: Math.random() * 6 })) };
+  function horseOf(name){ for (const h of S.horses) if (h.supporters.has(name)) return h; return null; }
+  function joinHorse(name, h, silent){
+    if (!h.supporters.has(name)) {
+      h.supporters.set(name, { gifts: 0 });
+      if (!silent) { feed('🐎 ' + name + ' → ' + h.name + ' ကို အားပေးပါတယ်'); ticker(name + ' → ' + h.name + ' အားပေးသူ ဖြစ်ပြီ'); sndJoin(); }
+    }
+    return h;
+  }
+  function doComment(name, text){
+    const t = String(text || '').trim();
+    const num = { '1':0,'၁':0,'2':1,'၂':1,'3':2,'၃':2,'4':3,'၄':3 }[t];
+    let h = null;
+    if (num != null) h = S.horses[num];
+    else for (const cand of S.horses) if (t.includes(cand.name)) { h = cand; break; }
+    if (!h) return;
+    const isNew = !h.supporters.has(name);
+    joinHorse(name, h);
+    if (S.phase === 'play' && isNew) h.prog = Math.min(99, h.prog + 0.4);
+  }
+  function doGift(name, giftName, count, coins){
+    if (S.phase !== 'play') return;
+    let h = horseOf(name);
+    if (!h) { h = [...S.horses].sort((a, b) => a.supporters.size - b.supporters.size)[0]; joinHorse(name, h, true); feed('👋 ' + name + ' → ' + h.name + ' (gift နဲ့ အလိုအလျောက်)'); }
+    h.supporters.get(name).gifts += count;
+    const pow = clamp(0.55 + coins * 0.006, 0.55, 1.9) * Math.sqrt(count);
+    h.boostT = 2.4; h.boostPow = pow;
+    h.prog = Math.min(99.5, h.prog + count * 0.55);
+    banner('🎁 ' + name, giftName + ' ×' + count + ' → ' + h.name + ' အရှိန်တက်!', 1500);
+    ticker('🎁 ' + name + ' — ' + giftName + ' → ' + h.name + ' ပြေးအား တက်ပြီ');
+    feed('🎁 ' + name + ' — ' + giftName + ' ×' + count + ' (' + (coins * count) + ' coins) → ' + h.name);
+    FX.floater(165 + h.prog * 7.3, laneY(h.idx) - 130, 'အရှိန်!', h.color);
+    sndGift();
+  }
+  function doLike(name, count){
+    if (S.phase !== 'play') return;
+    S.likeAcc += count;
+    while (S.likeAcc >= 12) {
+      S.likeAcc -= 12;
+      const last = [...S.horses].sort((a, b) => a.prog - b.prog)[0];
+      last.prog = Math.min(99, last.prog + 0.9);
+    }
+  }
+  function laneY(i){ return 650 + i * 290; }
+  function endRace(h){
+    h.wins++; S.phase = 'ended'; S.phaseT = 5;
+    banner('🏆 ' + h.name + ' နိုင်ပါတယ်!', 'မြင်းပြိုင်ပွဲ အမှတ် ' + S.race + ' — အားပေးသူတွေ အနိုင်ရပြီ', 4000);
+    feed('🏆 မြင်းပြိုင်ပွဲ ' + S.race + ' — ' + h.name + ' နိုင် (စုစုပေါင်း အနိုင်ရ ' + h.wins + ' ကြိမ်)');
+    FX.spawn(h.color);
+    sndWin();
+  }
+  function newRace(){
+    S.race++; S.phase = 'play';
+    for (const h of S.horses) { h.prog = 0; h.boostT = 0; }
+    feed('🔔 မြင်းပြိုင်ပွဲ အမှတ် ' + S.race + ' စပါပြီ — မန့် ၁-၄ နဲ့ မြင်း ရွေးပါ');
+    ticker('မြင်းပြိုင်ပွဲ စပြီ! မန့် ၁-၄ နဲ့ မြင်း ရွေးချယ်ပါ');
+  }
+  function update(dt){
+    if (S.phase === 'play') {
+      const sorted = [...S.horses].sort((a, b) => b.prog - a.prog);
+      const lead = sorted[0].prog;
+      for (const h of S.horses) {
+        const jitter = 1 + Math.sin(performance.now() / 900 + h.seed * 3) * 0.16;
+        const rubber = 1 + clamp((lead - h.prog), 0, 30) * 0.006;
+        let sp = 1.5 * jitter * rubber;
+        if (h.boostT > 0) { h.boostT -= dt; sp *= (1 + h.boostPow); }
+        h.prog += sp * dt;
+        h.gallop += dt * (7 + sp * 3.4);
+        if (h.prog >= 100) { h.prog = 100; endRace(h); break; }
+      }
+    } else {
+      S.phaseT -= dt;
+      if (S.phaseT <= 0) newRace();
+    }
+  }
+  function drawHorse(c, x, y, s, h, t){
+    const ph = h.gallop;
+    const bob = Math.sin(ph * 2) * 4 * s;
+    c.save(); c.translate(x, y + bob);
+    if (h.boostT > 0) {
+      c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 5 * s; c.lineCap = 'round';
+      for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(-128 * s - i * 28 * s, (-30 + i * 28) * s); c.lineTo(-84 * s - i * 28 * s, (-30 + i * 28) * s); c.stroke(); }
+      c.fillStyle = 'rgba(160,120,80,.35)';
+      for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(-100 * s - i * 22 * s, 62 * s, (11 + i * 4) * s, 0, 6.3); c.fill(); }
+    }
+    c.fillStyle = 'rgba(30,40,20,.25)';
+    c.beginPath(); c.ellipse(0, 84 * s, 105 * s, 13 * s, 0, 0, 6.3); c.fill();
+    /* legs — two-segment gallop */
+    const bodyG = c.createLinearGradient(0, -55 * s, 0, 45 * s);
+    bodyG.addColorStop(0, h.body); bodyG.addColorStop(1, h.dark);
+    c.strokeStyle = h.dark; c.lineCap = 'round';
+    const legPairs = [ [58, Math.sin(ph)], [38, Math.sin(ph + 3.6)], [-58, Math.sin(ph + 3.14)], [-38, Math.sin(ph + 6.7)] ];
+    for (const [lx, sw] of legPairs) {
+      const kneeX = lx * s + sw * 20 * s, footX = lx * s + sw * 38 * s;
+      c.lineWidth = 12 * s;
+      c.beginPath(); c.moveTo(lx * s, 20 * s); c.lineTo(kneeX, 52 * s); c.lineTo(footX, 82 * s); c.stroke();
+      c.fillStyle = '#263238';
+      c.fillRect(footX - 8 * s, 78 * s, 17 * s, 8 * s);
+    }
+    /* tail */
+    c.strokeStyle = h.dark; c.lineWidth = 14 * s;
+    c.beginPath(); c.moveTo(-84 * s, -22 * s); c.quadraticCurveTo(-118 * s, -6 * s, -108 * s, 38 * s); c.stroke();
+    /* body */
+    c.fillStyle = bodyG;
+    c.beginPath(); c.ellipse(0, 0, 92 * s, 42 * s, 0, 0, 6.3); c.fill();
+    /* neck + head */
+    c.save(); c.translate(66 * s, -26 * s); c.rotate(0.62 + Math.sin(ph * 2) * 0.045);
+    c.fillStyle = bodyG;
+    c.beginPath(); c.roundRect(-14 * s, -58 * s, 40 * s, 74 * s, 16 * s); c.fill();
+    c.fillStyle = h.dark;
+    c.beginPath(); c.roundRect(-17 * s, -58 * s, 13 * s, 70 * s, 6 * s); c.fill();
+    c.save(); c.translate(10 * s, -52 * s); c.rotate(0.85);
+    c.fillStyle = bodyG;
+    c.beginPath(); c.ellipse(26 * s, 0, 34 * s, 15 * s, 0, 0, 6.3); c.fill();
+    c.fillStyle = h.dark;
+    c.beginPath(); c.moveTo(-2 * s, -10 * s); c.lineTo(4 * s, -30 * s); c.lineTo(13 * s, -9 * s); c.closePath(); c.fill();
+    c.fillStyle = '#14100c';
+    c.beginPath(); c.arc(14 * s, -3 * s, 4.2 * s, 0, 6.3); c.fill();
+    c.beginPath(); c.arc(52 * s, 3 * s, 3.6 * s, 0, 6.3); c.fill();
+    c.restore();
+    c.restore();
+    /* saddle blanket with number */
+    c.fillStyle = h.color;
+    c.beginPath(); c.roundRect(-36 * s, -30 * s, 64 * s, 44 * s, 9 * s); c.fill();
+    c.strokeStyle = '#fff'; c.lineWidth = 2.5 * s; c.stroke();
+    c.fillStyle = '#fff'; c.font = '800 ' + (26 * s) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(String(h.idx + 1), -4 * s, -7 * s);
+    /* rider — crouched jockey */
+    c.strokeStyle = '#37474f'; c.lineWidth = 9 * s;
+    c.beginPath(); c.moveTo(-8 * s, -34 * s); c.lineTo(-24 * s, -4 * s); c.moveTo(-8 * s, -34 * s); c.lineTo(16 * s, -8 * s); c.stroke();
+    c.strokeStyle = '#f1c27d'; c.lineWidth = 8 * s;
+    c.beginPath(); c.moveTo(2 * s, -58 * s); c.lineTo(38 * s, -34 * s); c.stroke();
+    c.strokeStyle = h.color; c.lineWidth = 13 * s;
+    c.beginPath(); c.moveTo(-16 * s, -44 * s); c.quadraticCurveTo(0, -66 * s, 8 * s, -56 * s); c.stroke();
+    c.fillStyle = '#f1c27d';
+    c.beginPath(); c.arc(12 * s, -64 * s, 13 * s, 0, 6.3); c.fill();
+    c.fillStyle = h.color;
+    c.beginPath(); c.arc(12 * s, -70 * s, 13 * s, 3.3, 6.1); c.fill();
+    c.fillStyle = '#fff';
+    c.beginPath(); c.roundRect(-1 * s, -76 * s, 26 * s, 6 * s, 3 * s); c.fill();
+    c.restore();
+  }
+  function draw(c, t){
+    const sky = c.createLinearGradient(0, 0, 0, 520);
+    sky.addColorStop(0, '#5b9bd5'); sky.addColorStop(1, '#a8cdf2');
+    c.fillStyle = sky; c.fillRect(0, 0, W, 520);
+    c.fillStyle = 'rgba(255,255,255,.85)';
+    for (const [cx, cy, s] of [[240,430,1],[800,400,.75]]) {
+      c.beginPath();
+      c.ellipse(cx, cy, 85 * s, 27 * s, 0, 0, 6.3);
+      c.ellipse(cx + 48 * s, cy + 6 * s, 58 * s, 20 * s, 0, 0, 6.3);
+      c.fill();
+    }
+    c.fillStyle = '#5d8f4e'; c.fillRect(0, 470, W, 60);
+    for (let i = 0; i < 4; i++) {
+      const y = laneY(i);
+      const laneG = c.createLinearGradient(0, y - 130, 0, y + 130);
+      laneG.addColorStop(0, i % 2 ? '#c9a35f' : '#d4af6e'); laneG.addColorStop(1, i % 2 ? '#bd9450' : '#c9a35f');
+      c.fillStyle = laneG; c.fillRect(0, y - 128, W, 256);
+      c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 5; c.setLineDash([26, 20]);
+      c.beginPath(); c.moveTo(60, y + 122); c.lineTo(1010, y + 122); c.stroke(); c.setLineDash([]);
+      for (let mI = 1; mI <= 3; mI++) {
+        c.fillStyle = 'rgba(255,255,255,.35)';
+        c.fillRect(60 + mI * 237, y - 120, 3, 110);
+      }
+      c.fillStyle = '#26304d'; c.fillRect(972, y - 128, 14, 256);
+      c.fillStyle = '#ffd740';
+      for (let fI = 0; fI < 6; fI++) c.fillRect(972, y - 128 + fI * 43, 14, 21);
+      const h = S.horses[i];
+      const hx = 165 + h.prog * 7.3;
+      drawHorse(c, hx, y + 4, 1.28, h, t);
+      c.font = '800 30px sans-serif'; c.textAlign = 'left'; c.textBaseline = 'middle';
+      const label = (i + 1) + ' · ' + h.name;
+      const lw = c.measureText(label).width + 26;
+      c.fillStyle = 'rgba(10,10,22,.66)';
+      c.beginPath(); c.roundRect(28, y - 118, lw, 46, 23); c.fill();
+      c.fillStyle = h.color; c.beginPath(); c.arc(52, y - 95, 9, 0, 6.3); c.fill();
+      c.fillStyle = '#fff'; c.fillText(label, 70, y - 94);
+      c.font = '700 27px sans-serif'; c.textAlign = 'right';
+      c.fillStyle = 'rgba(255,255,255,.92)';
+      c.fillText(Math.floor(h.prog) + '%', 950, y - 94);
+    }
+    c.fillStyle = '#4a7c3a'; c.fillRect(0, 1660, W, H - 1660);
+    c.fillStyle = 'rgba(255,255,255,.9)'; c.font = '700 30px sans-serif'; c.textAlign = 'center';
+    c.fillText('မန့် ၁ · ၂ · ၃ · ၄ နဲ့ မြင်း ရွေးပါ — gift ပို့ရင် ကိုယ့်မြင်း အရှိန်တက်မယ်', 540, 1855);
+    if (S.phase === 'ended') { c.fillStyle = 'rgba(10,10,25,.30)'; c.fillRect(0, 0, W, H); }
+  }
+  let hudRows = null;
+  return {
+    title: 'မြင်းပြိုင်ပွဲ', cat: 'race', hud: 'horse',
+    desc: 'မြင်း ၄ ကောင် အပြိုင် — မန့် ၁-၄ နဲ့ မြင်း ရွေးပြီး gift နဲ့ အရှိန်တင်',
+    tag: 'မြင်း ၄ ကောင် · အပြိုင်',
+    howto: [
+      ['မန့် <b>၁ / ၂ / ၃ / ၄</b>', 'နံပါတ်အလိုက် မြင်း ရွေးမယ်'],
+      ['🎁 Gift ပို့ပါ', 'ကိုယ့်မြင်း အရှိန် ပြင်းပြင်း တက်မယ်'],
+      ['❤️ Like နှိပ်ပါ', '၁၂ ခါပြည့်ရင် နောက်ဆုံးမြင်း အားရမယ်']
+    ],
+    sim: [
+      { label: '🎁 ၁ Galaxy', cls: 'red',   fn: () => { const n = simName(); joinHorse(n, S.horses[0], true); doGift(n, 'Galaxy', 1, 100); } },
+      { label: '🎁 ၂ Lion',   cls: 'blue',  fn: () => { const n = simName(); joinHorse(n, S.horses[1], true); doGift(n, 'Lion', 1, 299); } },
+      { label: '🎁 ၃ Rose×5', fn: () => { const n = simName(); joinHorse(n, S.horses[2], true); doGift(n, 'Rose', 5, 1); } },
+      { label: '🎁 ၄ Perfume', fn: () => { const n = simName(); joinHorse(n, S.horses[3], true); doGift(n, 'Perfume', 1, 20); } },
+      { label: 'မန့် ကျပန်း', fn: () => doComment(simName(), String(1 + Math.floor(Math.random() * 4))) },
+      { label: '❤️ Like ×24', fn: () => doLike('စမ်းသူ', 24) }
+    ],
+    onComment: doComment, onGift: doGift, onLike: doLike,
+    demoTick(){
+      const r = Math.random();
+      if (r < .45) doComment(simName(), String(1 + Math.floor(Math.random() * 4)));
+      else if (r < .72) { const g = pick(GIFTS); doGift(simName(), g[0], 1 + Math.floor(Math.random() * 2), g[1]); }
+      else doLike(simName(), 6 + Math.floor(Math.random() * 12));
+    },
+    enter(){
+      const box = $('horseHud'); box.innerHTML = ''; hudRows = [];
+      for (const h of S.horses) {
+        const row = document.createElement('div'); row.className = 'hRow';
+        row.innerHTML = '<span class="hDot"></span><span class="hName"></span><span class="hBar"><div class="hFill"></div></span><span class="hMeta"></span>';
+        row.querySelector('.hDot').style.background = h.color;
+        row.querySelector('.hName').textContent = h.name;
+        row.querySelector('.hFill').style.background = h.color;
+        box.appendChild(row);
+        hudRows.push({ fill: row.querySelector('.hFill'), meta: row.querySelector('.hMeta'), h });
+      }
+    },
+    syncHorseHud(){
+      if (!hudRows) return;
+      for (const r of hudRows) {
+        r.fill.style.width = clamp(r.h.prog, 0, 100) + '%';
+        r.meta.textContent = '👥 ' + r.h.supporters.size + ' · 🏆 ' + r.h.wins;
+      }
+    },
+    resetAll(){ for (const h of S.horses) { h.wins = 0; h.supporters.clear(); h.prog = 0; h.boostT = 0; } S.race = 0; newRace(); },
+    update, draw
+  };
+})();
+/* ================= GAME: လှေပြိုင်ပွဲ ================= */
+GAMES.boat = (() => {
+  const M = makeMatch('အနီလှေ', 'အပြာလှေ');
+  for (const k of ['red','blue']) { M[k].prog = 0; M[k].surgeT = 0; M[k].surgePow = 0; M[k].rowPh = Math.random() * 6; M[k].dispPow = .3; }
+  const S = { likeAcc: { red: 0, blue: 0 } };
+  function endRace(winnerKey, byTimeout){
+    const Wm = M[winnerKey], Lm = M[otherKey(winnerKey)];
+    Wm.wins++; M.phase = 'ended'; M.phaseT = 4.5;
+    banner('🏆 ' + Wm.name + ' နိုင်ပါတယ်!', (byTimeout ? 'အချိန်ကုန် — အရှေ့ဆုံး ရောက်နေလို့ အနိုင်ရ' : 'ပန်းတိုင် အရင် ဝင်လို့ အနိုင်ရ') + ' · ပွဲစဉ် ' + M.round, 3800);
+    feed('🏆 လှေပြိုင်ပွဲ ပွဲစဉ် ' + M.round + ' — ' + Wm.name + ' နိုင် (' + Wm.wins + ' — ' + Lm.wins + ')');
+    FX.spawn(Wm.color);
+    sndWin();
+  }
+  function newRace(){
+    M.round++; M.phase = 'play'; M.timeLeft = 90;
+    for (const k of ['red','blue']) { M[k].prog = 0; M[k].surgeT = 0; }
+    S.likeAcc = { red: 0, blue: 0 };
+    feed('🔔 လှေပြိုင်ပွဲ ပွဲစဉ် ' + M.round + ' စပါပြီ — မန့် ၁ / ၂ နဲ့ လှေပေါ် တက်ပါ');
+    ticker('လှေပြိုင်ပွဲ စပြီ! ၁ = အနီလှေ · ၂ = အပြာလှေ');
+  }
+  function doComment(name, text){
+    const tk = commentTeam(M, name, text);
+    if (tk && M.phase === 'play') M[tk].prog = Math.min(99, M[tk].prog + 0.3);
+  }
+  function doGift(name, giftName, count, coins){
+    if (M.phase !== 'play') return;
+    const tk = giftTeam(M, name, giftName, count, coins);
+    const T = M[tk];
+    T.surgeT = 2.4; T.surgePow = clamp(0.5 + coins * 0.005, 0.5, 1.7) * Math.sqrt(count);
+    T.prog = Math.min(99.5, T.prog + count * 0.5);
+    banner('🎁 ' + name, giftName + ' ×' + count + ' → ' + T.name + ' လှော်အား တက်!', 1500);
+    ticker('🎁 ' + name + ' — ' + giftName + ' → ' + T.name);
+    feed('🎁 ' + name + ' — ' + giftName + ' ×' + count + ' (' + (coins * count) + ' coins) → ' + T.name);
+    FX.floater(200 + T.prog * 7.4, laneY(tk) - 150, 'လှော်အား!', T.color);
+    sndGift();
+  }
+  function doLike(name, count){
+    if (M.phase !== 'play') return;
+    const tk = teamOf(M, name) || (M.red.prog <= M.blue.prog ? 'red' : 'blue');
+    S.likeAcc[tk] += count;
+    while (S.likeAcc[tk] >= 10) { S.likeAcc[tk] -= 10; M[tk].prog = Math.min(99, M[tk].prog + 0.8); }
+  }
+  function laneY(k){ return k === 'red' ? 760 : 1330; }
+  function update(dt){
+    if (M.phase === 'play') {
+      const lead = Math.max(M.red.prog, M.blue.prog);
+      for (const k of ['red','blue']) {
+        const T = M[k];
+        const jitter = 1 + Math.sin(performance.now() / 800 + (k === 'red' ? 1 : 4)) * 0.15;
+        const rubber = 1 + clamp(lead - T.prog, 0, 30) * 0.006;
+        let sp = 1.42 * jitter * rubber;
+        if (T.surgeT > 0) { T.surgeT -= dt; sp *= (1 + T.surgePow); }
+        T.prog += sp * dt;
+        T.rowPh += dt * (6 + sp * 3);
+        T.dispPow += ((T.surgeT > 0 ? .92 : .34) - T.dispPow) * dt * 4;
+        if (T.prog >= 100) { T.prog = 100; endRace(k); break; }
+      }
+      if (M.phase === 'play') {
+        M.timeLeft -= dt;
+        if (M.timeLeft <= 0) endRace(M.red.prog >= M.blue.prog ? 'red' : 'blue', true);
+      }
+    } else {
+      M.phaseT -= dt;
+      if (M.phaseT <= 0) newRace();
+    }
+  }
+  function drawBoat(c, x, y, s, T, t){
+    const ph = T.rowPh;
+    c.save(); c.translate(x, y + Math.sin(ph * .5) * 3 * s);
+    c.strokeStyle = 'rgba(255,255,255,.4)'; c.lineWidth = 4 * s; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(-190 * s, 34 * s); c.quadraticCurveTo(-60 * s, 48 * s, 90 * s, 36 * s); c.stroke();
+    if (T.surgeT > 0) {
+      c.fillStyle = 'rgba(255,255,255,.55)';
+      for (let i = 0; i < 5; i++) { c.beginPath(); c.arc((185 + i * 14) * s, (6 - (i % 3) * 9) * s, (5 + i * 1.6) * s, 0, 6.3); c.fill(); }
+    }
+    const hullG = c.createLinearGradient(0, -16 * s, 0, 40 * s);
+    hullG.addColorStop(0, T.color); hullG.addColorStop(1, T.dark);
+    c.fillStyle = hullG;
+    c.beginPath();
+    c.moveTo(-200 * s, -6 * s);
+    c.quadraticCurveTo(-214 * s, 26 * s, -160 * s, 34 * s);
+    c.lineTo(150 * s, 34 * s);
+    c.quadraticCurveTo(205 * s, 24 * s, 216 * s, -22 * s);
+    c.quadraticCurveTo(150 * s, 2 * s, 60 * s, -4 * s);
+    c.lineTo(-150 * s, -4 * s);
+    c.quadraticCurveTo(-185 * s, -4 * s, -200 * s, -6 * s);
+    c.fill();
+    c.fillStyle = '#ffd740'; c.fillRect(-196 * s, -10 * s, 396 * s, 6 * s);
+    for (let i = 0; i < 6; i++) {
+      const rx = (-140 + i * 48) * s;
+      const stroke = Math.sin(ph + i * .35);
+      c.strokeStyle = '#8d6e63'; c.lineWidth = 6 * s;
+      c.beginPath(); c.moveTo(rx + 8 * s, -12 * s); c.lineTo(rx + (30 + stroke * 15) * s, (16 + Math.abs(stroke) * 10) * s); c.stroke();
+      c.fillStyle = i % 2 ? '#ffffff' : T.color;
+      c.beginPath(); c.roundRect(rx - 11 * s, -34 * s, 22 * s, 26 * s, 7 * s); c.fill();
+      c.fillStyle = '#f1c27d';
+      c.beginPath(); c.arc(rx, -42 * s, 10.5 * s, 0, 6.3); c.fill();
+      c.fillStyle = T.dark;
+      c.beginPath(); c.arc(rx, -47 * s, 10.5 * s, 3.4, 6.0); c.fill();
+    }
+    c.fillStyle = T.color;
+    c.beginPath(); c.moveTo(196 * s, -64 * s); c.lineTo(196 * s, -22 * s); c.lineTo(168 * s, -43 * s); c.closePath(); c.fill();
+    c.fillStyle = '#f1c27d';
+    c.beginPath(); c.arc(168 * s, -34 * s, 11 * s, 0, 6.3); c.fill();
+    c.fillStyle = T.dark;
+    c.beginPath(); c.roundRect(156 * s, -38 * s, 24 * s, 24 * s, 6 * s); c.fill();
+    c.restore();
+  }
+  function draw(c, t){
+    const sky = c.createLinearGradient(0, 0, 0, 470);
+    sky.addColorStop(0, '#ffb74d'); sky.addColorStop(1, '#ffe0b2');
+    c.fillStyle = sky; c.fillRect(0, 0, W, 470);
+    c.fillStyle = '#fff59d';
+    c.beginPath(); c.arc(920, 130, 52, 0, 6.3); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.85)';
+    for (const [cx, cy, s] of [[200,150,1],[560,100,.7]]) {
+      c.beginPath();
+      c.ellipse(cx, cy, 85 * s, 28 * s, 0, 0, 6.3);
+      c.ellipse(cx + 48 * s, cy + 6 * s, 58 * s, 21 * s, 0, 0, 6.3);
+      c.fill();
+    }
+    c.fillStyle = '#5d7a52';
+    c.beginPath(); c.ellipse(140, 480, 420, 90, 0, 3.14, 6.3); c.fill();
+    c.beginPath(); c.ellipse(900, 485, 460, 80, 0, 3.14, 6.3); c.fill();
+    c.fillStyle = '#4a6741';
+    c.beginPath(); c.moveTo(520, 470); c.lineTo(545, 330); c.lineTo(560, 470); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(498, 395); c.lineTo(582, 395); c.lineTo(576, 372); c.lineTo(504, 372); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(506, 362); c.lineTo(574, 362); c.lineTo(568, 342); c.lineTo(512, 342); c.closePath(); c.fill();
+    c.fillStyle = '#ffd740';
+    c.beginPath(); c.arc(540, 322, 9, 0, 6.3); c.fill();
+    const grd = c.createLinearGradient(0, 120, 0, 205);
+    grd.addColorStop(0, '#ffe082'); grd.addColorStop(1, '#ffb300');
+    c.fillStyle = grd; c.beginPath(); c.roundRect(290, 120, 500, 85, 16); c.fill();
+    c.strokeStyle = '#8d6e00'; c.lineWidth = 3; c.stroke();
+    c.fillStyle = '#4e342e'; c.font = '800 44px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('လှေပြိုင်ပွဲ', 540, 165);
+    const wat = c.createLinearGradient(0, 470, 0, H);
+    wat.addColorStop(0, '#2e86ab'); wat.addColorStop(1, '#14506b');
+    c.fillStyle = wat; c.fillRect(0, 470, W, H - 470);
+    c.strokeStyle = 'rgba(255,255,255,.13)'; c.lineWidth = 3;
+    for (let i = 0; i < 26; i++) {
+      const y = 520 + i * 54, off = Math.sin(t * 1.4 + i * 2.1) * 22;
+      c.beginPath(); c.moveTo((i * 97) % 300 - 60 + off, y); c.lineTo((i * 97) % 300 + 90 + off, y); c.stroke();
+      c.beginPath(); c.moveTo(500 + (i * 131) % 320 + off, y + 22); c.lineTo(500 + (i * 131) % 320 + 100 + off, y + 22); c.stroke();
+    }
+    for (const k of ['red','blue']) {
+      const T = M[k], y = laneY(k);
+      c.strokeStyle = 'rgba(255,215,64,.5)'; c.lineWidth = 4; c.setLineDash([14, 16]);
+      c.beginPath(); c.moveTo(50, y - 105); c.lineTo(1010, y - 105); c.stroke();
+      c.beginPath(); c.moveTo(50, y + 105); c.lineTo(1010, y + 105); c.stroke(); c.setLineDash([]);
+      for (let bI = 0; bI < 5; bI++) {
+        c.fillStyle = bI % 2 ? '#ff5252' : '#ffffff';
+        c.beginPath(); c.arc(120 + bI * 210, y - 105 + Math.sin(t * 2 + bI) * 4, 9, 0, 6.3); c.fill();
+      }
+      c.fillStyle = '#26304d'; c.fillRect(978, y - 105, 12, 210);
+      c.fillStyle = '#ffd740';
+      for (let fI = 0; fI < 5; fI++) c.fillRect(978, y - 105 + fI * 42, 12, 21);
+      drawBoat(c, 215 + T.prog * 7.3, y, 1.04, T, t);
+      c.font = '800 31px sans-serif'; c.textAlign = 'left'; c.textBaseline = 'middle';
+      const label = T.name + ' · ' + Math.floor(T.prog) + '%';
+      const lw = c.measureText(label).width + 26;
+      c.fillStyle = 'rgba(8,20,30,.6)';
+      c.beginPath(); c.roundRect(28, y - 168, lw, 48, 24); c.fill();
+      c.fillStyle = '#fff'; c.fillText(label, 42, y - 143);
+      const names = [...T.members.keys()].slice(-3);
+      c.font = '600 24px sans-serif'; c.fillStyle = 'rgba(255,255,255,.85)';
+      c.fillText(names.join(' · '), 42, y + 148);
+    }
+    if (M.phase === 'ended') { c.fillStyle = 'rgba(8,15,25,.3)'; c.fillRect(0, 0, W, H); }
+  }
+  return {
+    title: 'လှေပြိုင်ပွဲ', cat: 'teams', hud: 'teams',
+    desc: 'အင်း​လေး ပုံစံ လှေပြိုင် — မန့် ၁/၂ နဲ့ လှေပေါ်တက်ပြီး gift နဲ့ လှော်အား ဖြည့်',
+    tag: 'အသင်း ၂ ဖွဲ့ · အပြိုင်',
+    howto: [
+      ['မန့် <b>၁</b>', 'အနီလှေပေါ် တက်မယ်'],
+      ['မန့် <b>၂</b>', 'အပြာလှေပေါ် တက်မယ်'],
+      ['🎁 Gift ပို့ပါ', 'ကိုယ့်လှေ လှော်အား ပြင်းပြင်း တက်မယ်'],
+      ['❤️ Like နှိပ်ပါ', '၁၀ ခါပြည့်ရင် ကိုယ့်လှေ ရှေ့တိုးမယ်']
+    ],
+    sim: [
+      { label: '🎁 အနီ Galaxy', cls: 'red',  fn: () => doGift(simName(), 'Galaxy', 1, 100) },
+      { label: '🎁 အပြာ Lion',  cls: 'blue', fn: () => doGift(simName(), 'Lion', 1, 299) },
+      { label: 'မန့် ၁', fn: () => doComment(simName(), '၁') },
+      { label: 'မန့် ၂', fn: () => doComment(simName(), '၂') },
+      { label: '❤️ Like ×20', fn: () => doLike('စမ်းသူ', 20) }
+    ],
+    onComment: doComment, onGift: doGift, onLike: doLike,
+    demoTick(){
+      const r = Math.random();
+      if (r < .45) doComment(simName(), Math.random() < .5 ? '၁' : '၂');
+      else if (r < .72) { const g = pick(GIFTS); doGift(simName(), g[0], 1 + Math.floor(Math.random() * 3), g[1]); }
+      else doLike(simName(), 5 + Math.floor(Math.random() * 15));
+    },
+    getHud(){
+      return { redName: M.red.name, blueName: M.blue.name,
+        redMembers: M.red.members.size, blueMembers: M.blue.members.size,
+        redCoins: M.red.coins, blueCoins: M.blue.coins,
+        redPower: M.red.dispPow, bluePower: M.blue.dispPow,
+        timerText: M.phase === 'play' ? fmt(M.timeLeft) : 'ခဏစောင့်',
+        redWins: M.red.wins, blueWins: M.blue.wins, round: M.round };
+    },
+    resetAll(){ M.red.wins = M.blue.wins = 0; M.red.coins = M.blue.coins = 0; M.red.members.clear(); M.blue.members.clear(); M.round = 0; newRace(); },
+    update, draw
+  };
+})();
+/* ================= GAME: ဘောလုံးတိုက် ================= */
+GAMES.ball = (() => {
+  const M = makeMatch('အနီအသင်း', 'အပြာအသင်း');
+  const S = { pos: 0, spin: 0, pulse: 0, likeAcc: { red: 0, blue: 0 }, kickPh: 0 };
+  function goal(scoredKey){
+    const T = M[scoredKey];
+    T.wins++; M.phase = 'goal'; M.phaseT = 3.6;
+    banner('⚽ GOAL!!!', T.name + ' ဂိုး ဝင်သွားပြီ — ' + M.red.wins + ' : ' + M.blue.wins, 3200);
+    feed('⚽ ' + T.name + ' ဂိုးဝင်! ရမှတ် ' + M.red.wins + ' : ' + M.blue.wins);
+    FX.spawn(T.color);
+    sndWin();
+  }
+  function endMatch(){
+    M.phase = 'ended'; M.phaseT = 5;
+    if (M.red.wins === M.blue.wins) banner('🤝 သရေကျပါတယ်!', 'ဂိုး ' + M.red.wins + ' : ' + M.blue.wins + ' — နောက်ပွဲ ထပ်ကြိုးစားပါ', 4000);
+    else {
+      const Wm = M.red.wins > M.blue.wins ? M.red : M.blue;
+      banner('🏆 ' + Wm.name + ' နိုင်ပါတယ်!', 'ပွဲပြီးရမှတ် ဂိုး ' + M.red.wins + ' : ' + M.blue.wins, 4000);
+      FX.spawn(Wm.color);
+    }
+    feed('🏁 ဘောလုံးတိုက် ပွဲစဉ် ' + M.round + ' ပြီးပါပြီ — ဂိုး ' + M.red.wins + ' : ' + M.blue.wins);
+    sndWin();
+  }
+  function kickoff(){ S.pos = 0; M.red.force = M.blue.force = 0; if (M.phase !== 'play') M.phase = 'play'; }
+  function newMatch(){
+    M.round++; M.phase = 'play'; M.timeLeft = 120;
+    M.red.wins = M.blue.wins = 0;
+    S.likeAcc = { red: 0, blue: 0 };
+    kickoff();
+    feed('🔔 ဘောလုံးတိုက် ပွဲစဉ် ' + M.round + ' စပါပြီ');
+    ticker('ဘောလုံးတိုက် စပြီ! ၁ = အနီ · ၂ = အပြာ');
+  }
+  function doComment(name, text){
+    const tk = commentTeam(M, name, text);
+    if (tk && M.phase === 'play') M[tk].force = clamp(M[tk].force + 1.5, -6, 26);
+  }
+  function doGift(name, giftName, count, coins){
+    if (M.phase !== 'play') return;
+    const tk = giftTeam(M, name, giftName, count, coins);
+    const T = M[tk];
+    const power = Math.min(34, 5 + coins * 0.55) * Math.sqrt(count);
+    T.force = clamp(T.force + power, -6, 34);
+    S.pos = clamp(S.pos + (tk === 'red' ? 1 : -1) * Math.min(11, 2 + coins * 0.045) * Math.sqrt(count), -99, 99);
+    S.pulse = 1;
+    banner('🎁 ' + name, giftName + ' ×' + count + ' → ' + T.name + ' ကန်အား တက်!', 1500);
+    ticker('🎁 ' + name + ' — ' + giftName + ' → ' + T.name + ' ကန်ချက်!');
+    feed('🎁 ' + name + ' — ' + giftName + ' ×' + count + ' (' + (coins * count) + ' coins) → ' + T.name);
+    sndKick(); sndGift();
+  }
+  function doLike(name, count){
+    if (M.phase !== 'play') return;
+    const tk = teamOf(M, name) || (S.pos > 0 ? 'blue' : 'red');
+    S.likeAcc[tk] += count;
+    while (S.likeAcc[tk] >= 10) { S.likeAcc[tk] -= 10; M[tk].force = clamp(M[tk].force + 2.2, -6, 26); }
+  }
+  function update(dt){
+    for (const k of ['red','blue']) M[k].force *= Math.pow(0.45, dt);
+    S.pulse = Math.max(0, S.pulse - dt * 2);
+    S.kickPh += dt * 9;
+    if (M.phase === 'play') {
+      const diff = M.red.force - M.blue.force;
+      S.pos += diff * dt * 1.5;
+      S.pos = clamp(S.pos, -100, 100);
+      S.spin += diff * dt * 2.2;
+      M.timeLeft -= dt;
+      if (S.pos >= 100) goal('red');
+      else if (S.pos <= -100) goal('blue');
+      else if (M.timeLeft <= 0) endMatch();
+    } else if (M.phase === 'goal') {
+      M.phaseT -= dt;
+      M.timeLeft -= dt;
+      if (M.phaseT <= 0) { if (M.timeLeft <= 0) endMatch(); else kickoff(); }
+    } else {
+      M.phaseT -= dt;
+      if (M.phaseT <= 0) newMatch();
+    }
+  }
+  function drawPlayer(c, x, y, s, color, dark, kick, flip){
+    c.save(); c.translate(x, y); if (flip) c.scale(-1, 1);
+    c.fillStyle = 'rgba(20,40,20,.25)';
+    c.beginPath(); c.ellipse(0, 46 * s, 30 * s, 8 * s, 0, 0, 6.3); c.fill();
+    c.strokeStyle = '#263238'; c.lineWidth = 10 * s; c.lineCap = 'round';
+    const sw = Math.sin(kick) * 16 * s;
+    c.beginPath();
+    c.moveTo(0, 8 * s); c.lineTo(-12 * s + sw * .4, 44 * s);
+    c.moveTo(0, 8 * s); c.lineTo(14 * s + sw, 40 * s);
+    c.stroke();
+    c.fillStyle = '#263238';
+    c.beginPath(); c.roundRect(-15 * s, -2 * s, 30 * s, 16 * s, 5 * s); c.fill();
+    c.fillStyle = color;
+    c.beginPath(); c.roundRect(-16 * s, -38 * s, 32 * s, 38 * s, 9 * s); c.fill();
+    c.strokeStyle = color; c.lineWidth = 8 * s;
+    c.beginPath(); c.moveTo(-14 * s, -30 * s); c.lineTo(-26 * s, -8 * s + Math.sin(kick * .8) * 5 * s); c.stroke();
+    c.fillStyle = '#f1c27d';
+    c.beginPath(); c.arc(0, -52 * s, 14.5 * s, 0, 6.3); c.fill();
+    c.fillStyle = dark;
+    c.beginPath(); c.arc(0, -58 * s, 14.5 * s, 3.4, 6.0); c.fill();
+    c.restore();
+  }
+  function draw(c, t){
+    const g0 = c.createLinearGradient(0, 0, 0, H);
+    g0.addColorStop(0, '#43a047'); g0.addColorStop(1, '#2e7d32');
+    c.fillStyle = g0; c.fillRect(0, 0, W, H);
+    for (let i = 0; i < 8; i++) { if (i % 2) continue; c.fillStyle = 'rgba(255,255,255,.05)'; c.fillRect(0, 300 + i * 195, W, 195); }
+    c.fillStyle = '#26304d'; c.fillRect(0, 0, W, 130);
+    const dotCols = ['#ff8a80','#ffd180','#ffff8d','#ccff90','#a7ffeb','#82b1ff','#ff80ab'];
+    for (let i = 0; i < 26; i++) {
+      c.fillStyle = dotCols[i % 7];
+      c.beginPath(); c.arc(28 + i * 41, 62 + Math.sin(t * 3 + i) * 3, 11, 0, 6.3); c.fill();
+    }
+    c.fillStyle = '#ffd740'; c.font = '800 40px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('ဘောလုံးတိုက်', 540, 182);
+    c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 5;
+    c.strokeRect(70, 250, 940, 1560);
+    c.beginPath(); c.moveTo(70, 1030); c.lineTo(1010, 1030); c.stroke();
+    c.beginPath(); c.arc(540, 1030, 130, 0, 6.3); c.stroke();
+    c.strokeRect(320, 250, 440, 150);
+    c.strokeRect(320, 1660, 440, 150);
+    c.fillStyle = 'rgba(255,255,255,.16)'; c.fillRect(380, 176, 320, 74);
+    c.fillStyle = 'rgba(255,255,255,.16)'; c.fillRect(380, 1810, 320, 74);
+    c.strokeStyle = '#fff'; c.lineWidth = 6;
+    c.strokeRect(380, 176, 320, 74); c.strokeRect(380, 1810, 320, 74);
+    c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 2;
+    for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(380 + i * 53, 176); c.lineTo(380 + i * 53, 250); c.stroke(); c.beginPath(); c.moveTo(380 + i * 53, 1810); c.lineTo(380 + i * 53, 1884); c.stroke(); }
+    const by = 1030 - S.pos * 7.55;
+    const bx = 540 + Math.sin(t * .8) * 26 + Math.sin(S.spin * 2) * 10;
+    const redNames = [...M.red.members.keys()].slice(-5);
+    const blueNames = [...M.blue.members.keys()].slice(-5);
+    for (let i = 0; i < 5; i++) {
+      const px = 300 + i * 120, py = by - 120 - Math.abs(i - 2) * 26;
+      drawPlayer(c, px, py, 1.0, '#1e6fe0', '#0d2a57', S.kickPh + i, true);
+      if (blueNames[i]) { c.font = '700 23px sans-serif'; c.textAlign = 'center'; c.fillStyle = 'rgba(10,10,22,.66)'; const w2 = c.measureText(blueNames[i]).width + 18; c.beginPath(); c.roundRect(px - w2/2, py - 108, w2, 36, 18); c.fill(); c.fillStyle = '#a9ccff'; c.fillText(blueNames[i], px, py - 89); }
+    }
+    for (let i = 0; i < 5; i++) {
+      const px = 300 + i * 120, py = by + 120 + Math.abs(i - 2) * 26;
+      drawPlayer(c, px, py, 1.0, '#e53935', '#7f0000', S.kickPh + i + 2, false);
+      if (redNames[i]) { c.font = '700 23px sans-serif'; c.textAlign = 'center'; c.fillStyle = 'rgba(10,10,22,.66)'; const w2 = c.measureText(redNames[i]).width + 18; c.beginPath(); c.roundRect(px - w2/2, py + 62, w2, 36, 18); c.fill(); c.fillStyle = '#ff9d9d'; c.fillText(redNames[i], px, py + 81); }
+    }
+    c.fillStyle = 'rgba(20,40,20,.3)';
+    c.beginPath(); c.ellipse(bx, by + 52, 46, 11, 0, 0, 6.3); c.fill();
+    const br = 46 * (1 + S.pulse * .12);
+    const ballG = c.createRadialGradient(bx - 14, by - 16, 6, bx, by, br);
+    ballG.addColorStop(0, '#ffffff'); ballG.addColorStop(1, '#cfd8dc');
+    c.fillStyle = ballG;
+    c.beginPath(); c.arc(bx, by, br, 0, 6.3); c.fill();
+    c.strokeStyle = '#37474f'; c.lineWidth = 2.5; c.stroke();
+    c.fillStyle = '#263238';
+    for (let i = 0; i < 5; i++) {
+      const a = S.spin + i * 1.2566;
+      c.beginPath(); c.arc(bx + Math.cos(a) * br * .62, by + Math.sin(a) * br * .62, br * .17, 0, 6.3); c.fill();
+    }
+    c.beginPath(); c.arc(bx, by, br * .2, 0, 6.3); c.fill();
+    if (M.phase !== 'play') { c.fillStyle = 'rgba(10,20,10,.3)'; c.fillRect(0, 0, W, H); }
+  }
+  return {
+    title: 'ဘောလုံးတိုက်', cat: 'teams', hud: 'teams',
+    desc: 'ဘောလုံးကို ဂိုးထဲ တွန်းထည့် — gift က ကန်အား အပြင်း',
+    tag: 'အသင်း ၂ ဖွဲ့ · ၂ မိနစ် ပွဲ',
+    howto: [
+      ['မန့် <b>၁</b>', 'အနီအသင်း ဝင်မယ် (အောက်ဂိုး ကာကွယ်၊ အပေါ်ဂိုး တိုက်)'],
+      ['မန့် <b>၂</b>', 'အပြာအသင်း ဝင်မယ်'],
+      ['🎁 Gift ပို့ပါ', 'ဘောလုံးကို ပြင်းပြင်း ကန်ထည့်မယ်'],
+      ['❤️ Like နှိပ်ပါ', '၁၀ ခါပြည့်ရင် ရှုံးနေတဲ့အသင်း အားရမယ်']
+    ],
+    sim: [
+      { label: '🎁 အနီ Galaxy', cls: 'red',  fn: () => doGift(simName(), 'Galaxy', 1, 100) },
+      { label: '🎁 အပြာ Lion',  cls: 'blue', fn: () => doGift(simName(), 'Lion', 1, 299) },
+      { label: 'မန့် ၁', fn: () => doComment(simName(), '၁') },
+      { label: 'မန့် ၂', fn: () => doComment(simName(), '၂') },
+      { label: '❤️ Like ×25', fn: () => doLike('စမ်းသူ', 25) }
+    ],
+    onComment: doComment, onGift: doGift, onLike: doLike,
+    demoTick(){
+      const r = Math.random();
+      if (r < .45) doComment(simName(), Math.random() < .5 ? '၁' : '၂');
+      else if (r < .72) { const g = pick(GIFTS); doGift(simName(), g[0], 1 + Math.floor(Math.random() * 3), g[1]); }
+      else doLike(simName(), 5 + Math.floor(Math.random() * 15));
+    },
+    getHud(){
+      const total = Math.abs(M.red.force) + Math.abs(M.blue.force) + 8;
+      return { redName: M.red.name, blueName: M.blue.name,
+        redMembers: M.red.members.size, blueMembers: M.blue.members.size,
+        redCoins: M.red.coins, blueCoins: M.blue.coins,
+        redPower: M.red.force / total + .18, bluePower: M.blue.force / total + .18,
+        timerText: M.phase === 'ended' ? 'ပွဲပြီး' : fmt(M.timeLeft),
+        redWins: M.red.wins, blueWins: M.blue.wins, round: M.round };
+    },
+    resetAll(){ M.red.coins = M.blue.coins = 0; M.red.members.clear(); M.blue.members.clear(); M.round = 0; newMatch(); },
+    update, draw
+  };
+})();
+
+/* ================= GAME: အုန်းသီးခွဲ ================= */
+GAMES.coconut = (() => {
+  const M = makeMatch('အနီအသင်း', 'အပြာအသင်း');
+  for (const k of ['red','blue']) { M[k].hp = 100; M[k].hitT = 0; M[k].splitT = 0; }
+  const S = { likeAcc: { red: 0, blue: 0 } };
+  function crackWin(winnerKey, byTimeout){
+    const Wm = M[winnerKey], Lm = M[otherKey(winnerKey)];
+    if (!byTimeout) { Wm.wins++; M[winnerKey].splitT = 1; }
+    M.phase = 'ended'; M.phaseT = 4.5;
+    banner('🏆 ' + Wm.name + ' နိုင်ပါတယ်!', byTimeout ? 'အချိန်ကုန် — အုန်းသီး ပိုကွဲနေလို့ အနိုင်ရ' : 'အုန်းသီး အရင် ကွဲသွားပြီ!', 3800);
+    feed('🏆 အုန်းသီးခွဲ ပွဲစဉ် ' + M.round + ' — ' + Wm.name + ' နိုင် (' + Wm.wins + ' — ' + Lm.wins + ')');
+    FX.spawn(Wm.color);
+    sndWin();
+  }
+  function newRound(){
+    M.round++; M.phase = 'play'; M.timeLeft = 90;
+    for (const k of ['red','blue']) { M[k].hp = 100; M[k].hitT = 0; M[k].splitT = 0; }
+    S.likeAcc = { red: 0, blue: 0 };
+    feed('🔔 အုန်းသီးခွဲ ပွဲစဉ် ' + M.round + ' စပါပြီ — ကိုယ့်အုန်းသီး အရင် ခွဲနိုင်အောင် gift ပို့ပါ');
+    ticker('အုန်းသီးခွဲ စပြီ! ၁ = အနီ · ၂ = အပြာ');
+  }
+  function hit(tk, dmg, label){
+    const T = M[tk];
+    if (M.phase !== 'play' || T.hp <= 0) return;
+    T.hp = Math.max(0, T.hp - dmg);
+    T.hitT = 1;
+    FX.floater(tk === 'red' ? 280 : 800, 830, label || ('-' + Math.round(dmg)), T.color);
+    if (T.hp <= 0) crackWin(tk, false);
+  }
+  function doComment(name, text){
+    const tk = commentTeam(M, name, text);
+    if (tk) hit(tk, 0.5);
+  }
+  function doGift(name, giftName, count, coins){
+    if (M.phase !== 'play') return;
+    const tk = giftTeam(M, name, giftName, count, coins);
+    const dmg = Math.min(30, 4 + coins * 0.09) * Math.sqrt(count);
+    banner('🎁 ' + name, giftName + ' ×' + count + ' → ' + M[tk].name + ' တူနဲ့ ရိုက်!', 1500);
+    ticker('🎁 ' + name + ' — ' + giftName + ' → ' + M[tk].name + ' အုန်းသီး ရိုက်ချက်');
+    feed('🎁 ' + name + ' — ' + giftName + ' ×' + count + ' (' + (coins * count) + ' coins) → ' + M[tk].name + ' (-' + Math.round(dmg) + ')');
+    hit(tk, dmg, '💥 -' + Math.round(dmg));
+    sndPop(); sndGift();
+  }
+  function doLike(name, count){
+    if (M.phase !== 'play') return;
+    const tk = teamOf(M, name) || (M.red.hp <= M.blue.hp ? 'red' : 'blue');
+    S.likeAcc[tk] += count;
+    while (S.likeAcc[tk] >= 10) { S.likeAcc[tk] -= 10; hit(tk, 0.7); }
+  }
+  function update(dt){
+    for (const k of ['red','blue']) {
+      M[k].hitT = Math.max(0, M[k].hitT - dt * 2.6);
+      if (M[k].splitT > 0) M[k].splitT = Math.min(1, M[k].splitT + dt * 1.4);
+    }
+    if (M.phase === 'play') {
+      M.timeLeft -= dt;
+      if (M.timeLeft <= 0) {
+        if (M.red.hp === M.blue.hp) {
+          M.phase = 'ended'; M.phaseT = 4.5;
+          banner('🤝 သရေကျပါတယ်!', 'အုန်းသီး နှစ်လုံးလုံး တူတူ ကွဲလုနီး', 3600);
+          feed('🤝 အုန်းသီးခွဲ ပွဲစဉ် ' + M.round + ' သရေ');
+        } else crackWin(M.red.hp < M.blue.hp ? 'red' : 'blue', true);
+      }
+    } else {
+      M.phaseT -= dt;
+      if (M.phaseT <= 0) newRound();
+    }
+  }
+  function crackLines(c, x, y, r, stage, seed){
+    if (stage <= 0) return;
+    c.strokeStyle = 'rgba(30,18,8,.75)'; c.lineWidth = 5; c.lineCap = 'round';
+    const lines = [
+      [[0,-.95],[.08,-.6],[-.06,-.3],[.1,0]],
+      [[.3,-.85],[.24,-.45],[.38,-.1],[.3,.3]],
+      [[-.35,-.8],[-.26,-.4],[-.4,-.05],[-.3,.35]],
+      [[.05,-.2],[.3,.1],[.55,.35]],
+      [[-.05,-.25],[-.3,.05],[-.52,.3]]
+    ];
+    const n = [0, 2, 3, 5][stage] || 0;
+    for (let i = 0; i < n; i++) {
+      const pts = lines[(i + seed) % lines.length];
+      c.beginPath();
+      pts.forEach((p, j) => { const px = x + p[0] * r, py = y + p[1] * r; j ? c.lineTo(px, py) : c.moveTo(px, py); });
+      c.stroke();
+    }
+  }
+  function drawCoconut(c, x, y, T, t){
+    const r = 168;
+    c.fillStyle = '#6d4c41';
+    c.beginPath(); c.roundRect(x - 150, y + 130, 300, 34, 10); c.fill();
+    c.fillStyle = '#4e342e';
+    c.beginPath(); c.moveTo(x - 110, y + 164); c.lineTo(x - 80, y + 240); c.lineTo(x - 40, y + 240); c.lineTo(x - 60, y + 164); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(x + 110, y + 164); c.lineTo(x + 80, y + 240); c.lineTo(x + 40, y + 240); c.lineTo(x + 60, y + 164); c.closePath(); c.fill();
+    const shake = T.hitT > 0 ? Math.sin(T.hitT * 40) * 5 * T.hitT : 0;
+    c.save(); c.translate(x + shake, y);
+    if (T.hp > 0) {
+      const g = c.createRadialGradient(-50, -60, 30, 0, 0, r + 20);
+      g.addColorStop(0, '#8d6e63'); g.addColorStop(1, '#4e342e');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(0, 0, r, 0, 6.3); c.fill();
+      c.strokeStyle = 'rgba(40,25,15,.35)'; c.lineWidth = 3;
+      for (let i = 0; i < 7; i++) { c.beginPath(); c.arc(0, 0, r * (0.35 + i * 0.1), 0.4 + i, 2.2 + i * .6); c.stroke(); }
+      c.fillStyle = '#2d1a10';
+      for (const [ex, ey] of [[-38,-118],[38,-118],[0,-92]]) { c.beginPath(); c.arc(ex, ey, 13, 0, 6.3); c.fill(); }
+      const stage = T.hp > 75 ? 0 : T.hp > 50 ? 1 : T.hp > 25 ? 2 : 3;
+      crackLines(c, 0, 0, r, stage, T.key === 'red' ? 0 : 2);
+    } else {
+      const off = 60 * (T.splitT || 0);
+      for (const sgn of [-1, 1]) {
+        c.save(); c.translate(sgn * off, 20 * (T.splitT || 0)); c.rotate(sgn * .5 * (T.splitT || 0));
+        c.fillStyle = '#4e342e';
+        c.beginPath(); c.arc(0, 0, r, sgn < 0 ? 1.57 : -1.57, sgn < 0 ? 4.71 : 1.57, sgn < 0); c.fill();
+        c.fillStyle = '#f5f0e6';
+        c.beginPath(); c.arc(0, 0, r * .8, sgn < 0 ? 1.57 : -1.57, sgn < 0 ? 4.71 : 1.57, sgn < 0); c.fill();
+        c.restore();
+      }
+      c.fillStyle = 'rgba(255,255,255,.75)';
+      for (let i = 0; i < 8; i++) { c.beginPath(); c.arc(Math.sin(i * 2.4) * 120, 60 + (i % 3) * 40, 6 + (i % 3) * 2, 0, 6.3); c.fill(); }
+    }
+    c.restore();
+    if (T.hitT > 0 && T.hp > 0) {
+      const sw = Math.sin(T.hitT * Math.PI);
+      c.save(); c.translate(x + 120, y - 250); c.rotate(-.7 + sw * 1.15);
+      c.fillStyle = '#8d6e63'; c.fillRect(-9, 0, 18, 130);
+      c.fillStyle = '#546e7a'; c.beginPath(); c.roundRect(-52, -34, 104, 52, 10); c.fill();
+      c.restore();
+    }
+    const bw = 300;
+    c.fillStyle = 'rgba(10,10,22,.55)';
+    c.beginPath(); c.roundRect(x - bw/2, y + 268, bw, 26, 13); c.fill();
+    c.fillStyle = T.color;
+    c.beginPath(); c.roundRect(x - bw/2 + 3, y + 271, (bw - 6) * (T.hp / 100), 20, 10); c.fill();
+    c.font = '800 30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = T.color;
+    c.fillText(T.name, x, y + 340);
+    c.font = '600 25px sans-serif'; c.fillStyle = 'rgba(255,255,255,.92)';
+    c.fillText('အဖွဲ့ဝင် ' + T.members.size + ' ယောက် · ကျန် ' + Math.ceil(T.hp) + '%', x, y + 378);
+  }
+  function draw(c, t){
+    const sky = c.createLinearGradient(0, 0, 0, 700);
+    sky.addColorStop(0, '#7ec8f7'); sky.addColorStop(1, '#c8ecff');
+    c.fillStyle = sky; c.fillRect(0, 0, W, 720);
+    c.fillStyle = 'rgba(255,255,255,.9)';
+    for (const [cx, cy, s] of [[170,200,1],[850,150,.8]]) {
+      c.beginPath();
+      c.ellipse(cx, cy, 88 * s, 30 * s, 0, 0, 6.3);
+      c.ellipse(cx + 50 * s, cy + 7 * s, 62 * s, 23 * s, 0, 0, 6.3);
+      c.fill();
+    }
+    const grd = c.createLinearGradient(0, 110, 0, 195);
+    grd.addColorStop(0, '#ffe082'); grd.addColorStop(1, '#ffb300');
+    c.fillStyle = grd; c.beginPath(); c.roundRect(290, 110, 500, 85, 16); c.fill();
+    c.strokeStyle = '#8d6e00'; c.lineWidth = 3; c.stroke();
+    c.fillStyle = '#4e342e'; c.font = '800 44px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('အုန်းသီးခွဲ ပြိုင်ပွဲ', 540, 155);
+    c.fillStyle = '#66bb6a';
+    c.beginPath(); c.ellipse(120, 730, 420, 100, 0, 3.14, 6.3); c.fill();
+    c.beginPath(); c.ellipse(980, 735, 420, 95, 0, 3.14, 6.3); c.fill();
+    const gr = c.createLinearGradient(0, 700, 0, H);
+    gr.addColorStop(0, '#81c784'); gr.addColorStop(1, '#558b2f');
+    c.fillStyle = gr; c.fillRect(0, 700, W, H - 700);
+    c.fillStyle = 'rgba(255,255,255,.14)';
+    for (let i = 0; i < 40; i++) c.fillRect((i * 211) % W, 760 + (i * 331) % 1100, 26, 5);
+    c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 4; c.setLineDash([18, 16]);
+    c.beginPath(); c.moveTo(540, 740); c.lineTo(540, 1620); c.stroke(); c.setLineDash([]);
+    c.font = '800 54px sans-serif'; c.textAlign = 'center';
+    c.fillStyle = 'rgba(255,255,255,.85)';
+    c.fillText('VS', 540, 1000);
+    drawCoconut(c, 280, 1030, M.red, t);
+    drawCoconut(c, 800, 1030, M.blue, t);
+    c.font = '700 29px sans-serif'; c.fillStyle = 'rgba(255,255,255,.95)';
+    c.fillText('gift ပို့ရင် ကိုယ့်အသင်း အုန်းသီးကို တူနဲ့ ရိုက်မယ် — အရင် ကွဲတဲ့အသင်း နိုင်!', 540, 1830);
+    if (M.phase === 'ended') { c.fillStyle = 'rgba(10,20,10,.28)'; c.fillRect(0, 0, W, H); }
+  }
+  return {
+    title: 'အုန်းသီးခွဲ', cat: 'teams', hud: 'teams',
+    desc: 'ကိုယ့်အုန်းသီး အရင်ကွဲအောင် gift နဲ့ ရိုက် — အရင်ကွဲသူ နိုင်',
+    tag: 'အသင်း ၂ ဖွဲ့ · ၉၀ စက္ကန့်',
+    howto: [
+      ['မန့် <b>၁</b>', 'အနီအသင်း ဝင်မယ်'],
+      ['မန့် <b>၂</b>', 'အပြာအသင်း ဝင်မယ်'],
+      ['🎁 Gift ပို့ပါ', 'ကိုယ့်အုန်းသီးကို တူနဲ့ ပြင်းပြင်း ရိုက်မယ်'],
+      ['❤️ Like နှိပ်ပါ', '၁၀ ခါပြည့်ရင် ကိုယ့်အသင်း အသာရ အုန်းသီး နည်းနည်း ပိုကွဲမယ်']
+    ],
+    sim: [
+      { label: '🔨 အနီ Galaxy', cls: 'red',  fn: () => doGift(simName(), 'Galaxy', 1, 100) },
+      { label: '🔨 အပြာ Lion',  cls: 'blue', fn: () => doGift(simName(), 'Lion', 1, 299) },
+      { label: 'မန့် ၁', fn: () => doComment(simName(), '၁') },
+      { label: 'မန့် ၂', fn: () => doComment(simName(), '၂') },
+      { label: '❤️ Like ×20', fn: () => doLike('စမ်းသူ', 20) }
+    ],
+    onComment: doComment, onGift: doGift, onLike: doLike,
+    demoTick(){
+      const r = Math.random();
+      if (r < .4) doComment(simName(), Math.random() < .5 ? '၁' : '၂');
+      else if (r < .75) { const g = pick(GIFTS); doGift(simName(), g[0], 1 + Math.floor(Math.random() * 3), g[1]); }
+      else doLike(simName(), 5 + Math.floor(Math.random() * 15));
+    },
+    getHud(){
+      return { redName: M.red.name, blueName: M.blue.name,
+        redMembers: M.red.members.size, blueMembers: M.blue.members.size,
+        redCoins: M.red.coins, blueCoins: M.blue.coins,
+        redPower: 1 - M.red.hp / 100, bluePower: 1 - M.blue.hp / 100,
+        timerText: M.phase === 'play' ? fmt(M.timeLeft) : 'ခဏစောင့်',
+        redWins: M.red.wins, blueWins: M.blue.wins, round: M.round };
+    },
+    resetAll(){ M.red.wins = M.blue.wins = 0; M.red.coins = M.blue.coins = 0; M.red.members.clear(); M.blue.members.clear(); M.round = 0; newRound(); },
+    update, draw
+  };
+})();
+
+/* ================= INIT ================= */
+try {
+  const eu = JSON.parse(localStorage.getItem('nlo_euler') || 'null');
+  if (eu) { $('eulerUser').value = eu[0] || 'old.burma.com'; $('eulerKey').value = eu[1] || ''; }
+  const route = localStorage.getItem('nlo_live_route');
+  if (route === 'relay') setTimeout(() => connectLive(true), 1500);
+  else if (eu && eu[1]) setTimeout(() => connectLive(false), 1500);
+} catch(e){}
+buildHub();
+requestAnimationFrame(step);
+if (new URLSearchParams(location.search).get('output') === '1') {
+  const first = Object.keys(GAMES)[0];
+  if (first) { openGame(first); setOutput(true); }
+}
+</script>
+</body>
+</html>
