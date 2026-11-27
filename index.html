@@ -122,7 +122,7 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
     '</div>' +
     '<div class="mlsRow">' +
       '<button id="mlsRBtn">🛟 Backup server နဲ့ ချိတ်မယ်</button>' +
-      '<span class="muted" style="font-size:12.5px">တိုက်ရိုက် Euler ပြတ်တတ်ရင် ကိုယ်ပိုင် server က ကြားခံ ချိတ်ပေးမယ် (ပထမ အကြိမ် server နိုးချိန် ~၁ မိနစ် ကြာနိုင်ပါတယ်)</span>' +
+      '<span class="muted" style="font-size:12.5px">တိုက်ရိုက် Euler ပြတ်တတ်ရင် ကိုယ်ပိုင် server က ကြားခံ ချိတ်ပေးမယ် (ပထမ အကြိမ် server နိုးချိန် ~၁ မိနစ် ကြာနိုင်ပါတယ်)။ Server မှာ key သိမ်းထားပြီးရင် အပေါ်က Key နေရာ ဘာမှ မထည့်ဘဲ ဒီခလုတ်ကို နှိပ်ရုံပါပဲ။</span>' +
     '</div>' +
     '<div class="mlsRow">' +
       '<input id="mlsWorker" placeholder="(ရွေးချယ်ခွင့်) Worker URL — https://my-live-studio-api.xxx.workers.dev" style="flex:2;min-width:200px">' +
@@ -188,14 +188,15 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
   function connectEuler(){
     var user = ($i('mlsUser').value.trim() || 'old.burma.com').replace(/^@/, '');
     var key = $i('mlsKey').value.trim();
-    if (!key) { setStatus(false, 'API Key အရင် ထည့်ပါ (eulerstream.com Dashboard မှ)'); return; }
+    var sentKey = key;
+    if (!key && !relayMode) { setStatus(false, 'API Key အရင် ထည့်ပါ (eulerstream.com Dashboard မှ)'); return; }
     saveCfg();
     try { if (eulerWs) { eulerWs.onclose = null; eulerWs.close(); } } catch(e){}
     clearTimeout(eulerRetry);
     eulerWanted = true;
     setStatus(false, relayMode ? 'Backup server နဲ့ ချိတ်နေပါတယ်… (server နိုးချိန် ကြာနိုင်ပါတယ်)' : 'Euler နဲ့ ချိတ်နေပါတယ်…');
     var url = relayMode
-      ? RELAY_BASE + '?username=' + encodeURIComponent(user) + '&key=' + encodeURIComponent(key)
+      ? RELAY_BASE + '?username=' + encodeURIComponent(user) + (key ? '&key=' + encodeURIComponent(key) : '')
       : 'wss://ws.eulerstream.com?uniqueId=' + encodeURIComponent(user) + '&apiKey=' + encodeURIComponent(key);
     var sock;
     try { sock = new WebSocket(url); }
@@ -207,7 +208,7 @@ if(new URLSearchParams(location.search).get('overlay')==='1'){document.body.inne
     sock.onclose = function(e){
       if (!eulerWanted) { setStatus(false, 'ပိတ်ထားပါတယ်'); return; }
       var msg = CLOSE_MSG[e.code] || ('ပြတ်သွားပါတယ် (code ' + e.code + ') — ပြန်ချိတ်နေပါတယ်…');
-      if (e.code === 4401) { eulerWanted = false; setStatus(false, msg); return; }
+      if (e.code === 4401) { eulerWanted = false; setStatus(false, (relayMode && !sentKey) ? 'Server မှာ Euler key မရှိသေးပါ — setup link မှာ key အရင် သိမ်းပါ' : msg); return; }
       setStatus(false, msg);
       eulerRetry = setTimeout(connectEuler, e.code === 4404 ? 20000 : 6000);
     };
