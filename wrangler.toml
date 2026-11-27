@@ -1,0 +1,14 @@
+name = "my-live-studio-api"
+main = "worker.js"
+compatibility_date = "2026-11-27"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+[vars]
+# Set INGEST_TOKEN as a secret with: npx wrangler secret put INGEST_TOKEN
