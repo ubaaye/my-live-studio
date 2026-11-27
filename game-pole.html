@@ -102,6 +102,9 @@ GAME3D['pole'] = { create: function(THREE) { const T = THREE; const scene = new 
 const camera = new T.PerspectiveCamera(55, 0.5625, 0.2, 80);
 camera.position.set(0, 6.5, 17);
 camera.lookAt(0, 4.6, 0);
+const camPosT = new T.Vector3(0, 6.5, 17);
+const camLookT = new T.Vector3(0, 4.6, 0);
+const camLook = new T.Vector3(0, 4.6, 0);
 
 const hemi = new T.HemisphereLight(0xffe9c4, 0x996238, 0.95);
 scene.add(hemi);
@@ -487,6 +490,31 @@ const billColors = [0x4cc462, 0xf27ea9, 0x52b6e8, 0xf2c94c, 0x62d478];
   nameSpr.visible = false;
   poleGroup.add(nameSpr);
 
+  // Dizzy stars that orbit the fallen climber's head
+  const starCanvas = document.createElement('canvas');
+  starCanvas.width = 128; starCanvas.height = 128;
+  const sctx = starCanvas.getContext('2d');
+  sctx.translate(64, 64);
+  sctx.beginPath();
+  for (let si = 0; si < 10; si++) {
+    const sr = si % 2 === 0 ? 46 : 19, sa = si * Math.PI / 5 - Math.PI / 2;
+    if (si === 0) sctx.moveTo(Math.cos(sa) * sr, Math.sin(sa) * sr); else sctx.lineTo(Math.cos(sa) * sr, Math.sin(sa) * sr);
+  }
+  sctx.closePath();
+  sctx.fillStyle = '#ffd83d';
+  sctx.fill();
+  sctx.lineWidth = 6; sctx.strokeStyle = '#e8930c'; sctx.stroke();
+  const starTex = new T.CanvasTexture(starCanvas);
+  const starGrp = new T.Group();
+  const stars = [];
+  for (let si = 0; si < 3; si++) {
+    const sp = new T.Sprite(new T.SpriteMaterial({ map: starTex, transparent: true, depthWrite: false }));
+    sp.scale.set(0.34, 0.34, 1);
+    starGrp.add(sp); stars.push(sp);
+  }
+  starGrp.visible = false;
+  poleGroup.add(starGrp);
+
   // Two cheering/boost-ready supporters at base
   const supA = makePerson(team, false);
   supA.root.position.set(px + sign * 0.88, 0, 0.55);
@@ -531,12 +559,16 @@ const billColors = [0x4cc462, 0xf27ea9, 0x52b6e8, 0xf2c94c, 0x62d478];
     fallT: 0,
     fallFrom: 0,
     ladderT: 0,
+    ladderFromY: 0,
+    downedNow: false,
     supAH: { x: px + sign * 0.88, z: 0.55 },
     supBH: { x: px - sign * 0.72, z: 0.72 },
     extras: [],
     nameSpr: nameSpr,
     nameCtx: nameCtx,
     nameTex: nameTex,
+    starGrp: starGrp,
+    stars: stars,
     labelT: 0,
     slideToBase: false
   };
@@ -856,15 +888,18 @@ function updateSide(st, targetH, dt, running, over, winner) {
   if (st.ladderT > 0) st.ladderT = Math.max(0, st.ladderT - dt);
   if (st.fallT > 0) { st.fallT = Math.max(0, st.fallT - dt); if (st.fallT <= 0) st.scrambleT = Math.max(st.scrambleT, 0.9); }
 
-  // Human-tower envelopes (T3): A sits at base, B climbs onto A, climber on top
-  const lad = { a: 0, moveB: 0, up: 0, form: 0 };
+  // Human-tower sequence (T3): the climber on the pole comes DOWN, the
+  // gift giver takes over, the team stacks a human ladder and boosts
+  // him all the way to the TOP of the pole
+  const lad = { a: 0, moveB: 0, up: 0, form: 0, lp: -1 };
   if (st.ladderT > 0) {
-    const lp2 = 1 - st.ladderT / 5.5;
+    const lp2 = 1 - st.ladderT / 7.0;
+    lad.lp = lp2;
     const sg2 = function(a, b, x) { return Math.max(0, Math.min(1, (x - a) / (b - a))); };
-    lad.a = sg2(0, 0.14, lp2) * (1 - sg2(0.88, 1, lp2));
-    lad.moveB = sg2(0.12, 0.26, lp2) * (1 - sg2(0.84, 0.94, lp2));
-    lad.up = sg2(0.2, 0.34, lp2) * (1 - sg2(0.84, 0.94, lp2));
-    lad.form = sg2(0.32, 0.42, lp2) * (1 - sg2(0.84, 0.94, lp2));
+    lad.a = sg2(0, 0.14, lp2) * (1 - sg2(0.86, 1, lp2));
+    lad.moveB = sg2(0.10, 0.24, lp2) * (1 - sg2(0.86, 0.97, lp2));
+    lad.up = sg2(0.16, 0.30, lp2) * (1 - sg2(0.86, 0.97, lp2));
+    lad.form = sg2(0.28, 0.40, lp2) * (1 - sg2(0.86, 0.97, lp2));
   }
 
   // Visual grease dip
@@ -954,18 +989,30 @@ function updateSide(st, targetH, dt, running, over, winner) {
   // Position climber on 0..9 range (feet at 0..8.45, hands reach 10)
   const c = st.climber;
   let yPos = Math.max(0, st.hSmooth * 8.45 - st.greaseDip);
-  const fallP = st.fallT > 0 ? 1 - st.fallT / 1.6 : 1;
-  const falling = st.fallT > 0 && fallP < 0.34;
-  const downed = st.fallT > 0 && fallP >= 0.34;
+  const fallP = st.fallT > 0 ? 1 - st.fallT / 2.6 : 1;
+  const falling = st.fallT > 0 && fallP < 0.25;
+  const downed = st.fallT > 0 && fallP >= 0.25;
+  st.downedNow = downed;
   if (st.fallT > 0) {
-    if (falling) { const fk = fallP / 0.34; yPos = st.fallFrom * (1 - fk * fk); }
+    if (falling) { const fk = fallP / 0.25; yPos = st.fallFrom * (1 - fk * fk); }
     else yPos = 0;
   }
-  if (lad.form > 0 && st.fallT <= 0) {
-    const ek = lad.form * lad.form * (3 - 2 * lad.form);
-    yPos = yPos + (2.28 - yPos) * ek;
+  // Ladder height path: down → base → onto the tower (2.28) → TOP (8.45) → back
+  let ladPhase = '';
+  if (st.ladderT > 0 && st.fallT <= 0 && lad.lp >= 0) {
+    const lp = lad.lp;
+    ladPhase = lp < 0.16 ? 'down' : lp < 0.30 ? 'base' : lp < 0.46 ? 'tower' : lp < 0.66 ? 'climb' : lp < 0.84 ? 'top' : 'return';
+    const keys = [[0, st.ladderFromY], [0.16, 0], [0.30, 0], [0.46, 2.28], [0.66, 8.45], [0.84, 8.45], [1, yPos]];
+    for (let ki = 0; ki < keys.length - 1; ki++) {
+      if (lp >= keys[ki][0] && lp <= keys[ki + 1][0]) {
+        const kk = (lp - keys[ki][0]) / Math.max(0.0001, keys[ki + 1][0] - keys[ki][0]);
+        const ee = kk * kk * (3 - 2 * kk);
+        yPos = keys[ki][1] + (keys[ki + 1][1] - keys[ki][1]) * ee;
+        break;
+      }
+    }
   }
-  const isClimbing = st.fallT <= 0 && (st.scrambleT > 0 || st.windT > 0 || st.lightningT > 0 || st.tugT > 0 || st.climbVel > 0.015);
+  const isClimbing = st.fallT <= 0 && (st.scrambleT > 0 || st.windT > 0 || st.lightningT > 0 || st.tugT > 0 || st.climbVel > 0.015 || ladPhase === 'down' || ladPhase === 'climb' || ladPhase === 'return');
 
   if (isWin) {
     yPos = 8.45;
@@ -990,11 +1037,11 @@ function updateSide(st, targetH, dt, running, over, winner) {
     c.legL.rotation.set(-0.95, 0, -0.25);
     c.legR.rotation.set(-0.95, 0, 0.25);
   } else if (downed) {
-    // Slumped on the ground after the fall, stars moment
-    const sl2 = Math.sin(timeAcc * 3.2);
+    // Flat on the ground, DIZZY — head rolling in a circle, stars orbit
+    const dz = timeAcc * 2.6;
     c.hips.position.y = 0.62;
-    c.torso.rotation.set(0.38, 0, sl2 * 0.06);
-    c.head.rotation.set(0.42, sl2 * 0.4, 0.12);
+    c.torso.rotation.set(0.38, Math.sin(dz) * 0.14, Math.cos(dz) * 0.10);
+    c.head.rotation.set(0.42, Math.sin(dz) * 0.55, Math.cos(dz) * 0.40);
     c.armL.rotation.set(-0.7, 0, -0.9);
     c.armR.rotation.set(-0.7, 0, 0.9);
     c.legL.rotation.set(-0.35, 0, -0.55);
@@ -1009,8 +1056,17 @@ function updateSide(st, targetH, dt, running, over, winner) {
     c.armR.rotation.set(-1.35 - fl * 0.75, 0, 0.55 + Math.abs(fl) * 0.45);
     c.legL.rotation.set(-0.6 - fl * 0.65, 0, -0.5);
     c.legR.rotation.set(-0.6 + fl * 0.65, 0, 0.5);
-  } else if (lad.form > 0.5) {
-    // Standing on top of the human tower, reaching for the prize
+  } else if (ladPhase === 'base') {
+    // At the base, crouched ready while the tower forms under him
+    c.hips.position.y = 0.52;
+    c.torso.rotation.set(0.16, st.sign * 0.2, 0);
+    c.head.rotation.set(-0.4, st.sign * 0.3, 0);
+    c.armL.rotation.set(-2.2, 0, -0.5);
+    c.armR.rotation.set(-2.2, 0, 0.5);
+    c.legL.rotation.set(-1.15, 0, -0.3);
+    c.legR.rotation.set(-1.15, 0, 0.3);
+  } else if (ladPhase === 'tower' || ladPhase === 'top') {
+    // Standing on top of the human tower / at the pole top, reaching for the prize
     const wv2 = Math.sin(timeAcc * 6);
     c.hips.position.y = 0.72;
     c.torso.rotation.set(-0.04, st.sign * 0.2, wv2 * 0.05);
@@ -1056,10 +1112,21 @@ function updateSide(st, targetH, dt, running, over, winner) {
 
   st.climberPivot.position.y = yPos;
 
-  // Gift-giver name rides above the climber's head
+  // Gift-giver name rides above the climber's head (hidden while the
+  // previous climber slides down — the giver takes over at the base)
   if (st.labelT > 0) st.labelT = Math.max(0, st.labelT - dt);
-  st.nameSpr.visible = st.labelT > 0;
+  st.nameSpr.visible = st.labelT > 0 && ladPhase !== 'down';
   if (st.nameSpr.visible) st.nameSpr.position.y = yPos + 2.15;
+
+  // Dizzy stars orbit the fallen climber's head
+  st.starGrp.visible = downed;
+  if (downed) {
+    st.starGrp.position.set(0, yPos + 1.62, 0.45);
+    for (let si = 0; si < st.stars.length; si++) {
+      const an = timeAcc * 3.4 + si * 2.094;
+      st.stars[si].position.set(Math.cos(an) * 0.38, Math.sin(an * 1.3) * 0.12, Math.sin(an) * 0.2);
+    }
+  }
 
   // Pole top flag & hanging bag sway
   st.flag.rotation.y = Math.sin(timeAcc * 4.5 + st.px) * 0.32;
@@ -1171,6 +1238,24 @@ const game = {
 
     updateSide(sides.red, hR, dt, running, over, winner);
     updateSide(sides.blue, hB, dt, running, over, winner);
+
+    // Camera: pull in CLOSE on a fallen, dizzy climber; otherwise wide
+    let focus = null;
+    ['red', 'blue'].forEach(function(tk) {
+      const s2 = sides[tk];
+      if (s2.downedNow && (!focus || s2.fallT > focus.fallT)) focus = s2;
+    });
+    if (focus) {
+      camPosT.set(focus.px * 0.60, 2.7, 8.8);
+      camLookT.set(focus.px, 1.15, 0);
+    } else {
+      camPosT.set(0, 6.5, 17);
+      camLookT.set(0, 4.6, 0);
+    }
+    const ck = 1 - Math.exp(-dt * 3.0);
+    camera.position.lerp(camPosT, ck);
+    camLook.lerp(camLookT, ck);
+    camera.lookAt(camLook);
 
     // Win confetti burst
     if (over && winner && (winner === 'red' || winner === 'blue')) {
@@ -1342,7 +1427,7 @@ const game = {
     const st = sides[tk];
     const ost = sides[ok];
     st.cheerT = Math.max(st.cheerT, 0.9);
-    if (name) { setNameLabel(st, name); st.labelT = Math.max(st.labelT, tier >= 3 ? 5.5 : 3.2); }
+    if (name) { setNameLabel(st, name); st.labelT = Math.max(st.labelT, tier >= 3 ? 7.4 : 3.2); }
 
     if (tier === 1) {
       st.scrambleT = Math.max(st.scrambleT, 0.6);
@@ -1365,7 +1450,7 @@ const game = {
       // Grease attack on OTHER pole — climber slips and FALLS
       ost.greaseT = Math.max(ost.greaseT, 0.8);
       ost.fallFrom = Math.max(0, ost.hSmooth * 8.45 - ost.greaseDip);
-      ost.fallT = 1.6;
+      ost.fallT = 2.6;
       for (let i = 0; i < 14; i++) {
         spawnP(
           ost.px + (Math.random() - 0.5) * 0.5,
@@ -1381,9 +1466,10 @@ const game = {
         );
       }
     } else if (tier === 3) {
-      // Human ladder boost — supporters stack up at the base
-      st.ladderT = 5.5;
-      st.scrambleT = Math.max(st.scrambleT, 1.2);
+      // Human ladder: current climber comes down, the GIVER climbs,
+      // the team stacks up and boosts him to the very top
+      st.ladderFromY = Math.max(0, st.hSmooth * 8.45 - st.greaseDip);
+      st.ladderT = 7.0;
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2;
         spawnP(
@@ -1441,6 +1527,9 @@ const game = {
       st.tugT = 0;
       st.fallT = 0;
       st.ladderT = 0;
+      st.ladderFromY = 0;
+      st.downedNow = false;
+      st.starGrp.visible = false;
       st.supA.root.position.set(st.supAH.x, 0, st.supAH.z);
       st.supB.root.position.set(st.supBH.x, 0, st.supBH.z);
       st.flashRing.visible = false;
@@ -1466,7 +1555,7 @@ return game;
 <script>
 (function(){
 "use strict";
-var CFG = {"id": "pole", "metric": "h", "guide": [["Gift 1–99", "တက်အား ဖြည့်"], ["Gift 100–499", "ချောဆီ ဆွဲချ — တက်သူ ပြုတ်ကျ"], ["Gift 500–999", "လူလှေကား — ဆက်တက် အမြန်"], ["Gift 1000+", "မိုးကြိုး တက် — ထိပ်နား ခုန်တက်"]], "btn": ["ချောဆီဆွဲချ", "လူလှေကား"]};
+var CFG = {"id": "pole", "metric": "h", "guide": [["Gift 1–99", "တက်အား ဖြည့်"], ["Gift 100–499", "ချောဆီ ဆွဲချ — တက်သူ ပြုတ်ကျ"], ["Gift 500–999", "လူလှေကား — အပေါ်ဆုံးထိ တက်"], ["Gift 1000+", "မိုးကြိုး တက် — ထိပ်နား ခုန်တက်"]], "btn": ["ချောဆီဆွဲချ", "လူလှေကား"]};
 var $ = function(id){ return document.getElementById(id); };
 // ---------- team names (editable, saved on this device) ----------
 var TN = { red: 'အနီ', blue: 'အပြာ' };
