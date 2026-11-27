@@ -52,8 +52,8 @@
 .grow .c{margin-left:auto;font-weight:800}
 .democol{position:fixed;top:150px;z-index:9;display:none;flex-direction:column;gap:5px}
 #demoR{left:8px} #demoB{right:8px}
-.democol button{background:rgba(22,90,230,.62);color:#fff;border:1px solid #a8c8ff;border-radius:9px;padding:7px 10px;font-size:12.5px;font-weight:700;
- backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 10px #003a8c66;text-shadow:0 1px 3px #000c}
+.democol button{background:rgba(255,255,255,.16);color:#0b54e5;border:1px solid #ffffff70;border-radius:9px;padding:7px 10px;font-size:12.5px;font-weight:800;
+ backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 10px #0003;text-shadow:0 0 6px #ffffffd9,0 1px 2px #fff}
 .democol.show{display:flex}
 body.standalone #sideR,body.standalone #sideB{top:292px}
 #gEdit{font-size:11.5px;font-weight:700;background:rgba(255,255,255,.13);border:1px solid #ffffff59;border-radius:8px;
@@ -75,13 +75,13 @@ body.standalone #sideR,body.standalone #sideB{top:292px}
 </style></head><body>
 <div id="stage"></div>
 <div class="hud">
-  <div class="team red"><div class="nm" id="nmR">🔴 အနီ</div><div class="st">🎮 <span id="pR">0</span> · 👀 <span id="sR">0</span> · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
+  <div class="team red"><div class="nm" id="nmR">🔴 အနီ</div><div class="st">👥 <span id="pR">0</span> · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
   <div class="mid"><div class="tm" id="tm">1:30</div><div class="sc" id="sc">0 — 0</div><div class="rd">ပွဲစဉ် <span id="rd">1</span></div></div>
-  <div class="team blue"><div class="nm" id="nmB">🔵 အပြာ</div><div class="st">🎮 <span id="pB">0</span> · 👀 <span id="sB">0</span> · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
+  <div class="team blue"><div class="nm" id="nmB">🔵 အပြာ</div><div class="st">👥 <span id="pB">0</span> · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
 </div>
 <div id="vsbar"><div id="vsR" style="width:50%"></div><div id="vsB" style="width:50%"></div><span class="pc" id="vsL">၅၀%</span><span class="pc" id="vsRp">၅၀%</span></div>
-<div id="sideR"><div id="giftsR"></div><div class="qbox" id="qR"></div></div>
-<div id="sideB"><div id="giftsB"></div><div class="qbox" id="qB"></div></div>
+<div id="sideR"><div id="giftsR"></div></div>
+<div id="sideB"><div id="giftsB"></div></div>
 <div id="howto"><span id="howtoTx">မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
 <div id="ticker"></div>
 <div id="flash"></div><div id="fx"></div>
@@ -476,6 +476,17 @@ const billColors = [0x4cc462, 0xf27ea9, 0x52b6e8, 0xf2c94c, 0x62d478];
   const baseYaw = sign * 1.15;
   climberPivot.rotation.y = baseYaw;
 
+  // Gift-giver name label — floats over the climber (the giver IS the climber)
+  const nameCanvas = document.createElement('canvas');
+  nameCanvas.width = 512; nameCanvas.height = 128;
+  const nameCtx = nameCanvas.getContext('2d');
+  const nameTex = new T.CanvasTexture(nameCanvas);
+  const nameSpr = new T.Sprite(new T.SpriteMaterial({ map: nameTex, transparent: true, depthWrite: false }));
+  nameSpr.scale.set(1.9, 0.48, 1);
+  nameSpr.position.set(0, -10, 0.45);
+  nameSpr.visible = false;
+  poleGroup.add(nameSpr);
+
   // Two cheering/boost-ready supporters at base
   const supA = makePerson(team, false);
   supA.root.position.set(px + sign * 0.88, 0, 0.55);
@@ -522,6 +533,11 @@ const billColors = [0x4cc462, 0xf27ea9, 0x52b6e8, 0xf2c94c, 0x62d478];
     ladderT: 0,
     supAH: { x: px + sign * 0.88, z: 0.55 },
     supBH: { x: px - sign * 0.72, z: 0.72 },
+    extras: [],
+    nameSpr: nameSpr,
+    nameCtx: nameCtx,
+    nameTex: nameTex,
+    labelT: 0,
     slideToBase: false
   };
 });
@@ -780,6 +796,27 @@ let timeAcc = 0;
 let winDone = false;
 let winConfettiCD = 0;
 
+function setNameLabel(st, name) {
+  const ctx = st.nameCtx;
+  ctx.clearRect(0, 0, 512, 128);
+  const label = '🎁 ' + String(name || '').slice(0, 16);
+  ctx.font = '800 52px sans-serif';
+  const w = Math.min(492, ctx.measureText(label).width + 56);
+  const x0 = (512 - w) / 2;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x0, 16, w, 96, 48); else ctx.rect(x0, 16, w, 96);
+  ctx.fillStyle = 'rgba(8,10,24,0.78)';
+  ctx.fill();
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = st.team === 'red' ? '#ff5a5a' : '#5aa0ff';
+  ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, 256, 66);
+  st.nameTex.needsUpdate = true;
+}
+
 function resetBag(st) {
   if (st.bagHeld) {
     st.poleGroup.add(st.bag);
@@ -822,12 +859,12 @@ function updateSide(st, targetH, dt, running, over, winner) {
   // Human-tower envelopes (T3): A sits at base, B climbs onto A, climber on top
   const lad = { a: 0, moveB: 0, up: 0, form: 0 };
   if (st.ladderT > 0) {
-    const lp2 = 1 - st.ladderT / 3.0;
+    const lp2 = 1 - st.ladderT / 5.5;
     const sg2 = function(a, b, x) { return Math.max(0, Math.min(1, (x - a) / (b - a))); };
-    lad.a = sg2(0, 0.2, lp2) * (1 - sg2(0.9, 1, lp2));
-    lad.moveB = sg2(0.18, 0.38, lp2) * (1 - sg2(0.85, 0.97, lp2));
-    lad.up = sg2(0.3, 0.5, lp2) * (1 - sg2(0.85, 0.97, lp2));
-    lad.form = sg2(0.45, 0.6, lp2) * (1 - sg2(0.85, 0.97, lp2));
+    lad.a = sg2(0, 0.14, lp2) * (1 - sg2(0.88, 1, lp2));
+    lad.moveB = sg2(0.12, 0.26, lp2) * (1 - sg2(0.84, 0.94, lp2));
+    lad.up = sg2(0.2, 0.34, lp2) * (1 - sg2(0.84, 0.94, lp2));
+    lad.form = sg2(0.32, 0.42, lp2) * (1 - sg2(0.84, 0.94, lp2));
   }
 
   // Visual grease dip
@@ -1019,6 +1056,11 @@ function updateSide(st, targetH, dt, running, over, winner) {
 
   st.climberPivot.position.y = yPos;
 
+  // Gift-giver name rides above the climber's head
+  if (st.labelT > 0) st.labelT = Math.max(0, st.labelT - dt);
+  st.nameSpr.visible = st.labelT > 0;
+  if (st.nameSpr.visible) st.nameSpr.position.y = yPos + 2.15;
+
   // Pole top flag & hanging bag sway
   st.flag.rotation.y = Math.sin(timeAcc * 4.5 + st.px) * 0.32;
   if (!st.bagHeld) {
@@ -1079,6 +1121,37 @@ function updateSide(st, targetH, dt, running, over, winner) {
     const midB = bU > 0.05 && bU < 0.95 ? 1 : 0;
     sB.legL.rotation.set(midB ? -0.55 : -0.05, 0, -0.09);
     sB.legR.rotation.set(midB ? 0.35 : 0.05, 0, 0.09);
+  }
+
+  // Joined viewers' helper figures: cheer at the base; during the ladder
+  // they ALL ring the pole base and hold the tower up
+  for (let ei = 0; ei < st.extras.length; ei++) {
+    const ex = st.extras[ei], ep = ex.p;
+    const bb2 = Math.abs(Math.sin(timeAcc * 5 + ex.ph));
+    if (st.ladderT > 0) {
+      const k2 = lad.a * lad.a * (3 - 2 * lad.a);
+      const ang = -0.95 + (ei % 5) * 0.48, rad = 0.66 + (ei >= 5 ? 0.34 : 0);
+      const rx = st.px + Math.sin(ang) * rad, rz = Math.cos(ang) * rad;
+      ep.root.position.set(ex.hx + (rx - ex.hx) * k2, 0, ex.hz + (rz - ex.hz) * k2);
+      ep.root.rotation.y = Math.atan2(st.px - ep.root.position.x, -ep.root.position.z);
+      ep.hips.position.y = 0.72 - 0.24 * k2;
+      ep.torso.rotation.set(0.12 * k2, 0, 0);
+      ep.head.rotation.set(-0.35, 0, 0);
+      ep.armL.rotation.set(-0.3, 0, -2.3 - 0.4 * k2);
+      ep.armR.rotation.set(-0.3, 0, 2.3 + 0.4 * k2);
+      ep.legL.rotation.set(-0.75 * k2, 0, -0.2);
+      ep.legR.rotation.set(-0.75 * k2, 0, 0.2);
+    } else {
+      ep.root.position.set(ex.hx, bb2 * 0.12, ex.hz);
+      ep.root.rotation.y = st.sign * 0.3;
+      ep.hips.position.y = 0.72;
+      ep.torso.rotation.set(-0.05, Math.sin(timeAcc * 4 + ex.ph) * 0.1, 0);
+      ep.head.rotation.set(-0.3, 0, 0);
+      ep.armL.rotation.set(0, 0, -2.5 - bb2 * 0.35);
+      ep.armR.rotation.set(0, 0, 2.5 + bb2 * 0.35);
+      ep.legL.rotation.set(bb2 * 0.15, 0, -0.08);
+      ep.legR.rotation.set(-bb2 * 0.15, 0, 0.08);
+    }
   }
 }
 
@@ -1212,6 +1285,18 @@ const game = {
   onJoin: function(team) {
     const st = sides[team === 'blue' ? 'blue' : 'red'];
     st.cheerT = 0.7;
+    // Every joined viewer gets a helper figure at the pole base (max 10 shown)
+    if (st.extras.length < 10) {
+      const idx = st.extras.length;
+      const row = idx < 5 ? 0 : 1, colI = idx % 5;
+      const person = makePerson(st.team, false);
+      person.root.scale.setScalar(0.9);
+      const hx = st.px + (colI - 2) * 0.44 + (row ? 0.22 : 0);
+      const hz = row ? 1.52 : 1.06;
+      person.root.position.set(hx, 0, hz);
+      scene.add(person.root);
+      st.extras.push({ p: person, hx: hx, hz: hz, ph: idx * 1.93 });
+    }
     const col = st.team === 'red' ? 0xff5a5a : 0x5aa0ff;
     for (let i = 0; i < 6; i++) {
       spawnP(
@@ -1251,12 +1336,13 @@ const game = {
     }
   },
 
-  onGift: function(team, tier) {
+  onGift: function(team, tier, name) {
     const tk = team === 'blue' ? 'blue' : 'red';
     const ok = tk === 'red' ? 'blue' : 'red';
     const st = sides[tk];
     const ost = sides[ok];
     st.cheerT = Math.max(st.cheerT, 0.9);
+    if (name) { setNameLabel(st, name); st.labelT = Math.max(st.labelT, tier >= 3 ? 5.5 : 3.2); }
 
     if (tier === 1) {
       st.scrambleT = Math.max(st.scrambleT, 0.6);
@@ -1296,7 +1382,7 @@ const game = {
       }
     } else if (tier === 3) {
       // Human ladder boost — supporters stack up at the base
-      st.ladderT = 3.0;
+      st.ladderT = 5.5;
       st.scrambleT = Math.max(st.scrambleT, 1.2);
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2;
@@ -1388,7 +1474,7 @@ try { TN.red = localStorage.getItem('nlo_team_red') || TN.red; TN.blue = localSt
 function tn(t){ return t==='red' ? TN.red : TN.blue; }
 function applyNames(){
   $('nmR').textContent = '🔴 ' + TN.red; $('nmB').textContent = '🔵 ' + TN.blue;
-  $('howtoTx').textContent = 'မန့် ၁ = ' + TN.red + ' · မန့် ၂ = ' + TN.blue + ' ပရိတ်သတ် — Gift ပို့ရင် ကစားသမား';
+  $('howtoTx').textContent = 'မန့် ၁ = ' + TN.red + ' · မန့် ၂ = ' + TN.blue + ' join — Gift ပို့ရင် စမယ်';
 }
 $('gEdit').addEventListener('click', function(e){ e.stopPropagation(); $('tnR').value = TN.red; $('tnB').value = TN.blue; $('tedit').classList.add('show'); });
 $('tnCancel').addEventListener('click', function(){ $('tedit').classList.remove('show'); });
@@ -1427,30 +1513,12 @@ function renderGifts(team){
     d.querySelector('.n').textContent = it[0]; box.appendChild(d); });
   box.style.display = items.length ? 'flex' : 'none';
 }
-// ---------- roster: spectators / players / queue ----------
-var SLOTS = 5;
-var ROSTER = { red:{spec:[], play:[], queue:[]}, blue:{spec:[], play:[], queue:[]} };
-function rOther(team){ return team==='red' ? 'blue' : 'red'; }
-function rFind(team, name){ var R=ROSTER[team]; if (R.play.indexOf(name)>=0) return 'play'; if (R.queue.indexOf(name)>=0) return 'queue'; if (R.spec.indexOf(name)>=0) return 'spec'; return null; }
-function rRemove(team, name){ var R=ROSTER[team]; ['play','queue','spec'].forEach(function(k){ var i=R[k].indexOf(name); if (i>=0) R[k].splice(i,1); }); }
-function tryPromote(team, name){
-  var R = ROSTER[team];
-  if (R.play.length < SLOTS){
-    var i = R.spec.indexOf(name); if (i>=0) R.spec.splice(i,1);
-    var q = R.queue.indexOf(name); if (q>=0) R.queue.splice(q,1);
-    R.play.push(name); tick('🎮 '+name+' → '+tn(team)+' ကစားသမား ဖြစ်ပြီ!');
-    return true;
-  }
-  if (R.queue.indexOf(name)<0){ R.queue.push(name); tick('⏳ '+name+' → '+tn(team)+' တန်းစီ နံပါတ် '+num(R.queue.length)); }
-  return false;
-}
-function renderQueue(team){
-  var box = $(team==='red' ? 'qR' : 'qB'); var q = ROSTER[team].queue;
-  if (!q.length){ box.style.display='none'; box.textContent=''; return; }
-  box.style.display = 'block';
-  box.textContent = '⏳ တန်းစီ: ' + q.slice(0,3).join(', ') + (q.length>3 ? ' နောက် +'+num(q.length-3) : '');
-}
-function renderSide(team){ renderGifts(team); renderQueue(team); }
+// ---------- members: everyone in the LIVE is a viewer; join = team member (no limit) ----------
+var MEMBERS = { red: [], blue: [] };
+function mOther(team){ return team==='red' ? 'blue' : 'red'; }
+function mHas(team, name){ return MEMBERS[team].indexOf(name) >= 0; }
+function mAdd(team, name){ var o = mOther(team); var i = MEMBERS[o].indexOf(name); if (i>=0) MEMBERS[o].splice(i,1); if (!mHas(team, name)) MEMBERS[team].push(name); }
+function renderSide(team){ renderGifts(team); }
 function showPop(big, sub, ms){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, ms||2100); }
 var FXC = ['#ffd54d','#ff5a8a','#4da3ff','#7dff8a','#ff9d2e','#ffffff'];
 function burst(team, tier){
@@ -1481,7 +1549,7 @@ function applyGift(team, tier, name, giftName){
   var foe = team==='red' ? 'blue' : 'red';
   M[team].gifts++; M[team].power += tier;
   GC[team][giftName] = (GC[team][giftName]||0) + 1; renderGifts(team);
-  if (game) game.onGift(team, tier);
+  if (game) game.onGift(team, tier, name);
   var feat = CFG.guide[tier-1][1];
   if (CFG.metric==='p'){ S.p += (team==='red'?1:-1) * [0,.10,.22,.40,.70][tier]; }
   else if (CFG.metric==='h'){ if(team==='red') S.hR=Math.min(1,S.hR+[0,.03,.07,.13,.22][tier]); else S.hB=Math.min(1,S.hB+[0,.03,.07,.13,.22][tier]);
@@ -1509,15 +1577,9 @@ function endRound(w){ S.over=true; S.winner=w; S.running=false; if(w==='red') M.
   showPop('🏆 '+tn(w)+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
   setTimeout(newRound, 6000); syncHud(); }
 function newRound(){ round++;
-  ['red','blue'].forEach(function(team){ var R=ROSTER[team];
-    R.spec = R.spec.concat(R.play); R.play = [];
-    while (R.play.length < SLOTS && R.queue.length){ var qn = R.queue.shift(); var si = R.spec.indexOf(qn); if (si>=0) R.spec.splice(si,1); R.play.push(qn); tick('🎮 '+qn+' → '+tn(team)+' ကစားသမား ဝင်ပြီ (တန်းစီမှ)'); }
-    renderSide(team);
-  });
   S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
 function syncHud(){
-  $('pR').textContent=num(ROSTER.red.play.length); $('pB').textContent=num(ROSTER.blue.play.length);
-  $('sR').textContent=num(ROSTER.red.spec.length+ROSTER.red.queue.length); $('sB').textContent=num(ROSTER.blue.spec.length+ROSTER.blue.queue.length);
+  $('pR').textContent=num(MEMBERS.red.length); $('pB').textContent=num(MEMBERS.blue.length);
   $('gR').textContent=num(M.red.gifts); $('gB').textContent=num(M.blue.gifts);
   $('sc').textContent = num(M.red.wins||0)+' — '+num(M.blue.wins||0);
   var pctR=50, pctB=50;
@@ -1536,14 +1598,12 @@ function syncHud(){
 function onEvent(ev){
   if (!ev || !ev.kind) return;
   var team = ev.team==='blue' ? 'blue' : 'red';
-  if (ev.kind==='join'){ var jn = ev.name||'ပရိသတ်'; var jo = rOther(team);
-    if (rFind(jo, jn)) rRemove(jo, jn);
-    if (!rFind(team, jn)){ ROSTER[team].spec.push(jn); tick('👀 '+jn+' → '+tn(team)+' ပရိတ်သတ် ဝင်တယ်'); }
+  if (ev.kind==='join'){ var jn = ev.name||'Viewer'; var jo = mOther(team); var was = mHas(team, jn);
+    mAdd(team, jn);
+    if (!was) tick('👋 '+jn+' → '+tn(team)+' ဝင်ပြီ');
     if(game) game.onJoin(team); renderSide(team); renderSide(jo); }
-  else if (ev.kind==='gift'){ var gn = ev.name||'ပရိသတ်'; var go = rOther(team);
-    if (rFind(go, gn)){ rRemove(go, gn); ROSTER[team].spec.push(gn); renderSide(go); }
-    if (!rFind(team, gn)) ROSTER[team].spec.push(gn);
-    if (rFind(team, gn)==='spec') tryPromote(team, gn);
+  else if (ev.kind==='gift'){ var gn = ev.name||'Viewer';
+    if (!mHas(team, gn)){ mAdd(team, gn); renderSide(mOther(team)); }
     renderSide(team);
     applyGift(team, tierOf(ev.coins||1), gn, ev.gift||'Gift'); }
   else if (ev.kind==='like'){ if(game) game.onLike(team); var tr = (M.red.power<M.blue.power)?'red':(M.blue.power<M.red.power?'blue':null); if(tr && CFG.metric==='p') S.p += (tr==='red'?1:-1)*0.02; }
