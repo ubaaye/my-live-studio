@@ -52,7 +52,7 @@
 .grow .c{margin-left:auto;font-weight:800}
 .democol{position:fixed;top:150px;z-index:9;display:none;flex-direction:column;gap:5px}
 #demoR{left:8px} #demoB{right:8px}
-.democol button{background:rgba(24,20,12,.58);color:#fff;border:1px solid #ffffff40;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:700;
+.democol button{background:rgba(24,20,12,.58);color:#fff;border:1px solid #ffffff40;border-radius:999px;padding:3px 8px;font-size:9.5px;font-weight:700;
  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 8px #0004;text-shadow:0 1px 2px #000}
 .democol.show{display:flex}
 body.standalone #sideR,body.standalone #sideB{top:252px}
@@ -560,6 +560,8 @@ const billColors = [0x4cc462, 0xf27ea9, 0x52b6e8, 0xf2c94c, 0x62d478];
     fallFrom: 0,
     ladderT: 0,
     ladderFromY: 0,
+    ladderTopY: 2.28,
+    ladderLpNow: -1,
     downedNow: false,
     supAH: { x: px + sign * 0.88, z: 0.55 },
     supBH: { x: px - sign * 0.72, z: 0.72 },
@@ -997,12 +999,13 @@ function updateSide(st, targetH, dt, running, over, winner) {
     if (falling) { const fk = fallP / 0.25; yPos = st.fallFrom * (1 - fk * fk); }
     else yPos = 0;
   }
-  // Ladder height path: down → base → onto the tower (2.28) → TOP (8.45) → back
+  // Ladder height path: down → base → onto the tower → TOP (8.45) → back
   let ladPhase = '';
+  st.ladderLpNow = st.ladderT > 0 ? lad.lp : -1;
   if (st.ladderT > 0 && st.fallT <= 0 && lad.lp >= 0) {
     const lp = lad.lp;
     ladPhase = lp < 0.16 ? 'down' : lp < 0.30 ? 'base' : lp < 0.46 ? 'tower' : lp < 0.66 ? 'climb' : lp < 0.84 ? 'top' : 'return';
-    const keys = [[0, st.ladderFromY], [0.16, 0], [0.30, 0], [0.46, 2.28], [0.66, 8.45], [0.84, 8.45], [1, yPos]];
+    const keys = [[0, st.ladderFromY], [0.16, 0], [0.30, 0], [0.46, st.ladderTopY], [0.66, 8.45], [0.84, 8.45], [1, yPos]];
     for (let ki = 0; ki < keys.length - 1; ki++) {
       if (lp >= keys[ki][0] && lp <= keys[ki + 1][0]) {
         const kk = (lp - keys[ki][0]) / Math.max(0.0001, keys[ki + 1][0] - keys[ki][0]);
@@ -1191,23 +1194,43 @@ function updateSide(st, targetH, dt, running, over, winner) {
   }
 
   // Joined viewers' helper figures: cheer at the base; during the ladder
-  // they ALL ring the pole base and hold the tower up
+  // they ALL stack into the human tower itself (levels by join order)
+  const STACK = [
+    { dx: -0.78, y: 0, z: 0.60, lv: 0 }, { dx: -0.26, y: 0, z: 0.66, lv: 0 }, { dx: 0.26, y: 0, z: 0.66, lv: 0 }, { dx: 0.78, y: 0, z: 0.60, lv: 0 },
+    { dx: -0.52, y: 1.04, z: 0.55, lv: 1 }, { dx: 0.0, y: 1.04, z: 0.68, lv: 1 }, { dx: 0.52, y: 1.04, z: 0.55, lv: 1 },
+    { dx: -0.27, y: 2.35, z: 0.48, lv: 2 }, { dx: 0.27, y: 2.35, z: 0.48, lv: 2 },
+    { dx: 0.0, y: 3.65, z: 0.44, lv: 3 }
+  ];
   for (let ei = 0; ei < st.extras.length; ei++) {
     const ex = st.extras[ei], ep = ex.p;
     const bb2 = Math.abs(Math.sin(timeAcc * 5 + ex.ph));
-    if (st.ladderT > 0) {
-      const k2 = lad.a * lad.a * (3 - 2 * lad.a);
-      const ang = -0.95 + (ei % 5) * 0.48, rad = 0.66 + (ei >= 5 ? 0.34 : 0);
-      const rx = st.px + Math.sin(ang) * rad, rz = Math.cos(ang) * rad;
-      ep.root.position.set(ex.hx + (rx - ex.hx) * k2, 0, ex.hz + (rz - ex.hz) * k2);
+    if (st.ladderT > 0 && lad.lp >= 0) {
+      const sgK = function(a, b, x) { return Math.max(0, Math.min(1, (x - a) / (b - a))); };
+      let k2 = sgK(0.10, 0.34, lad.lp) * (1 - sgK(0.86, 0.97, lad.lp));
+      k2 = k2 * k2 * (3 - 2 * k2);
+      const slot = STACK[Math.min(ei, STACK.length - 1)];
+      const sx = st.px + slot.dx, sy = slot.y, sz = slot.z;
+      ep.root.position.set(ex.hx + (sx - ex.hx) * k2, sy * k2, ex.hz + (sz - ex.hz) * k2);
       ep.root.rotation.y = Math.atan2(st.px - ep.root.position.x, -ep.root.position.z);
-      ep.hips.position.y = 0.72 - 0.24 * k2;
-      ep.torso.rotation.set(0.12 * k2, 0, 0);
-      ep.head.rotation.set(-0.35, 0, 0);
-      ep.armL.rotation.set(-0.3, 0, -2.3 - 0.4 * k2);
-      ep.armR.rotation.set(-0.3, 0, 2.3 + 0.4 * k2);
-      ep.legL.rotation.set(-0.75 * k2, 0, -0.2);
-      ep.legR.rotation.set(-0.75 * k2, 0, 0.2);
+      if (slot.lv === 0) {
+        // Ground level: crouched solid, arms up holding the level above
+        ep.hips.position.y = 0.72 - 0.27 * k2;
+        ep.torso.rotation.set(0.14 * k2, 0, 0);
+        ep.head.rotation.set(-0.35, 0, 0);
+        ep.armL.rotation.set(-0.3, 0, -2.3 - 0.4 * k2);
+        ep.armR.rotation.set(-0.3, 0, 2.3 + 0.4 * k2);
+        ep.legL.rotation.set(-1.80 * k2, 0, -0.45 * k2);
+        ep.legR.rotation.set(-1.80 * k2, 0, 0.45 * k2);
+      } else {
+        // Upper levels: standing on shoulders, arms up supporting
+        ep.hips.position.y = 0.72;
+        ep.torso.rotation.set(0.05 * k2, 0, Math.sin(timeAcc * 7 + ex.ph) * 0.04 * k2);
+        ep.head.rotation.set(-0.38, 0, 0);
+        ep.armL.rotation.set(-0.3, 0, -2.35 - 0.35 * k2);
+        ep.armR.rotation.set(-0.3, 0, 2.35 + 0.35 * k2);
+        ep.legL.rotation.set(-0.14, 0, -0.10);
+        ep.legR.rotation.set(0.10, 0, 0.10);
+      }
     } else {
       ep.root.position.set(ex.hx, bb2 * 0.12, ex.hz);
       ep.root.rotation.y = st.sign * 0.3;
@@ -1239,12 +1262,19 @@ const game = {
     updateSide(sides.red, hR, dt, running, over, winner);
     updateSide(sides.blue, hB, dt, running, over, winner);
 
-    // Camera: pull in CLOSE on a fallen, dizzy climber; otherwise wide
+    // Camera: pull in CLOSE on a fallen, dizzy climber — or on the gift
+    // giver at the base just before he climbs the human ladder
     let focus = null;
     ['red', 'blue'].forEach(function(tk) {
       const s2 = sides[tk];
       if (s2.downedNow && (!focus || s2.fallT > focus.fallT)) focus = s2;
     });
+    if (!focus) {
+      ['red', 'blue'].forEach(function(tk) {
+        const s2 = sides[tk];
+        if (s2.ladderLpNow >= 0.06 && s2.ladderLpNow <= 0.42) focus = s2;
+      });
+    }
     if (focus) {
       camPosT.set(focus.px * 0.60, 2.7, 8.8);
       camLookT.set(focus.px, 1.15, 0);
@@ -1467,8 +1497,10 @@ const game = {
       }
     } else if (tier === 3) {
       // Human ladder: current climber comes down, the GIVER climbs,
-      // the team stacks up and boosts him to the very top
+      // ALL joined members stack up and boost him to the very top
       st.ladderFromY = Math.max(0, st.hSmooth * 8.45 - st.greaseDip);
+      const nEx = st.extras.length;
+      st.ladderTopY = nEx >= 10 ? 5.0 : nEx >= 8 ? 3.7 : nEx >= 5 ? 2.39 : 2.28;
       st.ladderT = 7.0;
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2;
@@ -1528,6 +1560,8 @@ const game = {
       st.fallT = 0;
       st.ladderT = 0;
       st.ladderFromY = 0;
+      st.ladderTopY = 2.28;
+      st.ladderLpNow = -1;
       st.downedNow = false;
       st.starGrp.visible = false;
       st.supA.root.position.set(st.supAH.x, 0, st.supAH.z);
@@ -1555,7 +1589,7 @@ return game;
 <script>
 (function(){
 "use strict";
-var CFG = {"id": "pole", "metric": "h", "guide": [["Gift 1–99", "တက်အား ဖြည့်"], ["Gift 100–499", "ချောဆီ ဆွဲချ — တက်သူ ပြုတ်ကျ"], ["Gift 500–999", "လူလှေကား — အပေါ်ဆုံးထိ တက်"], ["Gift 1000+", "မိုးကြိုး တက် — ထိပ်နား ခုန်တက်"]], "btn": ["ချောဆီဆွဲချ", "လူလှေကား"]};
+var CFG = {"id": "pole", "metric": "h", "guide": [["Gift 1–99", "တက်အား ဖြည့်"], ["Gift 100–499", "ချောဆီ ဆွဲချ — တက်သူ ပြုတ်ကျ"], ["Gift 500–999", "လူလှေကား — အပေါ်ဆုံးထိ တက်"], ["Gift 1000+", "မိုးကြိုး တက် — ထိပ်နား ခုန်တက်"]], "btn": ["ချောဆီဆွဲချ", "လူလှေကား"], "climb": "တိုင်ပေါ်တက်"};
 var $ = function(id){ return document.getElementById(id); };
 // ---------- team names (editable, saved on this device) ----------
 var TN = { red: 'အနီ', blue: 'အပြာ' };
@@ -1706,13 +1740,19 @@ if (window.parent===window){
   document.body.classList.add('standalone');
   $('demoR').classList.add('show'); $('demoB').classList.add('show');
   var names=['Aung Aung','May May','Ko Ko','Thiri','Zaw Zaw','Nilar'];
-  [['demoR','Join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
-   ['demoR',CFG.btn[0],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:199}); }],
-   ['demoR',CFG.btn[1],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Crown',coins:599}); }],
-   ['demoB','Join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }],
-   ['demoB',CFG.btn[0],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:199}); }],
-   ['demoB',CFG.btn[1],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Crown',coins:599}); }]
-  ].forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $(b[0]).appendChild(btn); });
+  var demoDefs=[
+   ['demoR','Join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
+   ['demoB','Join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }]
+  ];
+  if (CFG.climb){
+    demoDefs.push(['demoR',CFG.climb,function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Heart',coins:99}); }]);
+    demoDefs.push(['demoB',CFG.climb,function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Heart',coins:99}); }]);
+  }
+  demoDefs.push(['demoR',CFG.btn[0],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:199}); }]);
+  demoDefs.push(['demoR',CFG.btn[1],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Crown',coins:599}); }]);
+  demoDefs.push(['demoB',CFG.btn[0],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:199}); }]);
+  demoDefs.push(['demoB',CFG.btn[1],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Crown',coins:599}); }]);
+  demoDefs.forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $(b[0]).appendChild(btn); });
 }
 // ---------- loop ----------
 S.running = true;
