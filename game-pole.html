@@ -45,18 +45,35 @@
 #demo button{background:rgba(255,255,255,.13);color:#fff;border:1px solid #ffffff59;border-radius:9px;padding:6px 9px;font-size:12px;
  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 10px #0003;text-shadow:0 1px 3px #0009}
 #demo.show{display:flex}
+#gEdit{font-size:11.5px;font-weight:700;background:rgba(255,255,255,.13);border:1px solid #ffffff59;border-radius:8px;
+ padding:3px 9px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#tedit{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:20;background:rgba(4,6,16,.45)}
+#tedit.show{display:flex}
+#tedit .card{background:rgba(255,255,255,.13);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ border:1px solid #ffffff59;border-radius:16px;padding:16px;width:84%;max-width:320px;color:#fff;box-shadow:0 10px 34px #0007}
+#tedit h3{margin:0 0 10px;font-size:15px}
+#tedit label{display:block;font-size:12.5px;margin:10px 0 4px;opacity:.92}
+#tedit input{width:100%;padding:9px 11px;border-radius:9px;border:1px solid #ffffff55;background:rgba(0,0,0,.28);
+ color:#fff;font-size:15px;-webkit-user-select:text;user-select:text;outline:none}
+#tedit .row{display:flex;gap:8px;margin-top:14px}
+#tedit button{flex:1;padding:9px;border-radius:9px;border:1px solid #ffffff59;background:rgba(255,255,255,.13);
+ color:#fff;font-size:13.5px;font-weight:700;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 </style></head><body>
 <div id="stage"></div>
 <div class="hud">
-  <div class="team red"><div class="nm">🔴 အနီ</div><div class="st"><span id="mR">0</span> ယောက် · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
+  <div class="team red"><div class="nm" id="nmR">🔴 အနီ</div><div class="st"><span id="mR">0</span> ယောက် · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
   <div class="mid"><div class="tm" id="tm">1:30</div><div class="sc" id="sc">0 — 0</div><div class="rd">ပွဲစဉ် <span id="rd">1</span></div></div>
-  <div class="team blue"><div class="nm">🔵 အပြာ</div><div class="st"><span id="mB">0</span> ယောက် · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
+  <div class="team blue"><div class="nm" id="nmB">🔵 အပြာ</div><div class="st"><span id="mB">0</span> ယောက် · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
 </div>
 <div id="vsbar"><div id="vsR" style="width:50%"></div><div id="vsB" style="width:50%"></div><span class="pc" id="vsL">၅၀%</span><span class="pc" id="vsRp">၅၀%</span></div>
-<div id="howto"><span>မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
+<div id="howto"><span id="howtoTx">မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
 <div id="ticker"></div>
 <div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
-<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — ချောတိုင်တက်ပွဲ (GREASED POLE CLIMB)</span><span id="gTog">▾</span></div><div class="rows" id="gRows"></div></div>
+<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — ချောတိုင်တက်ပွဲ (GREASED POLE CLIMB)</span><span style="display:flex;gap:8px;align-items:center"><span id="gEdit">✎ အသင်းပြင်</span><span id="gTog">▾</span></span></div><div class="rows" id="gRows"></div></div>
+<div id="tedit"><div class="card"><h3>✎ အသင်းနာမည်များ ပြင်ရန်</h3>
+<label>🔴 အသင်း ၁ (မန့် ၁)</label><input id="tnR" maxlength="24">
+<label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
+<div class="row"><button id="tnCancel">မပြင်တော့</button><button id="tnSave">သိမ်းမယ်</button></div></div></div>
 <div id="demo"></div>
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
@@ -1237,9 +1254,25 @@ return game;
 "use strict";
 var CFG = {"id": "pole", "metric": "h", "guide": [["Gift 1–99", "တက်အား ဖြည့်"], ["Gift 100–499", "ပြိုင်ဘက် တိုင်ကို ချောဆီ သုတ် — ချော်ကျ"], ["Gift 500–999", "လေပွေ တက် အမြန်"], ["Gift 1000+", "မိုးကြိုး တက် — ထိပ်နား ခုန်တက်"]]};
 var $ = function(id){ return document.getElementById(id); };
+// ---------- team names (editable, saved on this device) ----------
+var TN = { red: 'အနီ', blue: 'အပြာ' };
+try { TN.red = localStorage.getItem('nlo_team_red') || TN.red; TN.blue = localStorage.getItem('nlo_team_blue') || TN.blue; } catch(e){}
+function tn(t){ return t==='red' ? TN.red : TN.blue; }
+function applyNames(){
+  $('nmR').textContent = '🔴 ' + TN.red; $('nmB').textContent = '🔵 ' + TN.blue;
+  $('howtoTx').textContent = 'မန့် ၁ = ' + TN.red + ' · မန့် ၂ = ' + TN.blue + ' ဝင်ပါ';
+}
+$('gEdit').addEventListener('click', function(e){ e.stopPropagation(); $('tnR').value = TN.red; $('tnB').value = TN.blue; $('tedit').classList.add('show'); });
+$('tnCancel').addEventListener('click', function(){ $('tedit').classList.remove('show'); });
+$('tnSave').addEventListener('click', function(){
+  var r = $('tnR').value.trim(), b = $('tnB').value.trim();
+  if (r) TN.red = r.slice(0,24); if (b) TN.blue = b.slice(0,24);
+  try { localStorage.setItem('nlo_team_red', TN.red); localStorage.setItem('nlo_team_blue', TN.blue); } catch(e){}
+  applyNames(); $('tedit').classList.remove('show'); tick('✎ အသင်းနာမည်များ ပြောင်းပြီ — ' + TN.red + ' / ' + TN.blue);
+});
 // ---------- guide ----------
 CFG.guide.forEach(function(g){ var d=document.createElement('div'); d.innerHTML='<b>'+g[0]+'</b> — '+g[1]; $('gRows').appendChild(d); });
-$('guide').querySelector('.hd').addEventListener('click', function(){ $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
+$('guide').querySelector('.hd').addEventListener('click', function(e){ if (e.target && e.target.id==='gEdit') return; $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
 // ---------- state ----------
 var S = { p:0, hpR:100, hpB:100, hR:0, hB:0, balR:100, balB:100, scoreR:0, scoreB:0, t:0, running:false, over:false, winner:null };
 var M = { red:{members:0, gifts:0, power:0, names:[]}, blue:{members:0, gifts:0, power:0, names:[]} };
@@ -1269,11 +1302,11 @@ function applyGift(team, tier, name, giftName){
   else if (CFG.metric==='hp'){ var dmg=[0,4,9,16,30][tier]; if(foe==='red') S.hpR=Math.max(0,S.hpR-dmg); else S.hpB=Math.max(0,S.hpB-dmg); lastHit[foe]=S.t; }
   else if (CFG.metric==='bal'){ var bd=[0,6,13,22,40][tier]; if(foe==='red') S.balR=Math.max(0,S.balR-bd); else S.balB=Math.max(0,S.balB-bd); lastHit[foe]=S.t; }
   else if (CFG.metric==='goal'){ S.p += (team==='red'?1:-1) * [0,.12,.26,.45,.85][tier]; if(tier===3) goldUntil[team]=S.t+5; if(tier===4 && Math.abs(S.p)>0.55){ goal(team); } }
-  if (tier>=3) showPop((team==='red'?'အနီ':'အပြာ')+' — '+feat, name+' က '+giftName+' ပို့တယ်');
-  tick('🎁 '+name+' → '+(team==='red'?'အနီ':'အပြာ')+' · '+feat);
+  if (tier>=3) showPop(tn(team)+' — '+feat, name+' က '+giftName+' ပို့တယ်');
+  tick('🎁 '+name+' → '+tn(team)+' · '+feat);
   syncHud();
 }
-function goal(team){ if(team==='red') S.scoreR++; else S.scoreB++; showPop('ဂိုး!!!', (team==='red'?'အနီ':'အပြာ')+' ဂိုး ဝင်တယ်'); S.p=0; if(game) game.reset(); syncHud(); }
+function goal(team){ if(team==='red') S.scoreR++; else S.scoreB++; showPop('ဂိုး!!!', tn(team)+' ဂိုး ဝင်တယ်'); S.p=0; if(game) game.reset(); syncHud(); }
 function winCheck(){
   if (S.over) return;
   var w=null;
@@ -1285,7 +1318,7 @@ function winCheck(){
   if (w) endRound(w);
 }
 function endRound(w){ S.over=true; S.winner=w; S.running=false; if(w==='red') M.red.wins=(M.red.wins||0)+1; else M.blue.wins=(M.blue.wins||0)+1;
-  showPop('🏆 '+(w==='red'?'အနီ':'အပြာ')+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
+  showPop('🏆 '+tn(w)+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
   setTimeout(newRound, 6000); syncHud(); }
 function newRound(){ round++; S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
 function syncHud(){
@@ -1308,7 +1341,7 @@ function syncHud(){
 function onEvent(ev){
   if (!ev || !ev.kind) return;
   var team = ev.team==='blue' ? 'blue' : 'red';
-  if (ev.kind==='join'){ M[team].members++; if(ev.name && M[team].names.indexOf(ev.name)<0) M[team].names.push(ev.name); if(game) game.onJoin(team); tick('👋 '+ev.name+' → '+(team==='red'?'အနီ':'အပြာ')+' ဝင်တယ်'); }
+  if (ev.kind==='join'){ M[team].members++; if(ev.name && M[team].names.indexOf(ev.name)<0) M[team].names.push(ev.name); if(game) game.onJoin(team); tick('👋 '+ev.name+' → '+tn(team)+' ဝင်တယ်'); }
   else if (ev.kind==='gift'){ applyGift(team, tierOf(ev.coins||1), ev.name||'ပရိသတ်', ev.gift||'Gift'); }
   else if (ev.kind==='like'){ if(game) game.onLike(team); var tr = (M.red.power<M.blue.power)?'red':(M.blue.power<M.red.power?'blue':null); if(tr && CFG.metric==='p') S.p += (tr==='red'?1:-1)*0.02; }
   else if (ev.kind==='chat'){ tick('💬 '+ev.name+': '+(ev.text||'').slice(0,40)); }
@@ -1349,7 +1382,7 @@ function frame(now){
   }
   if (game){ game.update(dt, S); renderer.render(game.scene, game.camera); }
 }
-resize(); syncHud(); requestAnimationFrame(frame);
+resize(); applyNames(); syncHud(); requestAnimationFrame(frame);
 })();
 </script>
 </body></html>
