@@ -7,13 +7,22 @@
  font-family:"Optimistic AI VF",system-ui,sans-serif;color:#eef1ff;-webkit-user-select:none;user-select:none}
 #stage{position:fixed;inset:0} #stage canvas{display:block}
 .hud{position:fixed;top:8px;left:8px;right:8px;display:flex;gap:8px;z-index:5;pointer-events:none}
-.team{flex:1;background:rgba(10,14,34,.72);border:1.5px solid #ffffff2a;border-radius:14px;padding:7px 10px;backdrop-filter:blur(6px)}
-.team.red{border-color:#ff5a5a88}.team.blue{border-color:#4da3ff88}
+.team{flex:1;background:rgba(8,10,26,.55);border:1.5px solid #ffffff2a;border-radius:16px;padding:7px 10px;
+ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.team.red{border-color:#ff4d7e;box-shadow:0 0 12px #ff4d7e44,inset 0 0 12px #ff4d7e14}
+.team.blue{border-color:#3fa9ff;box-shadow:0 0 12px #3fa9ff44,inset 0 0 12px #3fa9ff14}
 .team .nm{font-weight:800;font-size:15px} .team .st{font-size:12px;opacity:.85;margin-top:1px}
 .bar{height:6px;background:#ffffff22;border-radius:3px;margin-top:5px;overflow:hidden}
 .bar i{display:block;height:100%;border-radius:3px;transition:width .25s}
-.red .bar i{background:#ff5a5a}.blue .bar i{background:#4da3ff}
-.mid{width:86px;text-align:center;background:rgba(10,14,34,.72);border:1.5px solid #ffd54d66;border-radius:14px;padding:7px 4px;backdrop-filter:blur(6px)}
+.red .bar i{background:linear-gradient(90deg,#ff2e63,#ff7aa8)}.blue .bar i{background:linear-gradient(90deg,#2e9bff,#7ac2ff)}
+.mid{width:86px;text-align:center;background:rgba(8,10,26,.55);border:1.5px solid #ffd54dcc;border-radius:16px;padding:7px 4px;
+ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 0 12px #ffd54d33}
+#vsbar{position:fixed;top:94px;left:10px;right:10px;height:15px;z-index:5;border-radius:999px;overflow:hidden;pointer-events:none;
+ background:rgba(8,10,26,.45);border:1px solid #ffffff40;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#vsR{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ff2e63,#ff7aa8);transition:width .3s}
+#vsB{position:absolute;right:0;top:0;bottom:0;background:linear-gradient(90deg,#7ac2ff,#2e9bff);transition:width .3s}
+#vsbar .pc{position:absolute;top:0;bottom:0;display:flex;align-items:center;font-size:9.5px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000c;z-index:2}
+#vsL{left:7px} #vsRp{right:7px}
 .mid .tm{font-size:21px;font-weight:900;line-height:1} .mid .sc{font-size:13px;margin-top:2px} .mid .rd{font-size:11px;opacity:.8}
 #ticker{position:fixed;left:10px;bottom:64px;z-index:5;font-size:12.5px;line-height:1.5;pointer-events:none;text-shadow:0 1px 3px #000}
 #ticker div{background:rgba(5,8,20,.55);display:inline-block;padding:2px 8px;border-radius:8px;margin-top:3px}
@@ -23,507 +32,1071 @@
 #guide .rows{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}
 #guide .rows div b{color:#ffd54d;font-weight:700}
 #guide.closed .rows{display:none}
-#howto{position:fixed;top:96px;left:0;right:0;text-align:center;z-index:4;pointer-events:none}
+#howto{position:fixed;top:116px;left:0;right:0;text-align:center;z-index:4;pointer-events:none}
 #howto span{background:rgba(5,8,20,.5);padding:3px 12px;border-radius:999px;font-size:13px}
 #popup{position:fixed;top:38%;left:0;right:0;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:scale(.9);transition:all .18s}
 #popup.show{opacity:1;transform:scale(1)}
-#popup .big{display:inline-block;background:linear-gradient(180deg,#ffd54d,#ff9d2e);color:#431c00;font-weight:900;
- font-size:21px;padding:10px 22px;border-radius:16px;box-shadow:0 8px 30px #000a}
-#popup .sub{display:block;margin-top:7px;font-size:14px;color:#fff;text-shadow:0 1px 4px #000}
-#demo{position:fixed;right:8px;top:110px;z-index:9;display:none;flex-direction:column;gap:5px}
-#demo button{background:#1b2350;color:#fff;border:1px solid #ffffff33;border-radius:9px;padding:6px 9px;font-size:12px}
-#demo.show{display:flex}
+#popup .big{display:inline-block;background:rgba(255,255,255,.13);color:#fff;font-weight:800;
+ font-size:15px;line-height:1.3;padding:6px 14px;border-radius:11px;box-shadow:0 5px 18px #0004,inset 0 0 12px #ffffff1f;max-width:82%;
+ border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(10px) saturate(1.3);-webkit-backdrop-filter:blur(10px) saturate(1.3);
+ text-shadow:0 1px 4px #0009}
+#popup .sub{display:block;margin-top:4px;font-size:11.5px;color:#fff;text-shadow:0 1px 4px #000}
+#sideR,#sideB{position:fixed;top:150px;z-index:5;display:flex;flex-direction:column;gap:3px;pointer-events:none;min-width:106px}
+#sideR{left:8px} #sideB{right:8px}
+#giftsR,#giftsB{display:none;flex-direction:column;gap:3px}
+.qbox{display:none;background:rgba(255,255,255,.10);border:1px dashed #ffffff70;border-radius:8px;padding:3px 7px;
+ font-size:10.5px;color:#fff;text-shadow:0 1px 3px #000a;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);max-width:158px}
+.grow{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.13);border:1px solid #ffffff45;border-radius:8px;
+ padding:2.5px 7px;font-size:11px;color:#fff;text-shadow:0 1px 3px #000a;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.grow .n{opacity:.92;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grow .c{margin-left:auto;font-weight:800}
+.democol{position:fixed;top:150px;z-index:9;display:none;flex-direction:column;gap:5px}
+#demoR{left:8px} #demoB{right:8px}
+.democol button{background:rgba(24,20,12,.58);color:#fff;border:1px solid #ffffff40;border-radius:999px;padding:3px 8px;font-size:9.5px;font-weight:700;
+ backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 8px #0004;text-shadow:0 1px 2px #000}
+.democol.show{display:flex}
+body.standalone #sideR,body.standalone #sideB{top:252px}
+#gEdit{font-size:11.5px;font-weight:700;background:rgba(255,255,255,.13);border:1px solid #ffffff59;border-radius:8px;
+ padding:3px 9px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#tedit{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:20;background:rgba(4,6,16,.45)}
+#tedit.show{display:flex}
+#tedit .card{background:rgba(255,255,255,.13);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ border:1px solid #ffffff59;border-radius:16px;padding:16px;width:84%;max-width:320px;color:#fff;box-shadow:0 10px 34px #0007}
+#tedit h3{margin:0 0 10px;font-size:15px}
+#tedit label{display:block;font-size:12.5px;margin:10px 0 4px;opacity:.92}
+#tedit input{width:100%;padding:9px 11px;border-radius:9px;border:1px solid #ffffff55;background:rgba(0,0,0,.28);
+ color:#fff;font-size:15px;-webkit-user-select:text;user-select:text;outline:none}
+#tedit .row{display:flex;gap:8px;margin-top:14px}
+#tedit button{flex:1;padding:9px;border-radius:9px;border:1px solid #ffffff59;background:rgba(255,255,255,.13);
+ color:#fff;font-size:13.5px;font-weight:700;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#fx{position:fixed;inset:0;z-index:7;pointer-events:none;overflow:hidden}
+#fx .cf{position:absolute;width:8px;height:12px;border-radius:2px;opacity:.95}
+#flash{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;border:3px solid transparent;border-radius:6px}
 </style></head><body>
 <div id="stage"></div>
 <div class="hud">
-  <div class="team red"><div class="nm">🔴 အနီ</div><div class="st"><span id="mR">0</span> ယောက် · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
+  <div class="team red"><div class="nm" id="nmR">🔴 အနီ</div><div class="st">👥 <span id="pR">0</span> · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
   <div class="mid"><div class="tm" id="tm">1:30</div><div class="sc" id="sc">0 — 0</div><div class="rd">ပွဲစဉ် <span id="rd">1</span></div></div>
-  <div class="team blue"><div class="nm">🔵 အပြာ</div><div class="st"><span id="mB">0</span> ယောက် · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
+  <div class="team blue"><div class="nm" id="nmB">🔵 အပြာ</div><div class="st">👥 <span id="pB">0</span> · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
 </div>
-<div id="howto"><span>မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
+<div id="vsbar"><div id="vsR" style="width:50%"></div><div id="vsB" style="width:50%"></div><span class="pc" id="vsL">၅၀%</span><span class="pc" id="vsRp">၅၀%</span></div>
+<div id="sideR"><div id="giftsR"></div></div>
+<div id="sideB"><div id="giftsB"></div></div>
+<div id="howto"><span id="howtoTx">မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
 <div id="ticker"></div>
+<div id="flash"></div><div id="fx"></div>
 <div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
-<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — လွန်ဆွဲပွဲ (TUG OF WAR)</span><span id="gTog">▾</span></div><div class="rows" id="gRows"></div></div>
-<div id="demo"></div>
+<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — လွန်ဆွဲပွဲ (TUG OF WAR)</span><span style="display:flex;gap:8px;align-items:center"><span id="gEdit">✎ အသင်းပြင်</span><span id="gTog">▾</span></span></div><div class="rows" id="gRows"></div></div>
+<div id="tedit"><div class="card"><h3>✎ အသင်းနာမည်များ ပြင်ရန်</h3>
+<label>🔴 အသင်း ၁ (မန့် ၁)</label><input id="tnR" maxlength="24">
+<label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
+<div class="row"><button id="tnCancel">မပြင်တော့</button><button id="tnSave">သိမ်းမယ်</button></div></div></div>
+<div class="democol" id="demoR"></div><div class="democol" id="demoB"></div>
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
 <script>
 GAME3D['tug'] = {
-  create: function(THREE) {
-    const T = THREE;
-    const scene = new T.Scene();
-    scene.background = new T.Color(0xffb273);
-    scene.fog = new T.FogExp2(0xffb273, 0.025);
 
-    const camera = new T.PerspectiveCamera(55, 0.5, 0.1, 100);
-    camera.position.set(0, 3.8, 11.5);
-    camera.lookAt(0, 1.0, 0);
+create: function(THREE) { const T = THREE; const scene = new T.Scene(); scene.background = new T.Color(0xf7c58e); scene.fog = new T.Fog(0xf7c58e, 24, 56);
 
-    const hemiLight = new T.HemisphereLight(0xffdfa9, 0x6e4320, 0.85);
-    scene.add(hemiLight);
 
-    const dirLight = new T.DirectionalLight(0xfffaed, 1.2);
-    dirLight.position.set(6, 12, 8);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 30;
-    dirLight.shadow.camera.left = -8;
-    dirLight.shadow.camera.right = 8;
-    dirLight.shadow.camera.top = 8;
-    dirLight.shadow.camera.bottom = -4;
-    scene.add(dirLight);
 
-    const skinMat = new T.MeshStandardMaterial({ color: 0xf3b28f, roughness: 0.8 });
-    const thanakaMat = new T.MeshStandardMaterial({ color: 0xfff6bc, roughness: 0.9 });
-    const redMat = new T.MeshStandardMaterial({ color: 0xdd2c2c, roughness: 0.8 });
-    const redDarkMat = new T.MeshStandardMaterial({ color: 0x881111, roughness: 0.8 });
-    const blueMat = new T.MeshStandardMaterial({ color: 0x2c66dd, roughness: 0.8 });
-    const blueDarkMat = new T.MeshStandardMaterial({ color: 0x112b88, roughness: 0.8 });
-    const goldMat = new T.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.5, metalness: 0.2 });
-    const groundMat = new T.MeshStandardMaterial({ color: 0xdca363, roughness: 0.9 });
-    const mudMat = new T.MeshStandardMaterial({ color: 0x3d2310, roughness: 0.3 });
-    const ropeMat = new T.MeshStandardMaterial({ color: 0xab8855, roughness: 0.85, emissive: 0x000000 });
-    const woodMat = new T.MeshStandardMaterial({ color: 0x7a5230, roughness: 0.85 });
-    const leafMat = new T.MeshStandardMaterial({ color: 0x3b8433, roughness: 0.8 });
-    const whiteMat = new T.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.7 });
+const camera = new T.PerspectiveCamera(55, 0.5625, 0.5, 90);
+const camBase = new T.Vector3(0, 4.5, 19.2);
+const camLook = new T.Vector3(0, 2.5, 0);
+camera.position.copy(camBase);
+camera.lookAt(camLook);
 
-    const boxGeo = new T.BoxGeometry(1, 1, 1);
-    const sphereGeo = new T.SphereGeometry(1, 12, 10);
-    const cylinderGeo = new T.CylinderGeometry(1, 1, 1, 10);
-    const circleGeo = new T.CircleGeometry(1, 8);
+const hemi = new T.HemisphereLight(0xfff5db, 0xc77d48, 1.05);
+scene.add(hemi);
 
-    const ground = new T.Mesh(new T.PlaneGeometry(30, 20), groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
+const dir = new T.DirectionalLight(0xfff0cc, 1.65);
+dir.position.set(7, 14, 9);
+dir.castShadow = true;
+dir.shadow.mapSize.set(1024, 1024);
+dir.shadow.camera.left = -6.5;
+dir.shadow.camera.right = 6.5;
+dir.shadow.camera.top = 5.5;
+dir.shadow.camera.bottom = -4.5;
+dir.shadow.camera.near = 3;
+dir.shadow.camera.far = 32;
+dir.shadow.bias = -0.001;
+scene.add(dir);
 
-    const mud = new T.Mesh(new T.CylinderGeometry(2.8, 3.2, 0.05, 24), mudMat);
-    mud.position.set(0, 0.02, 0);
-    mud.scale.set(1, 1, 0.5);
-    scene.add(mud);
+const tmpObj = new T.Object3D();
+const tmpCol = new T.Color();
 
-    const lineR = new T.Mesh(boxGeo, redMat);
-    lineR.scale.set(0.12, 0.03, 3);
-    lineR.position.set(-3, 0.03, 0);
-    scene.add(lineR);
+// Shared materials
+const matSand = new T.MeshStandardMaterial({ color: 0xdca76c, roughness: 0.88 });
+const matArena = new T.MeshStandardMaterial({ color: 0xd19457, roughness: 0.9 });
+const matMud = new T.MeshStandardMaterial({ color: 0x3b2314, roughness: 0.18, metalness: 0.12 });
+const matMudRim = new T.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.88 });
+const matSkin = new T.MeshStandardMaterial({ color: 0xd99b6c, roughness: 0.82 });
+const matThanaka = new T.MeshStandardMaterial({ color: 0xf6e7a1, roughness: 0.85 });
+const matRed = new T.MeshStandardMaterial({ color: 0xe53935, roughness: 0.8 });
+const matRedDark = new T.MeshStandardMaterial({ color: 0x8e1919, roughness: 0.85, side: T.DoubleSide });
+const matBlue = new T.MeshStandardMaterial({ color: 0x1e88e5, roughness: 0.8 });
+const matBlueDark = new T.MeshStandardMaterial({ color: 0x0f4482, roughness: 0.85, side: T.DoubleSide });
+const matRope = new T.MeshStandardMaterial({ color: 0xc8a464, roughness: 0.88, emissive: new T.Color(0xffb800), emissiveIntensity: 0 });
+const matGold = new T.MeshStandardMaterial({ color: 0xf6be1a, roughness: 0.75, metalness: 0.15, side: T.DoubleSide });
+const matBannerRed = new T.MeshStandardMaterial({ color: 0xc62828, roughness: 0.82, side: T.DoubleSide });
+const matBamboo = new T.MeshStandardMaterial({ color: 0xc49c48, roughness: 0.85 });
+const matWood = new T.MeshStandardMaterial({ color: 0x8d5830, roughness: 0.88 });
+const matFrond = new T.MeshStandardMaterial({ color: 0x43923e, roughness: 0.84 });
+const matLineInst = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88 });
+const matCrowd = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82 });
+const matFlag = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, side: T.DoubleSide });
+const matString = new T.MeshStandardMaterial({ color: 0x6d4c30, roughness: 0.9 });
+const matDust = new T.MeshStandardMaterial({ color: 0xe7c697, roughness: 0.9, transparent: true, opacity: 0.78 });
+const matHill = new T.MeshStandardMaterial({ color: 0xd99b6a, roughness: 0.9 });
+const matStupa = new T.MeshStandardMaterial({ color: 0xe8b542, roughness: 0.78 });
 
-    const lineB = new T.Mesh(boxGeo, blueMat);
-    lineB.scale.set(0.12, 0.03, 3);
-    lineB.position.set(3, 0.03, 0);
-    scene.add(lineB);
+// Shared geometries
+const geoHead = new T.SphereGeometry(0.185, 10, 8);
+const geoBand = new T.TorusGeometry(0.18, 0.048, 7, 14);
+const geoThanaka = new T.CylinderGeometry(0.05, 0.05, 0.016, 8);
+const geoTorso = new T.CapsuleGeometry(0.165, 0.28, 4, 8);
+const geoLongyi = new T.CylinderGeometry(0.165, 0.22, 0.42, 10, 1, true);
+const geoArm = new T.CapsuleGeometry(0.055, 0.43, 4, 6);
+const geoLeg = new T.CapsuleGeometry(0.066, 0.42, 4, 6);
 
-    const lineC = new T.Mesh(boxGeo, whiteMat);
-    lineC.scale.set(0.08, 0.03, 3);
-    lineC.position.set(0, 0.03, 0);
-    scene.add(lineC);
+// Ground
+const ground = new T.Mesh(new T.PlaneGeometry(46, 36), matSand);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
 
-    const bgGroup = new T.Group();
-    bgGroup.position.z = -3.5;
-    scene.add(bgGroup);
+const arenaStrip = new T.Mesh(new T.PlaneGeometry(14, 4.2), matArena);
+arenaStrip.rotation.x = -Math.PI / 2;
+arenaStrip.position.set(0, 0.008, 0.1);
+arenaStrip.receiveShadow = true;
+scene.add(arenaStrip);
 
-    for (let i = -4; i <= 4; i++) {
-      const post = new T.Mesh(cylinderGeo, woodMat);
-      post.scale.set(0.08, 3, 0.08);
-      post.position.set(i * 1.8, 1.5, 0);
-      bgGroup.add(post);
+// Mud pit
+const mudPit = new T.Mesh(new T.CylinderGeometry(1.0, 1.0, 0.03, 22), matMud);
+mudPit.scale.set(1.22, 1, 0.78);
+mudPit.position.set(0, 0.015, 0);
+mudPit.receiveShadow = true;
+scene.add(mudPit);
+
+const mudRim = new T.Mesh(new T.TorusGeometry(1.0, 0.11, 7, 22), matMudRim);
+mudRim.rotation.x = Math.PI / 2;
+mudRim.scale.set(1.22, 0.78, 0.55);
+mudRim.position.set(0, 0.04, 0);
+mudRim.receiveShadow = true;
+scene.add(mudRim);
+
+// Win lines at x=-3 and x=+3
+const lineGeo = new T.PlaneGeometry(0.14, 3.6);
+lineGeo.rotateX(-Math.PI / 2);
+const winLines = new T.InstancedMesh(lineGeo, matLineInst, 4);
+winLines.receiveShadow = true;
+const lineDefs = [
+  { x: -3.0, col: 0xe53935 },
+  { x: -2.84, col: 0xfff8ee },
+  { x: 3.0, col: 0x1e88e5 },
+  { x: 2.84, col: 0xfff8ee }
+];
+for (let i = 0; i < 4; i++) {
+  tmpObj.position.set(lineDefs[i].x, 0.02, 0.05);
+  tmpObj.rotation.set(0, 0, 0);
+  tmpObj.scale.set(i % 2 === 1 ? 0.55 : 1, 1, 1);
+  tmpObj.updateMatrix();
+  winLines.setMatrixAt(i, tmpObj.matrix);
+  tmpCol.setHex(lineDefs[i].col);
+  winLines.setColorAt(i, tmpCol);
+}
+winLines.instanceMatrix.needsUpdate = true;
+winLines.instanceColor.needsUpdate = true;
+scene.add(winLines);
+
+// Stands and bamboo fence
+const standGeo = new T.BoxGeometry(1, 1, 1);
+const standPlanks = new T.InstancedMesh(standGeo, matWood, 11);
+let si = 0;
+for (let r = 0; r < 3; r++) {
+  tmpObj.position.set(0, 0.55 + r * 0.85, -4.1 - r * 1.05);
+  tmpObj.rotation.set(0, 0, 0);
+  tmpObj.scale.set(10.6, 0.22, 0.95);
+  tmpObj.updateMatrix();
+  standPlanks.setMatrixAt(si++, tmpObj.matrix);
+}
+for (let c = -4; c <= 4; c += 2) {
+  tmpObj.position.set(c * 1.15, 1.35, -6.5);
+  tmpObj.rotation.set(0, 0, 0);
+  tmpObj.scale.set(0.18, 2.9, 0.18);
+  tmpObj.updateMatrix();
+  standPlanks.setMatrixAt(si++, tmpObj.matrix);
+}
+// Foreground festival curb rails
+tmpObj.position.set(-3.4, 0.18, 5.2);
+tmpObj.rotation.set(0, 0.12, 0);
+tmpObj.scale.set(3.2, 0.16, 0.16);
+tmpObj.updateMatrix();
+standPlanks.setMatrixAt(si++, tmpObj.matrix);
+tmpObj.position.set(3.4, 0.18, 5.2);
+tmpObj.rotation.set(0, -0.12, 0);
+tmpObj.scale.set(3.2, 0.16, 0.16);
+tmpObj.updateMatrix();
+standPlanks.setMatrixAt(si++, tmpObj.matrix);
+tmpObj.position.set(0, 0.14, 6.4);
+tmpObj.rotation.set(0, 0, 0);
+tmpObj.scale.set(9.2, 0.12, 0.14);
+tmpObj.updateMatrix();
+standPlanks.setMatrixAt(si++, tmpObj.matrix);
+standPlanks.instanceMatrix.needsUpdate = true;
+scene.add(standPlanks);
+
+// Bamboo fence
+const poleGeo = new T.CylinderGeometry(0.055, 0.065, 1, 6);
+const bambooCount = 19;
+const bambooMesh = new T.InstancedMesh(poleGeo, matBamboo, bambooCount);
+let bi = 0;
+for (let i = 0; i < 15; i++) {
+  const x = -5.6 + i * 0.8;
+  tmpObj.position.set(x, 0.58, -3.15);
+  tmpObj.rotation.set(0, 0, (i % 2 === 0 ? 0.03 : -0.03));
+  tmpObj.scale.set(1, 1.25, 1);
+  tmpObj.updateMatrix();
+  bambooMesh.setMatrixAt(bi++, tmpObj.matrix);
+}
+for (let r = 0; r < 2; r++) {
+  tmpObj.position.set(0, 0.42 + r * 0.45, -3.12);
+  tmpObj.rotation.set(0, 0, Math.PI / 2);
+  tmpObj.scale.set(0.85, 11.8, 0.85);
+  tmpObj.updateMatrix();
+  bambooMesh.setMatrixAt(bi++, tmpObj.matrix);
+}
+// Foreground bamboo corner posts
+tmpObj.position.set(-4.6, 0.5, 5.0);
+tmpObj.rotation.set(0, 0, 0);
+tmpObj.scale.set(1.2, 1.0, 1.2);
+tmpObj.updateMatrix();
+bambooMesh.setMatrixAt(bi++, tmpObj.matrix);
+tmpObj.position.set(4.6, 0.5, 5.0);
+tmpObj.rotation.set(0, 0, 0);
+tmpObj.scale.set(1.2, 1.0, 1.2);
+tmpObj.updateMatrix();
+bambooMesh.setMatrixAt(bi++, tmpObj.matrix);
+bambooMesh.instanceMatrix.needsUpdate = true;
+scene.add(bambooMesh);
+
+// Crowd on stands
+const crowdTotal = 36;
+const crowdBodies = new T.InstancedMesh(new T.CapsuleGeometry(0.18, 0.36, 4, 6), matCrowd, crowdTotal);
+const crowdHeads = new T.InstancedMesh(new T.SphereGeometry(0.155, 8, 6), matCrowd, crowdTotal);
+const crowdPalette = [0xe53935, 0xfb8c00, 0xfdd835, 0x43a047, 0x00acc1, 0x1e88e5, 0x8e24aa, 0xd81b60];
+const skinPalette = [0xd99b6c, 0xcf8d5e, 0xe2ab7d, 0xc48254];
+const crowdData = [];
+for (let i = 0; i < crowdTotal; i++) {
+  const row = Math.floor(i / 12);
+  const col = i % 12;
+  const x = -4.65 + col * 0.84 + (row % 2) * 0.25;
+  const y = 0.96 + row * 0.85;
+  const z = -4.1 - row * 1.05;
+  crowdData.push({ x: x, y: y, z: z, phase: i * 1.13, spd: 3.2 + (i % 5) * 0.45 });
+  tmpCol.setHex(crowdPalette[(i * 3 + row) % crowdPalette.length]);
+  crowdBodies.setColorAt(i, tmpCol);
+  tmpCol.setHex(skinPalette[i % skinPalette.length]);
+  crowdHeads.setColorAt(i, tmpCol);
+}
+crowdBodies.instanceColor.needsUpdate = true;
+crowdHeads.instanceColor.needsUpdate = true;
+scene.add(crowdBodies);
+scene.add(crowdHeads);
+
+// Fair pavilions
+const pavPoles = new T.InstancedMesh(poleGeo, matWood, 12);
+const pavPos = [
+  { x: -4.2, z: -7.4, h: 4.5, w: 2.4 },
+  { x: 4.2, z: -7.4, h: 4.5, w: 2.4 },
+  { x: 0, z: -8.0, h: 5.4, w: 3.6 }
+];
+let pi = 0;
+for (let p = 0; p < 3; p++) {
+  const pv = pavPos[p];
+  const hw = pv.w * 0.48;
+  const offsets = [[-hw, -0.7], [hw, -0.7], [-hw, 0.7], [hw, 0.7]];
+  for (let k = 0; k < 4; k++) {
+    tmpObj.position.set(pv.x + offsets[k][0], pv.h * 0.5, pv.z + offsets[k][1]);
+    tmpObj.rotation.set(0, 0, 0);
+    tmpObj.scale.set(1.6, pv.h, 1.6);
+    tmpObj.updateMatrix();
+    pavPoles.setMatrixAt(pi++, tmpObj.matrix);
+  }
+}
+pavPoles.instanceMatrix.needsUpdate = true;
+scene.add(pavPoles);
+
+const roofGeo = new T.ConeGeometry(1.0, 1.0, 4);
+roofGeo.rotateY(Math.PI / 4);
+const pavRoofs = new T.InstancedMesh(roofGeo, matBannerRed, 6);
+const pavFinials = new T.InstancedMesh(new T.ConeGeometry(0.14, 0.9, 6), matGold, 3);
+let ri = 0;
+for (let p = 0; p < 3; p++) {
+  const pv = pavPos[p];
+  tmpObj.position.set(pv.x, pv.h + 0.55, pv.z);
+  tmpObj.rotation.set(0, 0, 0);
+  tmpObj.scale.set(pv.w * 0.85, 1.35, 1.75);
+  tmpObj.updateMatrix();
+  pavRoofs.setMatrixAt(ri++, tmpObj.matrix);
+
+  tmpObj.position.set(pv.x, pv.h + 1.45, pv.z);
+  tmpObj.scale.set(pv.w * 0.5, 1.05, 1.05);
+  tmpObj.updateMatrix();
+  pavRoofs.setMatrixAt(ri++, tmpObj.matrix);
+
+  tmpObj.position.set(pv.x, pv.h + 2.3, pv.z);
+  tmpObj.scale.set(1, 1, 1);
+  tmpObj.updateMatrix();
+  pavFinials.setMatrixAt(p, tmpObj.matrix);
+}
+pavRoofs.instanceMatrix.needsUpdate = true;
+pavFinials.instanceMatrix.needsUpdate = true;
+scene.add(pavRoofs);
+scene.add(pavFinials);
+
+// Red and gold fair banners
+const bannerGeo = new T.PlaneGeometry(1, 1);
+const bannersRed = new T.InstancedMesh(bannerGeo, matBannerRed, 6);
+const bannersGold = new T.InstancedMesh(bannerGeo, matGold, 6);
+const bDefs = [
+  { x: 0, y: 0.45, z: -3.58, w: 9.8, h: 0.48 },
+  { x: 0, y: 4.85, z: -7.25, w: 3.7, h: 0.65 },
+  { x: -4.2, y: 4.15, z: -6.65, w: 2.5, h: 0.5 },
+  { x: 4.2, y: 4.15, z: -6.65, w: 2.5, h: 0.5 },
+  { x: -4.6, y: 1.5, z: -3.1, w: 0.45, h: 1.35 },
+  { x: 4.6, y: 1.5, z: -3.1, w: 0.45, h: 1.35 }
+];
+for (let i = 0; i < 6; i++) {
+  const bd = bDefs[i];
+  tmpObj.position.set(bd.x, bd.y, bd.z);
+  tmpObj.rotation.set(0, 0, 0);
+  tmpObj.scale.set(bd.w, bd.h, 1);
+  tmpObj.updateMatrix();
+  bannersRed.setMatrixAt(i, tmpObj.matrix);
+
+  tmpObj.position.set(bd.x, bd.y - bd.h * 0.45, bd.z + 0.02);
+  tmpObj.scale.set(bd.w, bd.h * 0.22, 1);
+  tmpObj.updateMatrix();
+  bannersGold.setMatrixAt(i, tmpObj.matrix);
+}
+bannersRed.instanceMatrix.needsUpdate = true;
+bannersGold.instanceMatrix.needsUpdate = true;
+scene.add(bannersRed);
+scene.add(bannersGold);
+
+// Palm trees
+const palms = [
+  { x: -5.2, z: -5.2, h: 8.6, lean: 0.16 },
+  { x: 5.2, z: -5.2, h: 8.8, lean: -0.16 },
+  { x: -4.6, z: -9.8, h: 10.6, lean: 0.12 },
+  { x: 4.6, z: -9.8, h: 10.4, lean: -0.12 }
+];
+const segPerPalm = 8;
+const frondsPerPalm = 7;
+const palmTrunks = new T.InstancedMesh(new T.CylinderGeometry(0.16, 0.22, 1.35, 6), matWood, palms.length * segPerPalm);
+const palmFronds = new T.InstancedMesh(new T.ConeGeometry(0.42, 2.9, 4), matFrond, palms.length * frondsPerPalm);
+const palmTops = [];
+let ti = 0;
+for (let p = 0; p < palms.length; p++) {
+  const pm = palms[p];
+  let cx = pm.x;
+  let cy = 0;
+  const stepH = pm.h / segPerPalm;
+  for (let s = 0; s < segPerPalm; s++) {
+    const u = s / segPerPalm;
+    const bend = pm.lean * (u * 1.4 + 0.15);
+    tmpObj.position.set(cx + Math.sin(bend) * stepH * 0.5, cy + stepH * 0.5, pm.z);
+    tmpObj.rotation.set(0, 0, -bend);
+    const sc = 1.05 - u * 0.38;
+    tmpObj.scale.set(sc, stepH / 1.25, sc);
+    tmpObj.updateMatrix();
+    palmTrunks.setMatrixAt(ti++, tmpObj.matrix);
+    cx += Math.sin(bend) * stepH;
+    cy += stepH;
+  }
+  palmTops.push({ x: cx, y: cy, z: pm.z });
+}
+palmTrunks.instanceMatrix.needsUpdate = true;
+scene.add(palmTrunks);
+scene.add(palmFronds);
+
+// Distant warm hill and stupa silhouette
+const hill = new T.Mesh(new T.SphereGeometry(14, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), matHill);
+hill.scale.set(1.8, 0.35, 0.55);
+hill.position.set(0, -0.5, -24);
+scene.add(hill);
+
+const stupa = new T.Mesh(new T.ConeGeometry(1.1, 4.6, 8), matStupa);
+stupa.position.set(0.2, 6.2, -23.5);
+scene.add(stupa);
+
+// Overhead waving pennant strings
+const flagGeo = new T.BufferGeometry();
+flagGeo.setAttribute('position', new T.BufferAttribute(new Float32Array([
+  -0.19, 0, 0,
+   0.19, 0, 0,
+   0.0, -0.54, 0
+]), 3));
+flagGeo.computeVertexNormals();
+
+const stringDefs = [
+  { y: 5.5, z: -2.6, span: 5.6, sag: 0.75, n: 16 },
+  { y: 7.7, z: -4.8, span: 6.4, sag: 0.9, n: 18 },
+  { y: 10.1, z: -7.2, span: 7.4, sag: 1.05, n: 20 }
+];
+let totalFlags = 0;
+for (let s = 0; s < stringDefs.length; s++) totalFlags += stringDefs[s].n;
+const flagsMesh = new T.InstancedMesh(flagGeo, matFlag, totalFlags);
+const flagColors = [0xe53935, 0xfbc02d, 0x00acc1, 0xfb8c00, 0xd81b60, 0xfff8e1];
+const flagMeta = [];
+let fi = 0;
+for (let s = 0; s < stringDefs.length; s++) {
+  const sd = stringDefs[s];
+  const pts = [];
+  for (let k = 0; k <= 10; k++) {
+    const u = k / 10;
+    const x = -sd.span + u * sd.span * 2;
+    const y = sd.y - sd.sag * Math.sin(u * Math.PI);
+    pts.push(new T.Vector3(x, y, sd.z));
+  }
+  const curve = new T.CatmullRomCurve3(pts);
+  const lineMesh = new T.Mesh(new T.TubeGeometry(curve, 14, 0.025, 4, false), matString);
+  scene.add(lineMesh);
+
+  for (let k = 0; k < sd.n; k++) {
+    const u = (k + 0.5) / sd.n;
+    const x = -sd.span + u * sd.span * 2;
+    const y = sd.y - sd.sag * Math.sin(u * Math.PI);
+    const slope = -sd.sag * Math.PI * Math.cos(u * Math.PI) / (sd.span * 2);
+    flagMeta.push({ x: x, y: y, z: sd.z, rz: Math.atan(slope), phase: fi * 0.55 });
+    tmpCol.setHex(flagColors[fi % flagColors.length]);
+    flagsMesh.setColorAt(fi, tmpCol);
+    fi++;
+  }
+}
+flagsMesh.instanceColor.needsUpdate = true;
+scene.add(flagsMesh);
+
+// Articulated person builder
+function makePerson(team) {
+  const isRed = team === 'red';
+  const matShirt = isRed ? matRed : matBlue;
+  const matSkirt = isRed ? matRedDark : matBlueDark;
+
+  const root = new T.Group();
+
+  const longyi = new T.Mesh(geoLongyi, matSkirt);
+  longyi.position.set(0, 0.45, 0);
+  longyi.castShadow = true;
+  root.add(longyi);
+
+  const legL = new T.Group();
+  legL.position.set(0.10, 0.56, 0);
+  const legLM = new T.Mesh(geoLeg, matSkin);
+  legLM.position.set(0, -0.28, 0);
+  legLM.castShadow = true;
+  legL.add(legLM);
+  root.add(legL);
+
+  const legR = new T.Group();
+  legR.position.set(-0.10, 0.56, 0);
+  const legRM = new T.Mesh(geoLeg, matSkin);
+  legRM.position.set(0, -0.28, 0);
+  legRM.castShadow = true;
+  legR.add(legRM);
+  root.add(legR);
+
+  const torso = new T.Group();
+  torso.position.set(0, 0.58, 0);
+  const torsoM = new T.Mesh(geoTorso, matShirt);
+  torsoM.position.set(0, 0.30, 0);
+  torsoM.castShadow = true;
+  torso.add(torsoM);
+  root.add(torso);
+
+  const armL = new T.Group();
+  armL.position.set(0.21, 0.51, 0.02);
+  const armLM = new T.Mesh(geoArm, matSkin);
+  armLM.position.set(0, -0.25, 0);
+  armLM.castShadow = true;
+  armL.add(armLM);
+  torso.add(armL);
+
+  const armR = new T.Group();
+  armR.position.set(-0.21, 0.51, 0.02);
+  const armRM = new T.Mesh(geoArm, matSkin);
+  armRM.position.set(0, -0.25, 0);
+  armRM.castShadow = true;
+  armR.add(armRM);
+  torso.add(armR);
+
+  const head = new T.Group();
+  head.position.set(0, 0.62, 0);
+  const headM = new T.Mesh(geoHead, matSkin);
+  headM.position.set(0, 0.17, 0);
+  headM.castShadow = true;
+  head.add(headM);
+
+  const band = new T.Mesh(geoBand, matShirt);
+  band.position.set(0, 0.25, -0.01);
+  band.rotation.x = Math.PI / 2 - 0.14;
+  head.add(band);
+
+  const thL = new T.Mesh(geoThanaka, matThanaka);
+  thL.position.set(0.132, 0.145, 0.115);
+  thL.rotation.set(0, -0.45, 0.95);
+  head.add(thL);
+
+  const thR = new T.Mesh(geoThanaka, matThanaka);
+  thR.position.set(-0.132, 0.145, 0.115);
+  thR.rotation.set(0, 0.45, -0.95);
+  head.add(thR);
+
+  torso.add(head);
+
+  root.rotation.y = isRed ? Math.PI / 2 : -Math.PI / 2;
+  root.scale.setScalar(1.12);
+
+  return {
+    root: root,
+    torso: torso,
+    head: head,
+    armL: armL,
+    armR: armR,
+    legL: legL,
+    legR: legR,
+    longyi: longyi,
+    popTimer: 0,
+    baseX: 0,
+    baseZ: 0
+  };
+}
+
+// Tug assembly (rope + both teams)
+const assembly = new T.Group();
+scene.add(assembly);
+
+const redTeam = [];
+const blueTeam = [];
+for (let i = 0; i < 5; i++) {
+  const rp = makePerson('red');
+  rp.baseX = -0.98 - i * 0.48;
+  rp.baseZ = (i % 2 === 0 ? 0.11 : -0.11);
+  rp.root.position.set(rp.baseX, 0, rp.baseZ);
+  assembly.add(rp.root);
+  redTeam.push(rp);
+
+  const bp = makePerson('blue');
+  bp.baseX = 0.98 + i * 0.48;
+  bp.baseZ = (i % 2 === 0 ? -0.11 : 0.11);
+  bp.root.position.set(bp.baseX, 0, bp.baseZ);
+  assembly.add(bp.root);
+  blueTeam.push(bp);
+}
+
+// Rope segments and center gold ribbon
+const ropeSegs = 24;
+const ropeSegGeo = new T.CylinderGeometry(0.048, 0.048, 0.31, 7);
+ropeSegGeo.rotateZ(Math.PI / 2);
+const ropeMesh = new T.InstancedMesh(ropeSegGeo, matRope, ropeSegs);
+ropeMesh.castShadow = true;
+assembly.add(ropeMesh);
+
+const ribbonKnot = new T.Mesh(new T.CylinderGeometry(0.085, 0.085, 0.14, 10), matGold);
+ribbonKnot.rotation.z = Math.PI / 2;
+ribbonKnot.position.set(0, 0.92, 0);
+ribbonKnot.castShadow = true;
+assembly.add(ribbonKnot);
+
+const ribbonTail = new T.Mesh(new T.PlaneGeometry(0.16, 0.46), matGold);
+ribbonTail.position.set(0, 0.66, 0.02);
+assembly.add(ribbonTail);
+
+// Dust particle pool
+const dustMax = 36;
+const dustMesh = new T.InstancedMesh(new T.SphereGeometry(0.18, 6, 5), matDust, dustMax);
+scene.add(dustMesh);
+const dustPool = [];
+for (let i = 0; i < dustMax; i++) {
+  dustPool.push({ active: false, x: 0, y: -10, z: 0, vx: 0, vy: 0, vz: 0, life: 0, maxLife: 0.6, sz: 1 });
+}
+let dustCursor = 0;
+
+function spawnDust(x, y, z, count, spread) {
+  for (let i = 0; i < count; i++) {
+    const d = dustPool[dustCursor];
+    dustCursor = (dustCursor + 1) % dustMax;
+    d.active = true;
+    d.x = x + (Math.random() - 0.5) * spread;
+    d.y = y + Math.random() * 0.15;
+    d.z = z + (Math.random() - 0.5) * spread * 0.7;
+    d.vx = (Math.random() - 0.5) * 1.4;
+    d.vy = 0.8 + Math.random() * 1.4;
+    d.vz = (Math.random() - 0.5) * 0.9;
+    d.maxLife = 0.45 + Math.random() * 0.4;
+    d.life = d.maxLife;
+    d.sz = 0.55 + Math.random() * 0.85;
+  }
+}
+
+// Internal animation state
+let clock = 0;
+let asmX = 0;
+let prevP = 0;
+let dpSmooth = 0;
+let phaseR = 0;
+let phaseB = 1.6;
+let glowTimer = 0;
+let creakTimer = 0;
+let shakeTimer = 0;
+let crowdBoost = 0;
+let resetEase = 0;
+let standTimer = 0;
+
+const surge = { red: 0, blue: 0 };
+const heaveTimer = { red: 0, blue: 0 };
+const heaveDur = { red: 0.6, blue: 0.6 };
+const heaveAmp = { red: 0, blue: 0 };
+const heaveCount = { red: 1, blue: 1 };
+const likeTwitch = { red: 0, blue: 0 };
+const fallTimer = { red: 0, blue: 0 };
+const joinIdx = { red: 0, blue: 0 };
+
+function animateTeam(teamArr, teamKey, phase, dt, S) {
+  const isRed = teamKey === 'red';
+  const isWinner = S.over && S.winner === teamKey;
+  const isLoser = S.over && S.winner && S.winner !== teamKey;
+
+  let hPulse = 0;
+  if (heaveTimer[teamKey] > 0) {
+    heaveTimer[teamKey] = Math.max(0, heaveTimer[teamKey] - dt);
+    const u = 1 - heaveTimer[teamKey] / heaveDur[teamKey];
+    const wave = Math.sin(u * Math.PI * heaveCount[teamKey]);
+    hPulse = Math.max(0, wave) * heaveAmp[teamKey];
+  }
+
+  let twitch = 0;
+  if (likeTwitch[teamKey] > 0) {
+    likeTwitch[teamKey] = Math.max(0, likeTwitch[teamKey] - dt);
+    twitch = Math.sin((likeTwitch[teamKey] / 0.25) * Math.PI) * 0.22;
+  }
+
+  if (fallTimer[teamKey] > 0) {
+    fallTimer[teamKey] = Math.max(0, fallTimer[teamKey] - dt);
+  }
+
+  for (let i = 0; i < 5; i++) {
+    const p = teamArr[i];
+    let popScale = 1;
+    let popY = 0;
+    if (p.popTimer > 0) {
+      p.popTimer = Math.max(0, p.popTimer - dt);
+      const u = 1 - p.popTimer / 0.65;
+      const s = Math.sin(u * Math.PI);
+      popScale = 1 + 0.38 * s;
+      popY = 0.22 * s;
     }
-    const bar1 = new T.Mesh(cylinderGeo, woodMat);
-    bar1.scale.set(0.06, 16, 0.06);
-    bar1.rotation.z = Math.PI / 2;
-    bar1.position.set(0, 1.8, 0);
-    bgGroup.add(bar1);
+    p.root.scale.setScalar(1.12 * popScale);
 
-    const bar2 = bar1.clone();
-    bar2.position.y = 2.7;
-    bgGroup.add(bar2);
-
-    const bannerR = new T.Mesh(boxGeo, redMat);
-    bannerR.scale.set(1.5, 0.6, 0.02);
-    bannerR.position.set(-3, 2.25, 0.02);
-    bgGroup.add(bannerR);
-
-    const bannerB = new T.Mesh(boxGeo, blueMat);
-    bannerB.scale.set(1.5, 0.6, 0.02);
-    bannerB.position.set(3, 2.25, 0.02);
-    bgGroup.add(bannerB);
-
-    const spectators = [];
-    const specColors = [0xdd3333, 0x3366dd, 0xddaa22, 0x22aa55, 0xaa33aa, 0xff7722];
-    for (let i = 0; i < 22; i++) {
-      const spec = new T.Group();
-      const body = new T.Mesh(cylinderGeo, new T.MeshStandardMaterial({ color: specColors[i % specColors.length], roughness: 0.8 }));
-      body.scale.set(0.2, 0.5, 0.2);
-      body.position.y = 0.25;
-      spec.add(body);
-
-      const head = new T.Mesh(sphereGeo, skinMat);
-      head.scale.set(0.14, 0.14, 0.14);
-      head.position.y = 0.6;
-      spec.add(head);
-
-      const t1 = new T.Mesh(circleGeo, thanakaMat);
-      t1.scale.set(0.04, 0.04, 0.04);
-      t1.position.set(0.06, 0.6, 0.12);
-      spec.add(t1);
-
-      spec.position.set(-6.0 + i * 0.58, 1.2 + (i % 2) * 0.4, -0.2);
-      bgGroup.add(spec);
-      spectators.push({ mesh: spec, offset: i * 0.7, idx: i });
-    }
-
-    const flagColors = [0xff3333, 0xffd700, 0x3388ff, 0x33cc55, 0xff66cc];
-    const flags = [];
-    for (let i = 0; i < 14; i++) {
-      const flag = new T.Mesh(boxGeo, new T.MeshStandardMaterial({ color: flagColors[i % flagColors.length], roughness: 0.8, side: T.DoubleSide }));
-      flag.scale.set(0.3, 0.4, 0.01);
-      flag.position.set(-6.5 + i * 1.0, 3.2 + Math.sin(i * 0.5) * 0.15, -1);
-      flag.rotation.z = 0.2;
-      scene.add(flag);
-      flags.push({ mesh: flag, baseZ: 0.2, idx: i });
-    }
-
-    function makePalm(x, z) {
-      const palm = new T.Group();
-      palm.position.set(x, 0, z);
-      const trunk = new T.Mesh(cylinderGeo, woodMat);
-      trunk.scale.set(0.2, 4, 0.2);
-      trunk.position.y = 2;
-      trunk.rotation.z = x > 0 ? -0.15 : 0.15;
-      palm.add(trunk);
-      for (let a = 0; a < 5; a++) {
-        const frond = new T.Mesh(boxGeo, leafMat);
-        frond.scale.set(1.4, 0.05, 0.3);
-        frond.position.set(0, 3.9, 0);
-        frond.rotation.y = (a / 5) * Math.PI * 2;
-        frond.rotation.z = -0.4;
-        palm.add(frond);
+    // Front puller slip and scramble on T4
+    if (i === 0 && fallTimer[teamKey] > 0) {
+      const ft = fallTimer[teamKey];
+      const elapsed = 1.55 - ft;
+      let fallBlend = 1;
+      if (elapsed < 0.35) {
+        fallBlend = elapsed / 0.35;
+      } else if (ft < 1.0) {
+        fallBlend = ft;
       }
-      scene.add(palm);
-    }
-    makePalm(-7.2, -2);
-    makePalm(7.2, -2);
-
-    function makePerson(team) {
-      const isRed = team === 'red';
-      const teamM = isRed ? redMat : blueMat;
-      const darkM = isRed ? redDarkMat : blueDarkMat;
-
-      const root = new T.Group();
-      const torsoGroup = new T.Group();
-      torsoGroup.position.y = 0.65;
-      root.add(torsoGroup);
-
-      const torso = new T.Mesh(boxGeo, teamM);
-      torso.scale.set(0.38, 0.45, 0.25);
-      torso.castShadow = true;
-      torsoGroup.add(torso);
-
-      const headGroup = new T.Group();
-      headGroup.position.set(0, 0.32, 0);
-      torsoGroup.add(headGroup);
-
-      const head = new T.Mesh(sphereGeo, skinMat);
-      head.scale.set(0.18, 0.2, 0.18);
-      head.castShadow = true;
-      headGroup.add(head);
-
-      const thanakaL = new T.Mesh(circleGeo, thanakaMat);
-      thanakaL.scale.set(0.045, 0.045, 1);
-      thanakaL.position.set(0.09, 0, 0.16);
-      thanakaL.rotation.y = 0.5;
-      headGroup.add(thanakaL);
-
-      const thanakaR = thanakaL.clone();
-      thanakaR.position.set(-0.09, 0, 0.16);
-      thanakaR.rotation.y = -0.5;
-      headGroup.add(thanakaR);
-
-      const turban = new T.Mesh(new T.TorusGeometry(0.18, 0.04, 8, 16), teamM);
-      turban.rotation.x = Math.PI / 2;
-      turban.position.y = 0.08;
-      headGroup.add(turban);
-
-      const armL = new T.Group();
-      armL.position.set(0.22, 0.15, 0);
-      torsoGroup.add(armL);
-      const meshArmL = new T.Mesh(boxGeo, skinMat);
-      meshArmL.scale.set(0.1, 0.38, 0.1);
-      meshArmL.position.y = -0.16;
-      meshArmL.castShadow = true;
-      armL.add(meshArmL);
-
-      const armR = new T.Group();
-      armR.position.set(-0.22, 0.15, 0);
-      torsoGroup.add(armR);
-      const meshArmR = new T.Mesh(boxGeo, skinMat);
-      meshArmR.scale.set(0.1, 0.38, 0.1);
-      meshArmR.position.y = -0.16;
-      meshArmR.castShadow = true;
-      armR.add(meshArmR);
-
-      const longyi = new T.Mesh(cylinderGeo, darkM);
-      longyi.scale.set(0.22, 0.35, 0.2);
-      longyi.position.set(0, -0.3, 0);
-      torsoGroup.add(longyi);
-
-      const legL = new T.Group();
-      legL.position.set(0.11, 0.35, 0);
-      root.add(legL);
-      const meshLegL = new T.Mesh(boxGeo, skinMat);
-      meshLegL.scale.set(0.11, 0.38, 0.11);
-      meshLegL.position.y = -0.19;
-      meshLegL.castShadow = true;
-      legL.add(meshLegL);
-
-      const legR = new T.Group();
-      legR.position.set(-0.11, 0.35, 0);
-      root.add(legR);
-      const meshLegR = new T.Mesh(boxGeo, skinMat);
-      meshLegR.scale.set(0.11, 0.38, 0.11);
-      meshLegR.position.y = -0.19;
-      meshLegR.castShadow = true;
-      legR.add(meshLegR);
-
-      return { root, torsoGroup, headGroup, armL, armR, legL, legR, team, popTimer: 0 };
+      const scramble = ft < 1.0 ? Math.sin(ft * 22) * 0.25 * fallBlend : 0;
+      p.root.position.set(p.baseX + (isRed ? -0.22 : 0.22) * fallBlend, 0.14 * fallBlend + popY, p.baseZ);
+      p.torso.rotation.x = -1.18 * fallBlend + scramble;
+      p.torso.rotation.z = Math.sin(clock * 14) * 0.12 * fallBlend;
+      p.head.rotation.x = 0.75 * fallBlend;
+      p.armL.rotation.x = -2.25 * fallBlend + scramble;
+      p.armR.rotation.x = -2.05 * fallBlend - scramble;
+      p.armL.rotation.z = 0.35 * fallBlend;
+      p.armR.rotation.z = -0.35 * fallBlend;
+      p.legL.rotation.x = -1.35 * fallBlend + scramble;
+      p.legR.rotation.x = -1.05 * fallBlend - scramble;
+      p.longyi.rotation.x = -0.55 * fallBlend;
+      continue;
     }
 
-    const tugGroup = new T.Group();
-    scene.add(tugGroup);
+    const idxPhase = phase + i * 0.55;
+    const cycle = Math.sin(idxPhase);
+    const strainBob = Math.sin(clock * 4.8 + i * 0.85) * 0.035;
 
-    const rope = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, 12, 12), ropeMat);
-    rope.rotation.z = Math.PI / 2;
-    rope.position.set(0, 1.05, 0);
-    rope.castShadow = true;
-    tugGroup.add(rope);
+    if (standTimer > 0) {
+      const st = Math.min(1, standTimer / 0.7);
+      const ready = 1 - st;
+      p.root.position.set(p.baseX, popY, p.baseZ);
+      p.torso.rotation.x = -0.25 * ready;
+      p.torso.rotation.z = 0;
+      p.head.rotation.x = 0.15 * ready;
+      p.armL.rotation.x = -0.95 * ready - 0.15 * st;
+      p.armR.rotation.x = -0.95 * ready - 0.15 * st;
+      p.armL.rotation.z = -0.18 * ready;
+      p.armR.rotation.z = 0.18 * ready;
+      p.legL.rotation.x = -0.15 * ready;
+      p.legR.rotation.x = 0.1 * ready;
+      p.longyi.rotation.x = -0.05 * ready;
+      continue;
+    }
 
-    const ribbon = new T.Mesh(boxGeo, goldMat);
-    ribbon.scale.set(0.08, 0.35, 0.12);
-    ribbon.position.set(0, 1.05, 0);
-    tugGroup.add(ribbon);
+    if (isWinner) {
+      const hop = Math.abs(Math.sin(clock * 7.5 + i * 0.7));
+      p.root.position.set(p.baseX, hop * 0.32 + popY, p.baseZ);
+      p.torso.rotation.x = -0.08;
+      p.torso.rotation.z = Math.sin(clock * 8 + i) * 0.1;
+      p.head.rotation.x = -0.15;
+      p.armL.rotation.x = -2.75 + Math.sin(clock * 12 + i) * 0.25;
+      p.armR.rotation.x = -2.75 - Math.sin(clock * 12 + i) * 0.25;
+      p.armL.rotation.z = 0.25;
+      p.armR.rotation.z = -0.25;
+      p.legL.rotation.x = -0.2 * hop;
+      p.legR.rotation.x = 0.2 * hop;
+      p.longyi.rotation.x = 0;
+      continue;
+    }
 
-    const redPullers = [];
-    const bluePullers = [];
+    if (isLoser) {
+      p.root.position.set(p.baseX, -0.06 + popY, p.baseZ);
+      p.torso.rotation.x = 0.35 + Math.sin(clock * 2.5 + i) * 0.04;
+      p.torso.rotation.z = 0;
+      p.head.rotation.x = 0.25;
+      p.armL.rotation.x = -0.25;
+      p.armR.rotation.x = -0.25;
+      p.armL.rotation.z = -0.05;
+      p.armR.rotation.z = 0.05;
+      p.legL.rotation.x = -0.1;
+      p.legR.rotation.x = 0.12;
+      p.longyi.rotation.x = 0.1;
+      continue;
+    }
 
+    // Active pulling cycle
+    const heave = hPulse * 0.38 + twitch;
+    const lean = 0.34 + 0.16 * cycle + heave + strainBob;
+    const crouch = 0.05 + 0.05 * Math.max(0, cycle) + hPulse * 0.07;
+    const shuffle = Math.sin(idxPhase * 2.0) * 0.16;
+
+    p.root.position.set(p.baseX, -crouch + popY, p.baseZ);
+    p.torso.rotation.x = -lean;
+    p.torso.rotation.z = Math.sin(idxPhase) * 0.06;
+    p.head.rotation.x = lean * 0.68;
+
+    const armBend = -1.22 + lean - 0.14 * cycle - heave * 0.3;
+    p.armL.rotation.x = armBend;
+    p.armR.rotation.x = armBend + 0.08;
+    p.armL.rotation.z = -0.22;
+    p.armR.rotation.z = 0.22;
+
+    p.legL.rotation.x = -0.46 + shuffle - heave * 0.18;
+    p.legR.rotation.x = 0.06 - shuffle - heave * 0.12;
+    p.longyi.rotation.x = -lean * 0.25;
+  }
+}
+
+function updateRope(dt) {
+  if (glowTimer > 0) {
+    glowTimer = Math.max(0, glowTimer - dt);
+    matRope.emissiveIntensity = 0.75 + 0.5 * Math.sin(clock * 14);
+  } else {
+    matRope.emissiveIntensity = 0;
+  }
+
+  let creak = 0;
+  if (creakTimer > 0) {
+    creakTimer = Math.max(0, creakTimer - dt);
+    creak = Math.min(1, creakTimer * 2.5);
+  }
+
+  const tension = Math.min(1, 0.35 + dpSmooth * 0.4 + creak * 0.5);
+  const sag = 0.08 * (1 - tension);
+  const totalLen = 6.5;
+  for (let i = 0; i < ropeSegs; i++) {
+    const u = (i + 0.5) / ropeSegs;
+    const x = -totalLen * 0.5 + u * totalLen;
+    const norm = (u - 0.5) * 2;
+    const vibY = creak * Math.sin(clock * 46 + i * 1.1) * 0.045;
+    const vibZ = creak * Math.cos(clock * 38 + i * 0.9) * 0.035;
+    const y = 0.92 - sag * (1 - norm * norm) + vibY;
+    const slope = 2 * sag * norm / (totalLen * 0.5);
+
+    tmpObj.position.set(x, y, vibZ);
+    tmpObj.rotation.set(0, 0, Math.atan(slope));
+    tmpObj.scale.set(1, 1 + (glowTimer > 0 ? 0.18 : 0), 1 + (glowTimer > 0 ? 0.18 : 0));
+    tmpObj.updateMatrix();
+    ropeMesh.setMatrixAt(i, tmpObj.matrix);
+  }
+  ropeMesh.instanceMatrix.needsUpdate = true;
+
+  ribbonKnot.position.y = 0.92 - sag + creak * Math.sin(clock * 44) * 0.04;
+  ribbonTail.position.y = ribbonKnot.position.y - 0.24;
+  ribbonTail.rotation.z = Math.sin(clock * 7.5) * 0.18 + dpSmooth * 0.12;
+  ribbonTail.rotation.x = Math.sin(clock * 5.2) * 0.16;
+}
+
+function updateAmbient(dt, S) {
+  if (crowdBoost > 0) crowdBoost = Math.max(0, crowdBoost - dt * 0.8);
+  const cheer = (S.over ? 1.4 : 0) + crowdBoost;
+
+  for (let i = 0; i < crowdTotal; i++) {
+    const c = crowdData[i];
+    const b = Math.abs(Math.sin(clock * (c.spd + cheer * 1.6) + c.phase)) * (0.09 + cheer * 0.07);
+    tmpObj.position.set(c.x, c.y + b, c.z);
+    tmpObj.rotation.set(0, 0, Math.sin(clock * 2.5 + c.phase) * 0.06);
+    tmpObj.scale.set(1, 1, 1);
+    tmpObj.updateMatrix();
+    crowdBodies.setMatrixAt(i, tmpObj.matrix);
+
+    tmpObj.position.set(c.x, c.y + 0.44 + b, c.z);
+    tmpObj.rotation.set(0, 0, 0);
+    tmpObj.updateMatrix();
+    crowdHeads.setMatrixAt(i, tmpObj.matrix);
+  }
+  crowdBodies.instanceMatrix.needsUpdate = true;
+  crowdHeads.instanceMatrix.needsUpdate = true;
+
+  // Waving flags
+  for (let i = 0; i < totalFlags; i++) {
+    const fm = flagMeta[i];
+    tmpObj.position.set(fm.x, fm.y, fm.z);
+    tmpObj.rotation.set(Math.sin(clock * 4.4 + fm.phase) * 0.42, 0, fm.rz);
+    tmpObj.scale.set(1, 1, 1);
+    tmpObj.updateMatrix();
+    flagsMesh.setMatrixAt(i, tmpObj.matrix);
+  }
+  flagsMesh.instanceMatrix.needsUpdate = true;
+
+  // Swaying palm fronds
+  let pfi = 0;
+  for (let p = 0; p < palms.length; p++) {
+    const top = palmTops[p];
+    const sway = Math.sin(clock * 1.6 + p * 1.5) * 0.08;
+    for (let f = 0; f < frondsPerPalm; f++) {
+      const ang = (f / frondsPerPalm) * Math.PI * 2 + p * 0.4;
+      tmpObj.position.set(top.x + Math.cos(ang) * 1.15, top.y - 0.15, top.z + Math.sin(ang) * 1.15);
+      tmpObj.rotation.set(0, -ang, -1.25 + sway + Math.sin(clock * 2.2 + f) * 0.06);
+      tmpObj.scale.set(1, 1, 0.25);
+      tmpObj.updateMatrix();
+      palmFronds.setMatrixAt(pfi++, tmpObj.matrix);
+    }
+  }
+  palmFronds.instanceMatrix.needsUpdate = true;
+
+  // Dust particles
+  for (let i = 0; i < dustMax; i++) {
+    const d = dustPool[i];
+    if (!d.active) {
+      tmpObj.position.set(0, -20, 0);
+      tmpObj.scale.set(0.001, 0.001, 0.001);
+      tmpObj.updateMatrix();
+      dustMesh.setMatrixAt(i, tmpObj.matrix);
+      continue;
+    }
+    d.life -= dt;
+    if (d.life <= 0) {
+      d.active = false;
+      tmpObj.position.set(0, -20, 0);
+      tmpObj.scale.set(0.001, 0.001, 0.001);
+      tmpObj.updateMatrix();
+      dustMesh.setMatrixAt(i, tmpObj.matrix);
+      continue;
+    }
+    d.x += d.vx * dt;
+    d.y += d.vy * dt;
+    d.z += d.vz * dt;
+    d.vy -= 1.6 * dt;
+    const u = d.life / d.maxLife;
+    const sc = d.sz * (1.35 - u * 0.65) * Math.min(1, u * 3);
+    tmpObj.position.set(d.x, Math.max(0.05, d.y), d.z);
+    tmpObj.rotation.set(0, 0, 0);
+    tmpObj.scale.setScalar(sc);
+    tmpObj.updateMatrix();
+    dustMesh.setMatrixAt(i, tmpObj.matrix);
+  }
+  dustMesh.instanceMatrix.needsUpdate = true;
+}
+
+const game = {
+  scene: scene,
+  camera: camera,
+
+  update: function(dt, S) {
+    dt = Math.min(Math.max(dt || 0, 0), 0.05);
+    clock += dt;
+
+    const pVal = Math.max(-1, Math.min(1, S.p || 0));
+    const rawDp = Math.abs(pVal - prevP) / Math.max(dt, 0.005);
+    prevP = pVal;
+    dpSmooth += (Math.min(rawDp, 4.0) - dpSmooth) * Math.min(1, dt * 8);
+
+    if (resetEase > 0) resetEase = Math.max(0, resetEase - dt);
+    if (standTimer > 0) standTimer = Math.max(0, standTimer - dt);
+
+    const targetX = pVal * 1.6;
+    const lerpRate = resetEase > 0 ? 5.5 : 14.0;
+    asmX += (targetX - asmX) * Math.min(1, dt * lerpRate);
+
+    let shakeX = 0;
+    let shakeY = 0;
+    if (shakeTimer > 0) {
+      shakeTimer = Math.max(0, shakeTimer - dt);
+      const mag = (shakeTimer / 1.2) * 0.28;
+      shakeX = Math.sin(clock * 58) * mag;
+      shakeY = Math.cos(clock * 67) * mag * 0.85;
+    }
+    assembly.position.set(asmX + shakeX * 0.5, 0, 0);
+    camera.position.set(camBase.x + shakeX, camBase.y + shakeY, camBase.z);
+    camera.lookAt(camLook);
+
+    surge.red = Math.max(0, surge.red - dt * 1.2);
+    surge.blue = Math.max(0, surge.blue - dt * 1.2);
+
+    const baseSpd = S.running ? 3.2 : 1.6;
+    phaseR += dt * (baseSpd + dpSmooth * 5.5 + surge.red * 2.4);
+    phaseB += dt * (baseSpd + dpSmooth * 5.5 + surge.blue * 2.4);
+
+    animateTeam(redTeam, 'red', phaseR, dt, S);
+    animateTeam(blueTeam, 'blue', phaseB, dt, S);
+    updateRope(dt);
+    updateAmbient(dt, S);
+  },
+
+  onJoin: function(team) {
+    const key = team === 'blue' ? 'blue' : 'red';
+    const arr = key === 'red' ? redTeam : blueTeam;
+    const idx = Math.min(joinIdx[key], 4);
+    joinIdx[key]++;
+    arr[idx].popTimer = 0.65;
+    spawnDust(asmX + arr[idx].baseX, 0.12, arr[idx].baseZ, 4, 0.35);
+  },
+
+  onGift: function(team, tier) {
+    const key = team === 'blue' ? 'blue' : 'red';
+    const opp = key === 'red' ? 'blue' : 'red';
+    const arr = key === 'red' ? redTeam : blueTeam;
+    const oppArr = opp === 'red' ? redTeam : blueTeam;
+
+    if (tier === 1) {
+      heaveDur[key] = 0.55;
+      heaveTimer[key] = 0.55;
+      heaveAmp[key] = 1.0;
+      heaveCount[key] = 1;
+      creakTimer = Math.max(creakTimer, 0.55);
+      surge[key] = Math.min(2.5, surge[key] + 0.9);
+      crowdBoost = Math.max(crowdBoost, 0.8);
+    } else if (tier === 2) {
+      heaveDur[key] = 0.72;
+      heaveTimer[key] = 0.72;
+      heaveAmp[key] = 1.45;
+      heaveCount[key] = 1;
+      creakTimer = Math.max(creakTimer, 0.75);
+      surge[key] = Math.min(2.5, surge[key] + 1.4);
+      crowdBoost = Math.max(crowdBoost, 1.3);
+      for (let i = 0; i < 5; i++) {
+        spawnDust(asmX + arr[i].baseX, 0.1, arr[i].baseZ, 3, 0.35);
+      }
+    } else if (tier === 3) {
+      glowTimer = 5.0;
+      heaveDur[key] = 1.35;
+      heaveTimer[key] = 1.35;
+      heaveAmp[key] = 1.55;
+      heaveCount[key] = 2;
+      creakTimer = Math.max(creakTimer, 1.35);
+      surge[key] = Math.min(2.5, surge[key] + 2.0);
+      crowdBoost = Math.max(crowdBoost, 2.0);
+      for (let i = 0; i < 5; i++) {
+        spawnDust(asmX + arr[i].baseX, 0.1, arr[i].baseZ, 3, 0.4);
+      }
+    } else {
+      shakeTimer = 1.2;
+      fallTimer[opp] = 1.55;
+      heaveDur[key] = 0.9;
+      heaveTimer[key] = 0.9;
+      heaveAmp[key] = 1.65;
+      heaveCount[key] = 1;
+      creakTimer = Math.max(creakTimer, 1.2);
+      surge[key] = Math.min(2.5, surge[key] + 2.2);
+      crowdBoost = Math.max(crowdBoost, 2.6);
+      spawnDust(asmX + oppArr[0].baseX, 0.2, oppArr[0].baseZ, 16, 1.1);
+      spawnDust(asmX + arr[0].baseX, 0.15, arr[0].baseZ, 8, 0.9);
+    }
+  },
+
+  onLike: function(team) {
+    const key = team === 'blue' ? 'blue' : 'red';
+    const arr = key === 'red' ? redTeam : blueTeam;
+    surge[key] = Math.min(2.5, surge[key] + 0.45);
+    likeTwitch[key] = 0.25;
+    spawnDust(asmX + arr[0].baseX, 0.08, arr[0].baseZ, 3, 0.3);
+  },
+
+  reset: function() {
+    resetEase = 0.9;
+    standTimer = 0.7;
+    prevP = 0;
+    dpSmooth = 0;
+    glowTimer = 0;
+    creakTimer = 0;
+    shakeTimer = 0;
+    crowdBoost = 0;
+    surge.red = 0;
+    surge.blue = 0;
+    heaveTimer.red = 0;
+    heaveTimer.blue = 0;
+    likeTwitch.red = 0;
+    likeTwitch.blue = 0;
+    fallTimer.red = 0;
+    fallTimer.blue = 0;
+    joinIdx.red = 0;
+    joinIdx.blue = 0;
+    matRope.emissiveIntensity = 0;
     for (let i = 0; i < 5; i++) {
-      const pR = makePerson('red');
-      pR.root.position.set(-1.0 - i * 0.85, 0, 0);
-      pR.root.rotation.y = Math.PI / 2;
-      tugGroup.add(pR.root);
-      redPullers.push(pR);
-
-      const pB = makePerson('blue');
-      pB.root.position.set(1.0 + i * 0.85, 0, 0);
-      pB.root.rotation.y = -Math.PI / 2;
-      tugGroup.add(pB.root);
-      bluePullers.push(pB);
+      redTeam[i].popTimer = 0;
+      blueTeam[i].popTimer = 0;
     }
-
-    const particles = [];
-    const partGeo = new T.DodecahedronGeometry(0.08, 0);
-    const partMat = new T.MeshBasicMaterial({ color: 0xdcb888, transparent: true, opacity: 0.8 });
-    for (let i = 0; i < 35; i++) {
-      const p = new T.Mesh(partGeo, partMat);
-      p.visible = false;
-      scene.add(p);
-      particles.push({ mesh: p, life: 0, maxLife: 1, vx: 0, vy: 0, vz: 0 });
+    for (let i = 0; i < dustMax; i++) {
+      dustPool[i].active = false;
     }
-
-    function spawnDust(x, z, count) {
-      let spawned = 0;
-      for (let i = 0; i < particles.length && spawned < count; i++) {
-        const pt = particles[i];
-        if (pt.life <= 0) {
-          pt.mesh.visible = true;
-          pt.mesh.position.set(x + (Math.random() - 0.5) * 0.4, 0.08, z + (Math.random() - 0.5) * 0.4);
-          pt.mesh.scale.setScalar(0.6 + Math.random() * 0.8);
-          pt.vx = (Math.random() - 0.5) * 0.8;
-          pt.vy = 0.5 + Math.random() * 0.8;
-          pt.vz = (Math.random() - 0.5) * 0.8;
-          pt.life = 0.5 + Math.random() * 0.5;
-          pt.maxLife = pt.life;
-          spawned++;
-        }
-      }
-    }
-
-    let prevP = 0;
-    let shakeTime = 0;
-    let glowTime = 0;
-    let redFallTime = 0;
-    let blueFallTime = 0;
-    let redHeaveTime = 0;
-    let blueHeaveTime = 0;
-    let redJoinIdx = 0;
-    let blueJoinIdx = 0;
-
-    function animatePuller(p, idx, time, pVel, heaveTime, fallTime) {
-      if (p.popTimer > 0) {
-        const s = 1.0 + Math.sin(p.popTimer * Math.PI * 4) * 0.3;
-        p.root.scale.setScalar(s);
-      } else {
-        p.root.scale.setScalar(1.0);
-      }
-
-      if (fallTime > 0) {
-        const fallRatio = fallTime / 1.8;
-        if (fallRatio > 0.4) {
-          p.root.rotation.x = -Math.PI * 0.4 * ((fallRatio - 0.4) / 0.6);
-          p.torsoGroup.rotation.x = -0.2;
-        } else {
-          p.root.rotation.x = -Math.PI * 0.4 * (fallRatio / 0.4);
-          p.torsoGroup.rotation.x = 0;
-        }
-        return;
-      }
-
-      p.root.rotation.x = 0;
-
-      const isRed = p.team === 'red';
-      const speed = 4.0 + Math.abs(pVel) * 10.0;
-      const heave = heaveTime > 0 ? Math.sin(heaveTime * 12) * 0.35 : 0;
-      const strain = Math.sin(time * speed + idx * 0.5) * 0.08;
-
-      p.torsoGroup.rotation.x = -0.35 - heave - strain;
-      p.headGroup.rotation.x = 0.2 + heave * 0.5;
-
-      p.armL.rotation.x = -1.1 + strain;
-      p.armR.rotation.x = -1.1 - strain;
-
-      const step = Math.sin(time * speed + idx);
-      p.legL.rotation.x = 0.4 + step * 0.2;
-      p.legR.rotation.x = -0.4 - step * 0.2;
-
-      p.root.position.y = Math.abs(Math.sin(time * speed * 2)) * 0.04;
-    }
-
-    return {
-      scene: scene,
-      camera: camera,
-      update: function(dt, S) {
-        dt = Math.min(dt, 0.05);
-        const pVel = (S.p - prevP) / Math.max(dt, 0.001);
-        prevP = S.p;
-
-        tugGroup.position.x = T.MathUtils.lerp(tugGroup.position.x, S.p * 1.6, 0.1);
-
-        if (shakeTime > 0) {
-          shakeTime -= dt;
-          camera.position.x = (Math.random() - 0.5) * 0.3 * Math.max(0, shakeTime / 1.2);
-          camera.position.y = 3.8 + (Math.random() - 0.5) * 0.3 * Math.max(0, shakeTime / 1.2);
-        } else {
-          camera.position.set(0, 3.8, 11.5);
-        }
-
-        if (glowTime > 0) {
-          glowTime -= dt;
-          ropeMat.emissive.setHex(0xffaa00);
-          ropeMat.emissiveIntensity = 0.5 + Math.sin(S.t * 14) * 0.4;
-        } else {
-          ropeMat.emissive.setHex(0x000000);
-          ropeMat.emissiveIntensity = 0;
-        }
-
-        if (redHeaveTime > 0) redHeaveTime -= dt;
-        if (blueHeaveTime > 0) blueHeaveTime -= dt;
-        if (redFallTime > 0) redFallTime -= dt;
-        if (blueFallTime > 0) blueFallTime -= dt;
-
-        for (let i = 0; i < 5; i++) {
-          if (redPullers[i].popTimer > 0) redPullers[i].popTimer -= dt;
-          if (bluePullers[i].popTimer > 0) bluePullers[i].popTimer -= dt;
-
-          animatePuller(redPullers[i], i, S.t, pVel, redHeaveTime, i === 0 ? redFallTime : 0);
-          animatePuller(bluePullers[i], i, S.t, pVel, blueHeaveTime, i === 0 ? blueFallTime : 0);
-        }
-
-        for (let i = 0; i < spectators.length; i++) {
-          const spec = spectators[i];
-          spec.mesh.position.y = 1.2 + (spec.idx % 2) * 0.4 + Math.sin(S.t * 5 + spec.offset) * 0.07;
-        }
-
-        for (let i = 0; i < flags.length; i++) {
-          const fl = flags[i];
-          fl.mesh.rotation.z = fl.baseZ + Math.sin(S.t * 4 + fl.idx) * 0.15;
-        }
-
-        for (let i = 0; i < particles.length; i++) {
-          const pt = particles[i];
-          if (pt.life > 0) {
-            pt.life -= dt;
-            pt.mesh.position.x += pt.vx * dt;
-            pt.mesh.position.y += pt.vy * dt;
-            pt.mesh.position.z += pt.vz * dt;
-            const r = pt.life / pt.maxLife;
-            pt.mesh.scale.setScalar(r);
-            pt.mesh.visible = pt.life > 0;
-          }
-        }
-      },
-      onJoin: function(team) {
-        if (team === 'red') {
-          redPullers[redJoinIdx % 5].popTimer = 0.5;
-          redJoinIdx++;
-        } else {
-          bluePullers[blueJoinIdx % 5].popTimer = 0.5;
-          blueJoinIdx++;
-        }
-      },
-      onGift: function(team, tier) {
-        const isRed = team === 'red';
-        if (tier === 1) {
-          if (isRed) redHeaveTime = 0.6;
-          else blueHeaveTime = 0.6;
-        } else if (tier === 2) {
-          if (isRed) redHeaveTime = 0.9;
-          else blueHeaveTime = 0.9;
-          const pullers = isRed ? redPullers : bluePullers;
-          for (let i = 0; i < 5; i++) {
-            spawnDust(tugGroup.position.x + pullers[i].root.position.x, pullers[i].root.position.z, 2);
-          }
-        } else if (tier === 3) {
-          glowTime = 5.0;
-          if (isRed) redHeaveTime = 1.4;
-          else blueHeaveTime = 1.4;
-        } else if (tier === 4) {
-          shakeTime = 1.2;
-          if (isRed) {
-            blueFallTime = 1.8;
-            spawnDust(tugGroup.position.x + bluePullers[0].root.position.x, 0, 8);
-          } else {
-            redFallTime = 1.8;
-            spawnDust(tugGroup.position.x + redPullers[0].root.position.x, 0, 8);
-          }
-        }
-      },
-      onLike: function(team) {
-        if (team === 'red') redHeaveTime = 0.4;
-        else blueHeaveTime = 0.4;
-      },
-      reset: function() {
-        shakeTime = 0;
-        glowTime = 0;
-        redFallTime = 0;
-        blueFallTime = 0;
-        redHeaveTime = 0;
-        blueHeaveTime = 0;
-        tugGroup.position.x = 0;
-        ropeMat.emissive.setHex(0x000000);
-      }
-    };
   }
 };
+
+updateRope(0);
+updateAmbient(0, { over: false });
+return game;
+
+} };
 
 </script>
 <script>
 (function(){
 "use strict";
-var CFG = {"id": "tug", "metric": "p", "guide": [["Gift 1–99", "အားဖြည့် ဆွဲ"], ["Gift 100–499", "အပြင်း ဆွဲ + ဖုန်ထ"], ["Gift 500–999", "ရွှေကြိုး — အား ×၂ (၅ စက္ကန့်)"], ["Gift 1000+", "မြေငလျင် — ပြိုင်ဘက် ချော်လဲ"]]};
+var CFG = {"id": "tug", "metric": "p", "guide": [["Gift 1–99", "အားဖြည့် ဆွဲ"], ["Gift 100–499", "အပြင်း ဆွဲ + ဖုန်ထ"], ["Gift 500–999", "ရွှေကြိုး — အား ×၂ (၅ စက္ကန့်)"], ["Gift 1000+", "မြေငလျင် — ပြိုင်ဘက် ချော်လဲ"]], "btn": ["အပြင်းဆွဲ", "ရွှေကြိုး"], "climb": null};
 var $ = function(id){ return document.getElementById(id); };
+// ---------- team names (editable, saved on this device) ----------
+var TN = { red: 'အနီ', blue: 'အပြာ' };
+try { TN.red = localStorage.getItem('nlo_team_red') || TN.red; TN.blue = localStorage.getItem('nlo_team_blue') || TN.blue; } catch(e){}
+function tn(t){ return t==='red' ? TN.red : TN.blue; }
+function applyNames(){
+  $('nmR').textContent = '🔴 ' + TN.red; $('nmB').textContent = '🔵 ' + TN.blue;
+  $('howtoTx').textContent = 'မန့် ၁ = ' + TN.red + ' · မန့် ၂ = ' + TN.blue + ' join — Gift ပို့ရင် စမယ်';
+}
+$('gEdit').addEventListener('click', function(e){ e.stopPropagation(); $('tnR').value = TN.red; $('tnB').value = TN.blue; $('tedit').classList.add('show'); });
+$('tnCancel').addEventListener('click', function(){ $('tedit').classList.remove('show'); });
+$('tnSave').addEventListener('click', function(){
+  var r = $('tnR').value.trim(), b = $('tnB').value.trim();
+  if (r) TN.red = r.slice(0,24); if (b) TN.blue = b.slice(0,24);
+  try { localStorage.setItem('nlo_team_red', TN.red); localStorage.setItem('nlo_team_blue', TN.blue); } catch(e){}
+  applyNames(); $('tedit').classList.remove('show'); tick('✎ အသင်းနာမည်များ ပြောင်းပြီ — ' + TN.red + ' / ' + TN.blue);
+});
 // ---------- guide ----------
 CFG.guide.forEach(function(g){ var d=document.createElement('div'); d.innerHTML='<b>'+g[0]+'</b> — '+g[1]; $('gRows').appendChild(d); });
-$('guide').querySelector('.hd').addEventListener('click', function(){ $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
+$('gTog').addEventListener('click', function(e){ e.stopPropagation(); $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
 // ---------- state ----------
 var S = { p:0, hpR:100, hpB:100, hR:0, hB:0, balR:100, balB:100, scoreR:0, scoreB:0, t:0, running:false, over:false, winner:null };
 var M = { red:{members:0, gifts:0, power:0, names:[]}, blue:{members:0, gifts:0, power:0, names:[]} };
@@ -538,14 +1111,55 @@ function resize(){ var w=innerWidth, h=innerHeight; renderer.setSize(w,h); if(ga
 addEventListener('resize', resize);
 // ---------- helpers ----------
 function tierOf(coins){ return coins>=1000?4 : coins>=500?3 : coins>=100?2 : 1; }
-function showPop(big, sub){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, 2100); }
+var GC = { red:{}, blue:{} };
+var GIFT_EMOJI = [['rose','🌹'],['finger','🫰'],['heart','❤️'],['love','💗'],['crown','👑'],['lion','🦁'],['whale','🐳'],['rocket','🚀'],['car','🏎️'],['money','💸'],['star','⭐'],['tiktok','🎶'],['flower','🌸'],['diamond','💎'],['ring','💍'],['cake','🎂'],['beer','🍺'],['coffee','☕']];
+function giftEmoji(name){ var s=(name||'').toLowerCase(); for (var i=0;i<GIFT_EMOJI.length;i++) if (s.indexOf(GIFT_EMOJI[i][0])>=0) return GIFT_EMOJI[i][1]; return '🎁'; }
+function renderGifts(team){
+  var box = $(team==='red' ? 'giftsR' : 'giftsB');
+  var items = Object.keys(GC[team]).map(function(k){ return [k, GC[team][k]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0,4);
+  box.innerHTML = '';
+  items.forEach(function(it){ var d=document.createElement('div'); d.className='grow';
+    d.innerHTML = '<span>'+giftEmoji(it[0])+'</span><span class="n"></span><span class="c">×'+num(it[1])+'</span>';
+    d.querySelector('.n').textContent = it[0]; box.appendChild(d); });
+  box.style.display = items.length ? 'flex' : 'none';
+}
+// ---------- members: everyone in the LIVE is a viewer; join = team member (no limit) ----------
+var MEMBERS = { red: [], blue: [] };
+function mOther(team){ return team==='red' ? 'blue' : 'red'; }
+function mHas(team, name){ return MEMBERS[team].indexOf(name) >= 0; }
+function mAdd(team, name){ var o = mOther(team); var i = MEMBERS[o].indexOf(name); if (i>=0) MEMBERS[o].splice(i,1); if (!mHas(team, name)) MEMBERS[team].push(name); }
+function renderSide(team){ renderGifts(team); }
+function showPop(big, sub, ms){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, ms||2100); }
+var FXC = ['#ffd54d','#ff5a8a','#4da3ff','#7dff8a','#ff9d2e','#ffffff'];
+function burst(team, tier){
+  var box = $('fx'); var n = [0,0,14,24,42][tier]; if (!n) return;
+  var x0 = team==='red' ? innerWidth*0.24 : innerWidth*0.76;
+  for (var i=0;i<n;i++){
+    var d = document.createElement('div'); d.className='cf';
+    d.style.background = FXC[i % FXC.length];
+    d.style.left = (x0 + (Math.random()-0.5)*innerWidth*0.36) + 'px';
+    d.style.top = (innerHeight*0.16 + Math.random()*30) + 'px';
+    box.appendChild(d);
+    var dx = (Math.random()-0.5)*120, dy = innerHeight*(0.28+Math.random()*0.3), rot = (Math.random()-0.5)*540;
+    var anim = d.animate([
+      { transform:'translate(0,0) rotate(0deg)', opacity:1 },
+      { transform:'translate('+dx+'px,'+dy+'px) rotate('+rot+'deg)', opacity:0.15 }
+    ], { duration: 950+Math.random()*650, easing:'cubic-bezier(.2,.7,.3,1)' });
+    (function(el, a){ a.onfinish = function(){ el.remove(); }; })(d, anim);
+  }
+  if (tier>=4){
+    var f = $('flash'); f.style.borderColor = team==='red' ? '#ff4d7e' : '#3fa9ff';
+    f.animate([{opacity:0},{opacity:0.85, offset:0.25},{opacity:0}], { duration: 900, easing:'ease-out' });
+  }
+}
 function tick(txt){ var d=document.createElement('div'); d.textContent=txt; var box=$('ticker'); box.appendChild(d); while(box.children.length>4) box.removeChild(box.firstChild); setTimeout(function(){ d.style.opacity='0.35'; }, 6000); setTimeout(function(){ d.remove(); }, 9000); }
 function num(n){ return String(n).replace(/\d/g, function(c){ return '၀၁၂၃၄၅၆၇၈၉'[+c]; }); }
 // ---------- game numbers ----------
 function applyGift(team, tier, name, giftName){
   var foe = team==='red' ? 'blue' : 'red';
   M[team].gifts++; M[team].power += tier;
-  if (game) game.onGift(team, tier);
+  GC[team][giftName] = (GC[team][giftName]||0) + 1; renderGifts(team);
+  if (game) game.onGift(team, tier, name);
   var feat = CFG.guide[tier-1][1];
   if (CFG.metric==='p'){ S.p += (team==='red'?1:-1) * [0,.10,.22,.40,.70][tier]; }
   else if (CFG.metric==='h'){ if(team==='red') S.hR=Math.min(1,S.hR+[0,.03,.07,.13,.22][tier]); else S.hB=Math.min(1,S.hB+[0,.03,.07,.13,.22][tier]);
@@ -553,11 +1167,12 @@ function applyGift(team, tier, name, giftName){
   else if (CFG.metric==='hp'){ var dmg=[0,4,9,16,30][tier]; if(foe==='red') S.hpR=Math.max(0,S.hpR-dmg); else S.hpB=Math.max(0,S.hpB-dmg); lastHit[foe]=S.t; }
   else if (CFG.metric==='bal'){ var bd=[0,6,13,22,40][tier]; if(foe==='red') S.balR=Math.max(0,S.balR-bd); else S.balB=Math.max(0,S.balB-bd); lastHit[foe]=S.t; }
   else if (CFG.metric==='goal'){ S.p += (team==='red'?1:-1) * [0,.12,.26,.45,.85][tier]; if(tier===3) goldUntil[team]=S.t+5; if(tier===4 && Math.abs(S.p)>0.55){ goal(team); } }
-  if (tier>=3) showPop((team==='red'?'အနီ':'အပြာ')+' — '+feat, name+' က '+giftName+' ပို့တယ်');
-  tick('🎁 '+name+' → '+(team==='red'?'အနီ':'အပြာ')+' · '+feat);
+  showPop(tn(team)+' — '+feat, name+' က '+giftName+' ပို့တယ်', tier>=4 ? 2600 : tier>=3 ? 2100 : 1500);
+  burst(team, tier);
+  tick('🎁 '+name+' → '+tn(team)+' · '+feat);
   syncHud();
 }
-function goal(team){ if(team==='red') S.scoreR++; else S.scoreB++; showPop('ဂိုး!!!', (team==='red'?'အနီ':'အပြာ')+' ဂိုး ဝင်တယ်'); S.p=0; if(game) game.reset(); syncHud(); }
+function goal(team){ if(team==='red') S.scoreR++; else S.scoreB++; showPop('ဂိုး!!!', tn(team)+' ဂိုး ဝင်တယ်'); S.p=0; if(game) game.reset(); syncHud(); }
 function winCheck(){
   if (S.over) return;
   var w=null;
@@ -569,11 +1184,12 @@ function winCheck(){
   if (w) endRound(w);
 }
 function endRound(w){ S.over=true; S.winner=w; S.running=false; if(w==='red') M.red.wins=(M.red.wins||0)+1; else M.blue.wins=(M.blue.wins||0)+1;
-  showPop('🏆 '+(w==='red'?'အနီ':'အပြာ')+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
+  showPop('🏆 '+tn(w)+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
   setTimeout(newRound, 6000); syncHud(); }
-function newRound(){ round++; S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
+function newRound(){ round++;
+  S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
 function syncHud(){
-  $('mR').textContent=num(M.red.members); $('mB').textContent=num(M.blue.members);
+  $('pR').textContent=num(MEMBERS.red.length); $('pB').textContent=num(MEMBERS.blue.length);
   $('gR').textContent=num(M.red.gifts); $('gB').textContent=num(M.blue.gifts);
   $('sc').textContent = num(M.red.wins||0)+' — '+num(M.blue.wins||0);
   var pctR=50, pctB=50;
@@ -583,13 +1199,23 @@ function syncHud(){
   else if (CFG.metric==='bal'){ pctR=S.balR; pctB=S.balB; }
   else if (CFG.metric==='goal'){ pctR=50+S.p*50; pctB=100-pctR; $('sc').textContent=num(S.scoreR)+' — '+num(S.scoreB); }
   $('bR').style.width=pctR+'%'; $('bB').style.width=pctB+'%';
+  var vsR = pctR;
+  if (CFG.metric!=='p' && CFG.metric!=='goal'){ var tot = pctR+pctB; vsR = tot>0 ? pctR/tot*100 : 50; }
+  $('vsR').style.width=vsR+'%'; $('vsB').style.width=(100-vsR)+'%';
+  $('vsL').textContent=num(Math.round(vsR))+'%'; $('vsRp').textContent=num(Math.round(100-vsR))+'%';
 }
 // ---------- events ----------
 function onEvent(ev){
   if (!ev || !ev.kind) return;
   var team = ev.team==='blue' ? 'blue' : 'red';
-  if (ev.kind==='join'){ M[team].members++; if(ev.name && M[team].names.indexOf(ev.name)<0) M[team].names.push(ev.name); if(game) game.onJoin(team); tick('👋 '+ev.name+' → '+(team==='red'?'အနီ':'အပြာ')+' ဝင်တယ်'); }
-  else if (ev.kind==='gift'){ applyGift(team, tierOf(ev.coins||1), ev.name||'ပရိသတ်', ev.gift||'Gift'); }
+  if (ev.kind==='join'){ var jn = ev.name||'Viewer'; var jo = mOther(team); var was = mHas(team, jn);
+    mAdd(team, jn);
+    if (!was) tick('👋 '+jn+' → '+tn(team)+' ဝင်ပြီ');
+    if(game) game.onJoin(team); renderSide(team); renderSide(jo); }
+  else if (ev.kind==='gift'){ var gn = ev.name||'Viewer';
+    if (!mHas(team, gn)){ mAdd(team, gn); renderSide(mOther(team)); }
+    renderSide(team);
+    applyGift(team, tierOf(ev.coins||1), gn, ev.gift||'Gift'); }
   else if (ev.kind==='like'){ if(game) game.onLike(team); var tr = (M.red.power<M.blue.power)?'red':(M.blue.power<M.red.power?'blue':null); if(tr && CFG.metric==='p') S.p += (tr==='red'?1:-1)*0.02; }
   else if (ev.kind==='chat'){ tick('💬 '+ev.name+': '+(ev.text||'').slice(0,40)); }
   syncHud();
@@ -598,13 +1224,22 @@ addEventListener('message', function(e){ var d=e.data; if(d && d.nlo===1) onEven
 if (parent && parent!==window) parent.postMessage({nlo:1, kind:'ready', game:CFG.id}, '*');
 // ---------- demo (standalone debug) ----------
 if (window.parent===window){
-  $('demo').classList.add('show');
+  document.body.classList.add('standalone');
+  $('demoR').classList.add('show'); $('demoB').classList.add('show');
   var names=['Aung Aung','May May','Ko Ko','Thiri','Zaw Zaw','Nilar'];
-  [['R1','အနီ ၁ join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
-   ['B1','အပြာ ၂ join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }],
-   ['GR','အနီ gift',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }],
-   ['GB','အပြာ gift',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }]
-  ].forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $('demo').appendChild(btn); });
+  var demoDefs=[
+   ['demoR','Join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
+   ['demoB','Join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }]
+  ];
+  if (CFG.climb){
+    demoDefs.push(['demoR',CFG.climb,function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Heart',coins:99}); }]);
+    demoDefs.push(['demoB',CFG.climb,function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Heart',coins:99}); }]);
+  }
+  demoDefs.push(['demoR',CFG.btn[0],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:199}); }]);
+  demoDefs.push(['demoR',CFG.btn[1],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Crown',coins:599}); }]);
+  demoDefs.push(['demoB',CFG.btn[0],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:199}); }]);
+  demoDefs.push(['demoB',CFG.btn[1],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Crown',coins:599}); }]);
+  demoDefs.forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $(b[0]).appendChild(btn); });
 }
 // ---------- loop ----------
 S.running = true;
@@ -629,7 +1264,7 @@ function frame(now){
   }
   if (game){ game.update(dt, S); renderer.render(game.scene, game.camera); }
 }
-resize(); syncHud(); requestAnimationFrame(frame);
+resize(); applyNames(); syncHud(); requestAnimationFrame(frame);
 })();
 </script>
 </body></html>

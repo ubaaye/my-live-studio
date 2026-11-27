@@ -7,13 +7,22 @@
  font-family:"Optimistic AI VF",system-ui,sans-serif;color:#eef1ff;-webkit-user-select:none;user-select:none}
 #stage{position:fixed;inset:0} #stage canvas{display:block}
 .hud{position:fixed;top:8px;left:8px;right:8px;display:flex;gap:8px;z-index:5;pointer-events:none}
-.team{flex:1;background:rgba(10,14,34,.72);border:1.5px solid #ffffff2a;border-radius:14px;padding:7px 10px;backdrop-filter:blur(6px)}
-.team.red{border-color:#ff5a5a88}.team.blue{border-color:#4da3ff88}
+.team{flex:1;background:rgba(8,10,26,.55);border:1.5px solid #ffffff2a;border-radius:16px;padding:7px 10px;
+ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.team.red{border-color:#ff4d7e;box-shadow:0 0 12px #ff4d7e44,inset 0 0 12px #ff4d7e14}
+.team.blue{border-color:#3fa9ff;box-shadow:0 0 12px #3fa9ff44,inset 0 0 12px #3fa9ff14}
 .team .nm{font-weight:800;font-size:15px} .team .st{font-size:12px;opacity:.85;margin-top:1px}
 .bar{height:6px;background:#ffffff22;border-radius:3px;margin-top:5px;overflow:hidden}
 .bar i{display:block;height:100%;border-radius:3px;transition:width .25s}
-.red .bar i{background:#ff5a5a}.blue .bar i{background:#4da3ff}
-.mid{width:86px;text-align:center;background:rgba(10,14,34,.72);border:1.5px solid #ffd54d66;border-radius:14px;padding:7px 4px;backdrop-filter:blur(6px)}
+.red .bar i{background:linear-gradient(90deg,#ff2e63,#ff7aa8)}.blue .bar i{background:linear-gradient(90deg,#2e9bff,#7ac2ff)}
+.mid{width:86px;text-align:center;background:rgba(8,10,26,.55);border:1.5px solid #ffd54dcc;border-radius:16px;padding:7px 4px;
+ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 0 12px #ffd54d33}
+#vsbar{position:fixed;top:94px;left:10px;right:10px;height:15px;z-index:5;border-radius:999px;overflow:hidden;pointer-events:none;
+ background:rgba(8,10,26,.45);border:1px solid #ffffff40;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#vsR{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ff2e63,#ff7aa8);transition:width .3s}
+#vsB{position:absolute;right:0;top:0;bottom:0;background:linear-gradient(90deg,#7ac2ff,#2e9bff);transition:width .3s}
+#vsbar .pc{position:absolute;top:0;bottom:0;display:flex;align-items:center;font-size:9.5px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000c;z-index:2}
+#vsL{left:7px} #vsRp{right:7px}
 .mid .tm{font-size:21px;font-weight:900;line-height:1} .mid .sc{font-size:13px;margin-top:2px} .mid .rd{font-size:11px;opacity:.8}
 #ticker{position:fixed;left:10px;bottom:64px;z-index:5;font-size:12.5px;line-height:1.5;pointer-events:none;text-shadow:0 1px 3px #000}
 #ticker div{background:rgba(5,8,20,.55);display:inline-block;padding:2px 8px;border-radius:8px;margin-top:3px}
@@ -23,524 +32,1293 @@
 #guide .rows{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}
 #guide .rows div b{color:#ffd54d;font-weight:700}
 #guide.closed .rows{display:none}
-#howto{position:fixed;top:96px;left:0;right:0;text-align:center;z-index:4;pointer-events:none}
+#howto{position:fixed;top:116px;left:0;right:0;text-align:center;z-index:4;pointer-events:none}
 #howto span{background:rgba(5,8,20,.5);padding:3px 12px;border-radius:999px;font-size:13px}
 #popup{position:fixed;top:38%;left:0;right:0;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:scale(.9);transition:all .18s}
 #popup.show{opacity:1;transform:scale(1)}
-#popup .big{display:inline-block;background:linear-gradient(180deg,#ffd54d,#ff9d2e);color:#431c00;font-weight:900;
- font-size:21px;padding:10px 22px;border-radius:16px;box-shadow:0 8px 30px #000a}
-#popup .sub{display:block;margin-top:7px;font-size:14px;color:#fff;text-shadow:0 1px 4px #000}
-#demo{position:fixed;right:8px;top:110px;z-index:9;display:none;flex-direction:column;gap:5px}
-#demo button{background:#1b2350;color:#fff;border:1px solid #ffffff33;border-radius:9px;padding:6px 9px;font-size:12px}
-#demo.show{display:flex}
+#popup .big{display:inline-block;background:rgba(255,255,255,.13);color:#fff;font-weight:800;
+ font-size:15px;line-height:1.3;padding:6px 14px;border-radius:11px;box-shadow:0 5px 18px #0004,inset 0 0 12px #ffffff1f;max-width:82%;
+ border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(10px) saturate(1.3);-webkit-backdrop-filter:blur(10px) saturate(1.3);
+ text-shadow:0 1px 4px #0009}
+#popup .sub{display:block;margin-top:4px;font-size:11.5px;color:#fff;text-shadow:0 1px 4px #000}
+#sideR,#sideB{position:fixed;top:150px;z-index:5;display:flex;flex-direction:column;gap:3px;pointer-events:none;min-width:106px}
+#sideR{left:8px} #sideB{right:8px}
+#giftsR,#giftsB{display:none;flex-direction:column;gap:3px}
+.qbox{display:none;background:rgba(255,255,255,.10);border:1px dashed #ffffff70;border-radius:8px;padding:3px 7px;
+ font-size:10.5px;color:#fff;text-shadow:0 1px 3px #000a;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);max-width:158px}
+.grow{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.13);border:1px solid #ffffff45;border-radius:8px;
+ padding:2.5px 7px;font-size:11px;color:#fff;text-shadow:0 1px 3px #000a;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.grow .n{opacity:.92;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grow .c{margin-left:auto;font-weight:800}
+.democol{position:fixed;top:150px;z-index:9;display:none;flex-direction:column;gap:5px}
+#demoR{left:8px} #demoB{right:8px}
+.democol button{background:rgba(24,20,12,.58);color:#fff;border:1px solid #ffffff40;border-radius:999px;padding:3px 8px;font-size:9.5px;font-weight:700;
+ backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 8px #0004;text-shadow:0 1px 2px #000}
+.democol.show{display:flex}
+body.standalone #sideR,body.standalone #sideB{top:252px}
+#gEdit{font-size:11.5px;font-weight:700;background:rgba(255,255,255,.13);border:1px solid #ffffff59;border-radius:8px;
+ padding:3px 9px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#tedit{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:20;background:rgba(4,6,16,.45)}
+#tedit.show{display:flex}
+#tedit .card{background:rgba(255,255,255,.13);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ border:1px solid #ffffff59;border-radius:16px;padding:16px;width:84%;max-width:320px;color:#fff;box-shadow:0 10px 34px #0007}
+#tedit h3{margin:0 0 10px;font-size:15px}
+#tedit label{display:block;font-size:12.5px;margin:10px 0 4px;opacity:.92}
+#tedit input{width:100%;padding:9px 11px;border-radius:9px;border:1px solid #ffffff55;background:rgba(0,0,0,.28);
+ color:#fff;font-size:15px;-webkit-user-select:text;user-select:text;outline:none}
+#tedit .row{display:flex;gap:8px;margin-top:14px}
+#tedit button{flex:1;padding:9px;border-radius:9px;border:1px solid #ffffff59;background:rgba(255,255,255,.13);
+ color:#fff;font-size:13.5px;font-weight:700;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#fx{position:fixed;inset:0;z-index:7;pointer-events:none;overflow:hidden}
+#fx .cf{position:absolute;width:8px;height:12px;border-radius:2px;opacity:.95}
+#flash{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;border:3px solid transparent;border-radius:6px}
 </style></head><body>
 <div id="stage"></div>
 <div class="hud">
-  <div class="team red"><div class="nm">🔴 အနီ</div><div class="st"><span id="mR">0</span> ယောက် · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
+  <div class="team red"><div class="nm" id="nmR">🔴 အနီ</div><div class="st">👥 <span id="pR">0</span> · 🎁 <span id="gR">0</span></div><div class="bar"><i id="bR" style="width:50%"></i></div></div>
   <div class="mid"><div class="tm" id="tm">1:30</div><div class="sc" id="sc">0 — 0</div><div class="rd">ပွဲစဉ် <span id="rd">1</span></div></div>
-  <div class="team blue"><div class="nm">🔵 အပြာ</div><div class="st"><span id="mB">0</span> ယောက် · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
+  <div class="team blue"><div class="nm" id="nmB">🔵 အပြာ</div><div class="st">👥 <span id="pB">0</span> · 🎁 <span id="gB">0</span></div><div class="bar"><i id="bB" style="width:50%"></i></div></div>
 </div>
-<div id="howto"><span>မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
+<div id="vsbar"><div id="vsR" style="width:50%"></div><div id="vsB" style="width:50%"></div><span class="pc" id="vsL">၅၀%</span><span class="pc" id="vsRp">၅၀%</span></div>
+<div id="sideR"><div id="giftsR"></div></div>
+<div id="sideB"><div id="giftsB"></div></div>
+<div id="howto"><span id="howtoTx">မန့် ၁ = အနီ · မန့် ၂ = အပြာ ဝင်ပါ</span></div>
 <div id="ticker"></div>
+<div id="flash"></div><div id="fx"></div>
 <div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
-<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — ခေါင်းအုံးရိုက်ပွဲ (PILLOW FIGHT)</span><span id="gTog">▾</span></div><div class="rows" id="gRows"></div></div>
-<div id="demo"></div>
+<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — ခေါင်းအုံးရိုက်ပွဲ (PILLOW FIGHT)</span><span style="display:flex;gap:8px;align-items:center"><span id="gEdit">✎ အသင်းပြင်</span><span id="gTog">▾</span></span></div><div class="rows" id="gRows"></div></div>
+<div id="tedit"><div class="card"><h3>✎ အသင်းနာမည်များ ပြင်ရန်</h3>
+<label>🔴 အသင်း ၁ (မန့် ၁)</label><input id="tnR" maxlength="24">
+<label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
+<div class="row"><button id="tnCancel">မပြင်တော့</button><button id="tnSave">သိမ်းမယ်</button></div></div></div>
+<div class="democol" id="demoR"></div><div class="democol" id="demoB"></div>
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
 <script>
-GAME3D = window.GAME3D || {};
-GAME3D['pillow'] = {
-  create: function(THREE) {
-    const T = THREE;
-    const scene = new T.Scene();
-    scene.background = new T.Color(0xffd194);
-    scene.fog = new T.FogExp2(0xffd194, 0.03);
-
-    const camera = new T.PerspectiveCamera(55, 0.5, 0.1, 100);
-    camera.position.set(0, 2.5, 7.5);
-    camera.lookAt(0, 1.4, 0);
-
-    const hemi = new T.HemisphereLight(0xfff0dd, 0x556633, 0.8);
-    scene.add(hemi);
-
-    const dir = new T.DirectionalLight(0xffeedd, 1.2);
-    dir.position.set(5, 10, 5);
-    dir.castShadow = true;
-    dir.shadow.mapSize.width = 1024;
-    dir.shadow.mapSize.height = 1024;
-    dir.shadow.camera.near = 1;
-    dir.shadow.camera.far = 20;
-    dir.shadow.camera.left = -6;
-    dir.shadow.camera.right = 6;
-    dir.shadow.camera.top = 6;
-    dir.shadow.camera.bottom = -2;
-    scene.add(dir);
-
-    const matCache = {};
-    function getMat(color, roughness, metalness) {
-      const key = color + '_' + (roughness !== undefined ? roughness : 0.8) + '_' + (metalness !== undefined ? metalness : 0.1);
-      if (!matCache[key]) {
-        matCache[key] = new T.MeshStandardMaterial({
-          color: color,
-          roughness: roughness !== undefined ? roughness : 0.8,
-          metalness: metalness !== undefined ? metalness : 0.1
-        });
-      }
-      return matCache[key];
-    }
-
-    const skinMat = getMat(0xe5b88f);
-    const thanakaMat = getMat(0xedd892);
-    const waterMat = new T.MeshStandardMaterial({ color: 0x1a88bb, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.85 });
-    const featherMat = new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide });
-
-    const headGeo = new T.SphereGeometry(0.22, 12, 12);
-    const torsoGeo = new T.BoxGeometry(0.35, 0.5, 0.22);
-    const longyiGeo = new T.CylinderGeometry(0.2, 0.25, 0.45, 10);
-    const limbGeo = new T.CylinderGeometry(0.06, 0.05, 0.45, 8);
-    const gbGeo = new T.TorusGeometry(0.2, 0.04, 6, 12);
-    const thanakaGeo = new T.CylinderGeometry(0.04, 0.04, 0.01, 8);
-    const pillowGeo = new T.BoxGeometry(0.6, 0.4, 0.3);
-    const pillowTrimGeo = new T.BoxGeometry(0.62, 0.08, 0.32);
-    const leafGeo = new T.ConeGeometry(0.6, 2, 4);
-
-    const ground = new T.Mesh(new T.PlaneGeometry(30, 30), getMat(0xd4a359));
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.5;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    const waterGeo = new T.PlaneGeometry(20, 10, 32, 16);
-    const water = new T.Mesh(waterGeo, waterMat);
-    water.rotation.x = -Math.PI / 2;
-    water.position.set(0, 0.05, 1);
-    scene.add(water);
-
-    const logGeo = new T.CylinderGeometry(0.22, 0.22, 9, 16);
-    const logMat = getMat(0x8b6b32);
-    const logMesh = new T.Mesh(logGeo, logMat);
-    logMesh.rotation.z = Math.PI / 2;
-    logMesh.position.set(0, 1.4, 0);
-    logMesh.castShadow = true;
-    logMesh.receiveShadow = true;
-    scene.add(logMesh);
-
-    const supL = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 2.5, 8), logMat);
-    supL.position.set(-3.8, 0.6, 0);
-    supL.castShadow = true;
-    scene.add(supL);
-
-    const supR = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 2.5, 8), logMat);
-    supR.position.set(3.8, 0.6, 0);
-    supR.castShadow = true;
-    scene.add(supR);
-
-    function makePalm(x, z) {
-      const p = new T.Group();
-      p.position.set(x, 0, z);
-      const trunk = new T.Mesh(new T.CylinderGeometry(0.12, 0.2, 4, 8), logMat);
-      trunk.position.y = 2;
-      p.add(trunk);
-      for(let i=0; i<5; i++) {
-        const f = new T.Mesh(leafGeo, getMat(0x2e7d32));
-        f.position.set(0, 4, 0);
-        f.rotation.z = Math.PI / 2 + 0.3;
-        f.rotation.y = (i / 5) * Math.PI * 2;
-        p.add(f);
-      }
-      scene.add(p);
-    }
-    makePalm(-4.5, -3);
-    makePalm(4.5, -3.2);
-    makePalm(-5.2, -1);
-
-    const stand = new T.Mesh(new T.BoxGeometry(10, 1.2, 1.5), getMat(0x6d4c41));
-    stand.position.set(0, 0.6, -2.5);
-    scene.add(stand);
-
-    const pennants = [];
-    for(let i = -5; i <= 5; i += 0.8) {
-      const flag = new T.Mesh(new T.ConeGeometry(0.2, 0.4, 3), getMat(i % 2 === 0 ? 0xd32f2f : 0xffc107));
-      flag.position.set(i, 3.8 + Math.sin(i)*0.15, -2);
-      flag.rotation.z = Math.PI;
-      scene.add(flag);
-      pennants.push(flag);
-    }
-
-    const spectators = [];
-    for(let i=0; i<12; i++) {
-      const color = [0x303f9f, 0xc2185b, 0x00796b, 0xfbc02d][i % 4];
-      const spec = new T.Mesh(new T.SphereGeometry(0.18, 8, 8), getMat(color));
-      spec.position.set(-3.8 + i * 0.7, 1.4, -2.3);
-      scene.add(spec);
-      spectators.push({ mesh: spec, offset: Math.random() * 5 });
-    }
-
-    function createFighter(team) {
-      const isRed = team === 'red';
-      const mainColor = isRed ? 0xd32f2f : 0x1976d2;
-      const darkColor = isRed ? 0x801313 : 0x0d47a1;
-
-      const root = new T.Group();
-      root.position.set(isRed ? -1.2 : 1.2, 1.62, 0);
-      scene.add(root);
-
-      const torsoGroup = new T.Group();
-      root.add(torsoGroup);
-
-      const torso = new T.Mesh(torsoGeo, getMat(mainColor));
-      torso.position.y = 0.25;
-      torso.castShadow = true;
-      torsoGroup.add(torso);
-
-      const longyi = new T.Mesh(longyiGeo, getMat(darkColor));
-      longyi.position.y = -0.1;
-      torsoGroup.add(longyi);
-
-      const headGroup = new T.Group();
-      headGroup.position.y = 0.55;
-      torsoGroup.add(headGroup);
-
-      const head = new T.Mesh(headGeo, skinMat);
-      head.castShadow = true;
-      headGroup.add(head);
-
-      const gb = new T.Mesh(gbGeo, getMat(mainColor));
-      gb.position.y = 0.12;
-      gb.rotation.x = Math.PI / 2;
-      headGroup.add(gb);
-
-      const tL = new T.Mesh(thanakaGeo, thanakaMat);
-      tL.position.set(-0.12, 0.02, 0.16);
-      tL.rotation.y = -0.3;
-      headGroup.add(tL);
-      const tR = tL.clone();
-      tR.position.x = 0.12;
-      tR.rotation.y = 0.3;
-      headGroup.add(tR);
-
-      const armLGroup = new T.Group();
-      armLGroup.position.set(-0.22, 0.4, 0);
-      torsoGroup.add(armLGroup);
-      const armL = new T.Mesh(limbGeo, skinMat);
-      armL.position.y = -0.2;
-      armL.castShadow = true;
-      armLGroup.add(armL);
-
-      const armRGroup = new T.Group();
-      armRGroup.position.set(0.22, 0.4, 0);
-      torsoGroup.add(armRGroup);
-      const armR = new T.Mesh(limbGeo, skinMat);
-      armR.position.y = -0.2;
-      armR.castShadow = true;
-      armRGroup.add(armR);
-
-      const legLGroup = new T.Group();
-      legLGroup.position.set(-0.1, -0.3, 0);
-      torsoGroup.add(legLGroup);
-      const legL = new T.Mesh(limbGeo, skinMat);
-      legL.position.y = -0.2;
-      legL.castShadow = true;
-      legLGroup.add(legL);
-
-      const legRGroup = new T.Group();
-      legRGroup.position.set(0.1, -0.3, 0);
-      torsoGroup.add(legRGroup);
-      const legR = new T.Mesh(limbGeo, skinMat);
-      legR.position.y = -0.2;
-      legR.castShadow = true;
-      legRGroup.add(legR);
-
-      const pillowGroup = new T.Group();
-      pillowGroup.position.set(0, 0.3, 0.25);
-      torsoGroup.add(pillowGroup);
-
-      const pillow = new T.Mesh(pillowGeo, getMat(0xffffff, 0.9));
-      pillow.castShadow = true;
-      pillowGroup.add(pillow);
-
-      const trim = new T.Mesh(pillowTrimGeo, getMat(mainColor));
-      pillowGroup.add(trim);
-
-      if (!isRed) {
-        root.rotation.y = Math.PI;
-      }
-
-      return {
-        team: team,
-        root: root,
-        torsoGroup: torsoGroup,
-        headGroup: headGroup,
-        armLGroup: armLGroup,
-        armRGroup: armRGroup,
-        legLGroup: legLGroup,
-        legRGroup: legRGroup,
-        pillowGroup: pillowGroup,
-        baseX: isRed ? -1.2 : 1.2,
-        action: null,
-        actionTimer: 0,
-        inWater: false,
-        hitWobble: 0
-      };
-    }
-
-    const redFighter = createFighter('red');
-    const blueFighter = createFighter('blue');
-
-    const feathers = [];
-    const featherGeo = new T.PlaneGeometry(0.08, 0.12);
-    for(let i=0; i<50; i++) {
-      const f = new T.Mesh(featherGeo, featherMat);
-      f.visible = false;
-      scene.add(f);
-      feathers.push({ mesh: f, vx: 0, vy: 0, vz: 0, rotS: 0, life: 0 });
-    }
-
-    function spawnFeathers(pos, count) {
-      let spawned = 0;
-      for(let f of feathers) {
-        if (!f.mesh.visible) {
-          f.mesh.position.copy(pos);
-          f.mesh.position.x += (Math.random() - 0.5) * 0.4;
-          f.mesh.position.y += (Math.random() - 0.5) * 0.4;
-          f.mesh.position.z += (Math.random() - 0.5) * 0.4;
-          f.vx = (Math.random() - 0.5) * 2;
-          f.vy = Math.random() * 2 + 1;
-          f.vz = (Math.random() - 0.5) * 2;
-          f.rotS = (Math.random() - 0.5) * 10;
-          f.life = 1.2 + Math.random() * 0.8;
-          f.mesh.visible = true;
-          spawned++;
-          if (spawned >= count) break;
-        }
-      }
-    }
-
-    const splashes = [];
-    const splashGeo = new T.SphereGeometry(0.06, 6, 6);
-    const splashMat = getMat(0xaaddff, 0.2, 0.9);
-    for(let i=0; i<30; i++) {
-      const s = new T.Mesh(splashGeo, splashMat);
-      s.visible = false;
-      scene.add(s);
-      splashes.push({ mesh: s, vx: 0, vy: 0, vz: 0, life: 0 });
-    }
-
-    function triggerSplash(x, z) {
-      let count = 0;
-      for(let s of splashes) {
-        if (!s.mesh.visible) {
-          s.mesh.position.set(x + (Math.random()-0.5)*0.5, 0.1, z + (Math.random()-0.5)*0.5);
-          s.vx = (Math.random() - 0.5) * 3;
-          s.vy = Math.random() * 3 + 2;
-          s.vz = (Math.random() - 0.5) * 3;
-          s.life = 0.8;
-          s.mesh.visible = true;
-          count++;
-          if (count >= 25) break;
-        }
-      }
-    }
-
-    const tempVec = new T.Vector3();
-
-    function triggerSwing(attacker, defender, tier) {
-      attacker.action = tier === 4 ? 'spin' : (tier === 3 ? 'giant' : (tier === 2 ? 'combo' : 'swing'));
-      attacker.actionTimer = tier === 4 ? 1.0 : (tier === 2 ? 0.8 : 0.5);
-
-      if (tier >= 3) {
-        attacker.pillowGroup.scale.set(1.8, 1.8, 1.8);
-      }
-
-      setTimeout(function() {
-        if (defender) {
-          defender.hitWobble = tier * 0.4;
-          attacker.pillowGroup.getWorldPosition(tempVec);
-          spawnFeathers(tempVec, tier * 10);
-        }
-      }, 200);
-    }
-
-    return {
-      scene: scene,
-      camera: camera,
-
-      update: function(dt, S) {
-        const delta = Math.min(dt || 0.016, 0.05);
-        const time = (S && S.t) ? S.t : performance.now() * 0.001;
-
-        const posAttr = waterGeo.attributes.position;
-        for(let i=0; i<posAttr.count; i++) {
-          const u = posAttr.getX(i);
-          const v = posAttr.getY(i);
-          posAttr.setZ(i, Math.sin(u * 2 + time * 3) * 0.05 + Math.cos(v * 2 + time * 2) * 0.05);
-        }
-        posAttr.needsUpdate = true;
-
-        for(let s of spectators) {
-          s.mesh.position.y = 1.4 + Math.abs(Math.sin(time * 4 + s.offset)) * 0.15;
-        }
-        for(let i=0; i<pennants.length; i++) {
-          pennants[i].rotation.z = Math.PI + Math.sin(time * 3 + i) * 0.15;
-        }
-
-        for(let f of feathers) {
-          if (f.mesh.visible) {
-            f.life -= delta;
-            if (f.life <= 0) f.mesh.visible = false;
-            else {
-              f.mesh.position.x += f.vx * delta;
-              f.mesh.position.y += f.vy * delta;
-              f.mesh.position.z += f.vz * delta;
-              f.vy -= 2.5 * delta;
-              f.mesh.rotation.x += f.rotS * delta;
-              f.mesh.rotation.y += f.rotS * delta;
-            }
-          }
-        }
-
-        for(let s of splashes) {
-          if (s.mesh.visible) {
-            s.life -= delta;
-            if (s.life <= 0) s.mesh.visible = false;
-            else {
-              s.mesh.position.x += s.vx * delta;
-              s.mesh.position.y += s.vy * delta;
-              s.mesh.position.z += s.vz * delta;
-              s.vy -= 9.8 * delta;
-            }
-          }
-        }
-
-        const fighters = [
-          { f: redFighter, bal: S ? S.balR : 100 },
-          { f: blueFighter, bal: S ? S.balB : 100 }
-        ];
-
-        for(let item of fighters) {
-          const f = item.f;
-          const bal = item.bal !== undefined ? item.bal : 100;
-          const isFallen = bal <= 0 || (S && S.over && S.winner && S.winner !== f.team);
-
-          if (isFallen && !f.inWater) {
-            f.inWater = true;
-            triggerSplash(f.root.position.x, f.root.position.z);
-          } else if (!isFallen && f.inWater && bal > 50) {
-            f.inWater = false;
-            f.root.position.set(f.baseX, 1.62, 0);
-            f.root.rotation.z = 0;
-          }
-
-          if (f.inWater) {
-            if (f.root.position.y > 0.2) {
-              f.root.position.y -= delta * 4;
-              f.root.rotation.z += (f.team === 'red' ? -1 : 1) * delta * 3;
-            } else {
-              f.root.position.y = 0.2 + Math.sin(time * 3) * 0.05;
-              f.root.rotation.z = f.team === 'red' ? -Math.PI / 2 : Math.PI / 2;
-            }
-            continue;
-          }
-
-          const unbalance = (100 - bal) / 100;
-          const wobbleFreq = 4 + unbalance * 6;
-          const wobbleAmp = unbalance * 0.4 + f.hitWobble;
-
-          f.hitWobble = Math.max(0, f.hitWobble - delta * 2);
-
-          f.root.position.y = 1.62 + Math.sin(time * wobbleFreq) * 0.03;
-          f.root.rotation.z = Math.sin(time * wobbleFreq) * wobbleAmp * (f.team === 'red' ? 1 : -1);
-
-          let armRotZ = 0.3;
-          let armRotX = -0.5;
-
-          if (f.actionTimer > 0) {
-            f.actionTimer -= delta;
-            const progress = 1 - (f.actionTimer / (f.action === 'spin' ? 1.0 : 0.5));
-
-            if (f.action === 'spin') {
-              f.torsoGroup.rotation.y = progress * Math.PI * 2;
-              spawnFeathers(f.root.position, 1);
-            } else if (f.action === 'taunt') {
-              f.pillowGroup.position.y = 0.6 + Math.sin(progress * Math.PI) * 0.3;
-              f.torsoGroup.rotation.z = Math.sin(progress * Math.PI * 4) * 0.2;
-            } else {
-              const swingAngle = Math.sin(progress * Math.PI) * 1.5;
-              f.torsoGroup.rotation.y = swingAngle * (f.team === 'red' ? 1 : -1);
-            }
-
-            if (f.actionTimer <= 0) {
-              f.action = null;
-              f.torsoGroup.rotation.y = 0;
-              f.torsoGroup.rotation.z = 0;
-              f.pillowGroup.scale.set(1, 1, 1);
-              f.pillowGroup.position.set(0, 0.3, 0.25);
-            }
-          }
-
-          if (bal < 35 && !f.action) {
-            armRotX = Math.sin(time * 12) * 1.2;
-            armRotZ = 1.0;
-          }
-
-          f.armLGroup.rotation.x = armRotX;
-          f.armRGroup.rotation.x = armRotX;
-          f.armLGroup.rotation.z = -armRotZ;
-          f.armRGroup.rotation.z = armRotZ;
-
-          f.headGroup.rotation.z = -f.root.rotation.z * 0.5;
-        }
-      },
-
-      onJoin: function(team) {
-        const f = team === 'red' ? redFighter : blueFighter;
-        f.hitWobble = 0.3;
-      },
-
-      onGift: function(team, tier) {
-        const attacker = team === 'red' ? redFighter : blueFighter;
-        const defender = team === 'red' ? blueFighter : redFighter;
-        triggerSwing(attacker, defender, tier || 1);
-      },
-
-      onLike: function(team) {
-        const f = team === 'red' ? redFighter : blueFighter;
-        if (!f.action) {
-          f.action = 'taunt';
-          f.actionTimer = 0.6;
-        }
-      },
-
-      reset: function() {
-        const list = [redFighter, blueFighter];
-        for(let i=0; i<list.length; i++) {
-          const f = list[i];
-          f.action = null;
-          f.actionTimer = 0;
-          f.inWater = false;
-          f.hitWobble = 0;
-          f.root.position.set(f.baseX, 1.62, 0);
-          f.root.rotation.set(0, f.team === 'blue' ? Math.PI : 0, 0);
-          f.torsoGroup.rotation.set(0, 0, 0);
-          f.pillowGroup.scale.set(1, 1, 1);
-          f.pillowGroup.position.set(0, 0.3, 0.25);
-        }
-        for(let fea of feathers) fea.mesh.visible = false;
-        for(let spl of splashes) spl.mesh.visible = false;
-      }
-    };
+GAME3D['pillow'] = { create: function(THREE) { const T = THREE; const scene = new T.Scene(); const skyCol = 0xf8cb8e; scene.background = new T.Color(skyCol); scene.fog = new T.Fog(skyCol, 15, 36);
+
+
+
+const camera = new T.PerspectiveCamera(55, 0.5625, 0.2, 60);
+camera.position.set(0, 3.4, 8.2);
+camera.lookAt(0, 1.7, -0.3);
+
+const hemi = new T.HemisphereLight(0xfff5dc, 0x8b6e4b, 0.95);
+scene.add(hemi);
+
+const dirLight = new T.DirectionalLight(0xfff0c8, 1.35);
+dirLight.position.set(4.5, 11.0, 6.5);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width = 1024;
+dirLight.shadow.mapSize.height = 1024;
+dirLight.shadow.camera.left = -4.6;
+dirLight.shadow.camera.right = 4.6;
+dirLight.shadow.camera.top = 5.6;
+dirLight.shadow.camera.bottom = -3.6;
+dirLight.shadow.camera.near = 1.0;
+dirLight.shadow.camera.far = 22.0;
+dirLight.shadow.bias = -0.001;
+scene.add(dirLight);
+
+function stdMat(color, rough, extra) {
+  const cfg = { color: color, roughness: rough !== undefined ? rough : 0.82, metalness: 0.02 };
+  if (extra) {
+    for (const k in extra) cfg[k] = extra[k];
   }
+  return new T.MeshStandardMaterial(cfg);
+}
+
+const M = {
+  water: stdMat(0x1f8ac9, 0.18, { metalness: 0.12 }),
+  sand: stdMat(0xd9a667, 0.88),
+  sandDark: stdMat(0xba8548, 0.88),
+  bamboo: stdMat(0xbba64e, 0.78),
+  bambooDark: stdMat(0x7d6c2c, 0.82),
+  wood: stdMat(0x9a6438, 0.85),
+  woodDark: stdMat(0x6e4424, 0.88),
+  roof: stdMat(0xc83a2b, 0.82),
+  gold: stdMat(0xf4bc3a, 0.75),
+  bannerRed: stdMat(0xd62839, 0.82),
+  trunk: stdMat(0x825a36, 0.88),
+  frond: stdMat(0x3a8f3e, 0.82),
+  rope: stdMat(0x5a4630, 0.9),
+  skin: stdMat(0xdc9e70, 0.8),
+  eye: stdMat(0x1c1412, 0.75),
+  thanaka: stdMat(0xf6eaab, 0.85),
+  redTop: stdMat(0xe63946, 0.8),
+  redLongyi: stdMat(0x8f1d28, 0.85, { side: T.DoubleSide }),
+  blueTop: stdMat(0x1d78e6, 0.8),
+  blueLongyi: stdMat(0x10438a, 0.85, { side: T.DoubleSide }),
+  pillow: stdMat(0xfbf7ef, 0.88),
+  feather: stdMat(0xffffff, 0.85, { side: T.DoubleSide }),
+  drop: stdMat(0xe4f9ff, 0.22),
+  crowd: [
+    stdMat(0xe85d75, 0.84),
+    stdMat(0xf4a236, 0.84),
+    stdMat(0x2fa87b, 0.84),
+    stdMat(0x9b5de5, 0.84),
+    stdMat(0x2892d7, 0.84),
+    stdMat(0xf26444, 0.84)
+  ],
+  pennant: [
+    stdMat(0xe63946, 0.82),
+    stdMat(0xf4c430, 0.82),
+    stdMat(0x18a999, 0.82),
+    stdMat(0xd9387a, 0.82),
+    stdMat(0xf27d24, 0.82)
+  ]
 };
+
+function makePillowGeo() {
+  const g = new T.BoxGeometry(0.62, 0.48, 0.34, 4, 4, 4);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const nx = x / 0.31;
+    const ny = y / 0.24;
+    const nz = z / 0.17;
+    const r2 = nx * nx + ny * ny;
+    const puff = 1 + 0.34 * Math.max(0, 1 - r2 * 0.55);
+    const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+    const k = 0.72 + 0.28 / Math.max(1, len);
+    pos.setXYZ(i, x * k, y * k, z * k * puff);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+const G = {
+  head: new T.SphereGeometry(0.22, 14, 12),
+  eye: new T.SphereGeometry(0.032, 7, 6),
+  thanaka: new T.CylinderGeometry(0.06, 0.06, 0.012, 10),
+  gaung: new T.TorusGeometry(0.205, 0.052, 8, 16),
+  torso: new T.BoxGeometry(0.44, 0.6, 0.28),
+  longyi: new T.CylinderGeometry(0.22, 0.28, 0.52, 12, 1, true),
+  limb: new T.CapsuleGeometry(0.072, 0.42, 4, 8),
+  leg: new T.CapsuleGeometry(0.082, 0.5, 4, 8),
+  pillow: makePillowGeo(),
+  trim: new T.BoxGeometry(0.64, 0.09, 0.39),
+  crowdBody: new T.CylinderGeometry(0.16, 0.22, 0.58, 8),
+  crowdHead: new T.SphereGeometry(0.16, 8, 7),
+  pennant: new T.ConeGeometry(0.24, 0.44, 3),
+  frond: new T.ConeGeometry(0.38, 2.35, 4),
+  ring: new T.RingGeometry(0.18, 0.29, 20),
+  drop: new T.SphereGeometry(0.11, 7, 6),
+  feather: new T.PlaneGeometry(0.2, 0.1)
+};
+
+const LOG_Y = 1.45;
+const LOG_R = 0.22;
+const STAND_Y = LOG_Y + LOG_R;
+
+// Pond and banks
+const water = new T.Mesh(new T.PlaneGeometry(24, 16), M.water);
+water.rotation.x = -Math.PI / 2;
+water.position.set(0, 0, 2.2);
+water.receiveShadow = true;
+scene.add(water);
+
+const farBank = new T.Mesh(new T.BoxGeometry(24, 0.9, 13), M.sand);
+farBank.position.set(0, -0.15, -10.5);
+farBank.receiveShadow = true;
+scene.add(farBank);
+
+const sideMoundGeo = new T.BoxGeometry(5.5, 1.1, 6.5);
+const leftBank = new T.Mesh(sideMoundGeo, M.sandDark);
+leftBank.position.set(-5.8, 0.05, -2.5);
+leftBank.receiveShadow = true;
+scene.add(leftBank);
+
+const rightBank = new T.Mesh(sideMoundGeo, M.sandDark);
+rightBank.position.set(5.8, 0.05, -2.5);
+rightBank.receiveShadow = true;
+scene.add(rightBank);
+
+// Main bamboo log and supports
+const logMesh = new T.Mesh(new T.CylinderGeometry(LOG_R, LOG_R, 8.2, 16), M.bamboo);
+logMesh.rotation.z = Math.PI / 2;
+logMesh.position.set(0, LOG_Y, 0);
+logMesh.castShadow = true;
+logMesh.receiveShadow = true;
+scene.add(logMesh);
+
+const nodeGeo = new T.TorusGeometry(LOG_R + 0.012, 0.025, 6, 16);
+for (let i = 0; i < 2; i++) {
+  const node = new T.Mesh(nodeGeo, M.bambooDark);
+  node.rotation.y = Math.PI / 2;
+  node.position.set(i === 0 ? -1.45 : 1.45, LOG_Y, 0);
+  scene.add(node);
+}
+
+const postGeo = new T.CylinderGeometry(0.085, 0.1, 2.5, 8);
+const supportX = [-2.75, 2.75];
+for (let i = 0; i < 2; i++) {
+  const sx = supportX[i];
+  const p1 = new T.Mesh(postGeo, M.bambooDark);
+  p1.position.set(sx, 0.72, -0.22);
+  p1.rotation.x = 0.28;
+  scene.add(p1);
+  const p2 = new T.Mesh(postGeo, M.bambooDark);
+  p2.position.set(sx, 0.72, 0.22);
+  p2.rotation.x = -0.28;
+  scene.add(p2);
+}
+
+// Bamboo fence on far bank
+const fencePostGeo = new T.CylinderGeometry(0.07, 0.08, 1.35, 7);
+const fenceXs = [-3.2, 0, 3.2];
+for (let i = 0; i < 3; i++) {
+  const fp = new T.Mesh(fencePostGeo, M.bambooDark);
+  fp.position.set(fenceXs[i], 0.9, -4.6);
+  scene.add(fp);
+}
+const fenceRailGeo = new T.CylinderGeometry(0.055, 0.055, 8.6, 7);
+for (let i = 0; i < 2; i++) {
+  const fr = new T.Mesh(fenceRailGeo, M.bamboo);
+  fr.rotation.z = Math.PI / 2;
+  fr.position.set(0, 0.72 + i * 0.48, -4.6);
+  scene.add(fr);
+}
+
+// Tiered stands
+const step1 = new T.Mesh(new T.BoxGeometry(7.6, 0.6, 1.0), M.wood);
+step1.position.set(0, 0.6, -5.65);
+scene.add(step1);
+
+const step2 = new T.Mesh(new T.BoxGeometry(7.6, 1.25, 1.0), M.woodDark);
+step2.position.set(0, 0.92, -6.6);
+scene.add(step2);
+
+const backBoard = new T.Mesh(new T.BoxGeometry(7.8, 1.1, 0.16), M.wood);
+backBoard.position.set(0, 2.05, -7.15);
+scene.add(backBoard);
+
+// Fair pavilions and banners
+const pavPoleGeo = new T.CylinderGeometry(0.09, 0.1, 3.8, 7);
+const pavRoofGeo = new T.ConeGeometry(1.75, 1.35, 4);
+const pavTrimGeo = new T.BoxGeometry(2.5, 0.22, 2.5);
+const pavXs = [-2.9, 2.9];
+for (let i = 0; i < 2; i++) {
+  const px = pavXs[i];
+  const poleL = new T.Mesh(pavPoleGeo, M.bambooDark);
+  poleL.position.set(px - 0.85, 2.2, -7.2);
+  scene.add(poleL);
+  const poleR = new T.Mesh(pavPoleGeo, M.bambooDark);
+  poleR.position.set(px + 0.85, 2.2, -7.2);
+  scene.add(poleR);
+  const roof = new T.Mesh(pavRoofGeo, M.roof);
+  roof.position.set(px, 4.75, -7.2);
+  roof.rotation.y = Math.PI / 4;
+  scene.add(roof);
+  const trim = new T.Mesh(pavTrimGeo, M.gold);
+  trim.position.set(px, 4.08, -7.2);
+  scene.add(trim);
+}
+
+const bannerGeo = new T.BoxGeometry(0.52, 1.55, 0.08);
+for (let i = 0; i < 2; i++) {
+  const b = new T.Mesh(bannerGeo, i === 0 ? M.bannerRed : M.gold);
+  b.position.set(i === 0 ? -0.95 : 0.95, 2.75, -7.02);
+  scene.add(b);
+}
+
+// Crowd on stands
+const crowd = [];
+const crowdCoords = [
+  [-2.35, 1.18, -5.6, 'red'],
+  [-0.85, 1.18, -5.6, 'red'],
+  [0.85, 1.18, -5.6, 'blue'],
+  [2.35, 1.18, -5.6, 'blue'],
+  [-1.75, 1.82, -6.55, 'red'],
+  [-0.45, 1.82, -6.55, 'red'],
+  [0.45, 1.82, -6.55, 'blue'],
+  [1.75, 1.82, -6.55, 'blue']
+];
+for (let i = 0; i < crowdCoords.length; i++) {
+  const c = crowdCoords[i];
+  const g = new T.Group();
+  const body = new T.Mesh(G.crowdBody, M.crowd[i % M.crowd.length]);
+  body.position.y = 0.29;
+  g.add(body);
+  const head = new T.Mesh(G.crowdHead, M.skin);
+  head.position.y = 0.72;
+  g.add(head);
+  g.position.set(c[0], c[1], c[2]);
+  scene.add(g);
+  crowd.push({ g: g, baseY: c[1], phase: i * 1.17, side: c[3] });
+}
+
+// Palm trees
+const palms = [];
+const trunkGeo = new T.CylinderGeometry(0.13, 0.24, 6.2, 7);
+const palmSpecs = [
+  { x: -3.7, z: -8.3, tilt: 0.14 },
+  { x: 3.7, z: -8.3, tilt: -0.14 }
+];
+for (let i = 0; i < 2; i++) {
+  const sp = palmSpecs[i];
+  const pg = new T.Group();
+  pg.position.set(sp.x, 0.2, sp.z);
+  pg.rotation.z = sp.tilt;
+  const trunk = new T.Mesh(trunkGeo, M.trunk);
+  trunk.position.y = 3.1;
+  pg.add(trunk);
+  const crown = new T.Group();
+  crown.position.y = 6.15;
+  pg.add(crown);
+  const frondAngles = [0.2, 1.75, 3.35, 4.9];
+  for (let f = 0; f < 4; f++) {
+    const fg = new T.Group();
+    fg.rotation.y = frondAngles[f];
+    const fm = new T.Mesh(G.frond, M.frond);
+    fm.scale.set(1.0, 1.0, 0.24);
+    fm.position.set(1.05, -0.15, 0);
+    fm.rotation.z = -1.25;
+    fg.add(fm);
+    crown.add(fg);
+  }
+  scene.add(pg);
+  palms.push({ crown: crown, phase: i * 2.1 });
+}
+
+// Overhead pennant strings
+const pennants = [];
+const ropeGeo = new T.CylinderGeometry(0.022, 0.022, 8.6, 5);
+const stringSpecs = [
+  { y: 6.15, z: -2.8, sag: 0.42 },
+  { y: 7.25, z: -1.2, sag: 0.48 }
+];
+for (let s = 0; s < 2; s++) {
+  const ss = stringSpecs[s];
+  const rope = new T.Mesh(ropeGeo, M.rope);
+  rope.rotation.z = Math.PI / 2;
+  rope.position.set(0, ss.y - ss.sag * 0.5, ss.z);
+  scene.add(rope);
+  for (let k = 0; k < 5; k++) {
+    const fx = -2.4 + k * 1.2;
+    const norm = fx / 3.4;
+    const fy = ss.y - ss.sag * (1 - norm * norm);
+    const flag = new T.Mesh(G.pennant, M.pennant[(k + s * 2) % M.pennant.length]);
+    flag.scale.set(1, 1, 0.16);
+    flag.rotation.x = Math.PI;
+    flag.position.set(fx, fy - 0.22, ss.z);
+    scene.add(flag);
+    pennants.push({ mesh: flag, phase: k * 0.9 + s * 1.7 });
+  }
+}
+
+// Articulated person builder
+function makePerson(team) {
+  const isRed = team === 'red';
+  const topMat = isRed ? M.redTop : M.blueTop;
+  const longyiMat = isRed ? M.redLongyi : M.blueLongyi;
+  const dir = isRed ? 1 : -1;
+
+  const root = new T.Group();
+  root.rotation.y = dir * Math.PI * 0.44;
+
+  const body = new T.Group();
+  root.add(body);
+
+  const legL = new T.Group();
+  legL.position.set(-0.14, 0.72, 0);
+  const legLMesh = new T.Mesh(G.leg, M.skin);
+  legLMesh.position.y = -0.35;
+  legLMesh.castShadow = true;
+  legL.add(legLMesh);
+  body.add(legL);
+
+  const legR = new T.Group();
+  legR.position.set(0.14, 0.72, 0);
+  const legRMesh = new T.Mesh(G.leg, M.skin);
+  legRMesh.position.y = -0.35;
+  legRMesh.castShadow = true;
+  legR.add(legRMesh);
+  body.add(legR);
+
+  const torso = new T.Group();
+  torso.position.set(0, 0.72, 0);
+  body.add(torso);
+
+  const torsoMesh = new T.Mesh(G.torso, topMat);
+  torsoMesh.position.y = 0.34;
+  torsoMesh.castShadow = true;
+  torso.add(torsoMesh);
+
+  const longyiMesh = new T.Mesh(G.longyi, longyiMat);
+  longyiMesh.position.y = -0.18;
+  longyiMesh.castShadow = true;
+  torso.add(longyiMesh);
+
+  const head = new T.Group();
+  head.position.set(0, 0.7, 0);
+  torso.add(head);
+
+  const headMesh = new T.Mesh(G.head, M.skin);
+  headMesh.position.y = 0.2;
+  headMesh.castShadow = true;
+  head.add(headMesh);
+
+  const eyeL = new T.Mesh(G.eye, M.eye);
+  eyeL.position.set(-0.075, 0.22, 0.195);
+  head.add(eyeL);
+  const eyeR = new T.Mesh(G.eye, M.eye);
+  eyeR.position.set(0.075, 0.22, 0.195);
+  head.add(eyeR);
+
+  const thL = new T.Mesh(G.thanaka, M.thanaka);
+  thL.position.set(-0.145, 0.155, 0.155);
+  thL.rotation.set(Math.PI / 2, 0, 0.55);
+  head.add(thL);
+  const thR = new T.Mesh(G.thanaka, M.thanaka);
+  thR.position.set(0.145, 0.155, 0.155);
+  thR.rotation.set(Math.PI / 2, 0, -0.55);
+  head.add(thR);
+
+  const gaung = new T.Mesh(G.gaung, topMat);
+  gaung.position.set(0, 0.31, -0.01);
+  gaung.rotation.x = Math.PI / 2 - 0.18;
+  head.add(gaung);
+
+  const armL = new T.Group();
+  armL.position.set(-0.28, 0.56, 0);
+  const armLMesh = new T.Mesh(G.limb, M.skin);
+  armLMesh.position.y = -0.26;
+  armLMesh.castShadow = true;
+  armL.add(armLMesh);
+  torso.add(armL);
+
+  const armR = new T.Group();
+  armR.position.set(0.28, 0.56, 0);
+  const armRMesh = new T.Mesh(G.limb, M.skin);
+  armRMesh.position.y = -0.26;
+  armRMesh.castShadow = true;
+  armR.add(armRMesh);
+  torso.add(armR);
+
+  const pillowPivot = new T.Group();
+  pillowPivot.position.set(0, 0.42, 0.44);
+  const pillowMesh = new T.Mesh(G.pillow, M.pillow);
+  pillowMesh.castShadow = true;
+  pillowPivot.add(pillowMesh);
+  const trimMesh = new T.Mesh(G.trim, topMat);
+  pillowPivot.add(trimMesh);
+  torso.add(pillowPivot);
+
+  scene.add(root);
+
+  return {
+    team: team,
+    dir: dir,
+    baseX: isRed ? -1.12 : 1.12,
+    root: root,
+    body: body,
+    torso: torso,
+    head: head,
+    armL: armL,
+    armR: armR,
+    legL: legL,
+    legR: legR,
+    pillowPivot: pillowPivot,
+    state: 'log',
+    fallTimer: 0,
+    splashed: false,
+    dripTimer: 0,
+    fallSide: isRed ? 1 : -1,
+    hopStartX: 0,
+    hopStartY: 0,
+    hopStartZ: 0,
+    hopT: 0,
+    actTier: 0,
+    actT: 0,
+    actDur: 0,
+    hitStage: 0,
+    queue: [0, 0, 0, 0],
+    qLen: 0,
+    hitTimer: 0,
+    hitAmp: 0,
+    extremeTimer: 0,
+    tauntTimer: 0,
+    wobblePhase: isRed ? 0 : 1.9
+  };
+}
+
+const redF = makePerson('red');
+const blueF = makePerson('blue');
+const fighters = [redF, blueF];
+
+// Water rings pool
+const rings = [];
+for (let i = 0; i < 6; i++) {
+  const rMat = new T.MeshBasicMaterial({
+    color: 0xdff7ff,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false
+  });
+  const rm = new T.Mesh(G.ring, rMat);
+  rm.rotation.x = -Math.PI / 2;
+  rm.visible = false;
+  scene.add(rm);
+  rings.push({ mesh: rm, mat: rMat, active: false, t: 0, dur: 1, maxS: 2, baseOp: 0.5 });
+}
+
+function spawnRing(x, z, maxS, dur, op) {
+  for (let i = 0; i < rings.length; i++) {
+    const r = rings[i];
+    if (!r.active) {
+      r.active = true;
+      r.t = 0;
+      r.dur = dur;
+      r.maxS = maxS;
+      r.baseOp = op;
+      r.mesh.position.set(x, 0.03, z);
+      r.mesh.scale.set(0.3, 0.3, 1);
+      r.mat.opacity = op;
+      r.mesh.visible = true;
+      return;
+    }
+  }
+}
+
+// Splash droplets pool
+const drops = [];
+for (let i = 0; i < 8; i++) {
+  const dm = new T.Mesh(G.drop, M.drop);
+  dm.visible = false;
+  scene.add(dm);
+  drops.push({ mesh: dm, active: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, s: 1 });
+}
+
+function spawnSplash(x, z) {
+  spawnRing(x, z, 3.6, 1.05, 0.85);
+  spawnRing(x, z, 2.3, 0.72, 0.7);
+  for (let i = 0; i < drops.length; i++) {
+    const d = drops[i];
+    const ang = (i / drops.length) * Math.PI * 2 + (i % 2) * 0.25;
+    const spd = 1.4 + (i % 3) * 0.65;
+    d.active = true;
+    d.x = x;
+    d.y = 0.15;
+    d.z = z;
+    d.vx = Math.cos(ang) * spd;
+    d.vy = 3.8 + (i % 4) * 0.65;
+    d.vz = Math.sin(ang) * spd;
+    d.s = 0.85 + (i % 3) * 0.25;
+    d.mesh.scale.set(d.s, d.s, d.s);
+    d.mesh.position.set(d.x, d.y, d.z);
+    d.mesh.visible = true;
+  }
+}
+
+function spawnDrip(x, y, z) {
+  for (let i = 0; i < drops.length; i++) {
+    const d = drops[i];
+    if (!d.active) {
+      d.active = true;
+      d.x = x + (Math.random() - 0.5) * 0.35;
+      d.y = y;
+      d.z = z + (Math.random() - 0.5) * 0.25;
+      d.vx = 0;
+      d.vy = -0.3;
+      d.vz = 0;
+      d.s = 0.42;
+      d.mesh.scale.set(0.42, 0.55, 0.42);
+      d.mesh.position.set(d.x, d.y, d.z);
+      d.mesh.visible = true;
+      return;
+    }
+  }
+}
+
+// Feathers pool
+const feathers = [];
+for (let i = 0; i < 14; i++) {
+  const fm = new T.Mesh(G.feather, M.feather);
+  fm.visible = false;
+  scene.add(fm);
+  feathers.push({
+    mesh: fm, active: false, mode: 0,
+    x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
+    cx: 0, cz: 0, ang: 0, rad: 0,
+    life: 0, maxLife: 1.5, phase: i * 0.83
+  });
+}
+
+function spawnFeathers(x, y, z, count, spread, tornado) {
+  let spawned = 0;
+  for (let i = 0; i < feathers.length && spawned < count; i++) {
+    const f = feathers[i];
+    if (!f.active || count >= 12) {
+      f.active = true;
+      f.mode = tornado ? 1 : 0;
+      f.life = 0;
+      f.maxLife = tornado ? 2.1 : (1.35 + (i % 4) * 0.22);
+      f.cx = x;
+      f.cz = z;
+      f.ang = (spawned / Math.max(1, count)) * Math.PI * 2;
+      f.rad = 0.35 + (spawned % 3) * 0.28;
+      if (tornado) {
+        f.x = x + Math.cos(f.ang) * f.rad;
+        f.y = y - 0.4 + (spawned / count) * 1.4;
+        f.z = z + Math.sin(f.ang) * f.rad;
+        f.vx = 0;
+        f.vy = 0;
+        f.vz = 0;
+      } else {
+        f.x = x + (Math.random() - 0.5) * 0.35;
+        f.y = y + (Math.random() - 0.5) * 0.3;
+        f.z = z + (Math.random() - 0.5) * 0.35;
+        f.vx = (Math.random() - 0.5) * spread * 2.2;
+        f.vy = 1.4 + Math.random() * spread * 1.4;
+        f.vz = (Math.random() - 0.5) * spread * 1.8;
+      }
+      f.mesh.scale.set(1, 1, 1);
+      f.mesh.position.set(f.x, f.y, f.z);
+      f.mesh.visible = true;
+      spawned++;
+    }
+  }
+}
+
+let elapsed = 0;
+let ambientRingTimer = 0.4;
+let cheerR = 0;
+let cheerB = 0;
+
+function getFighter(team) {
+  return team === 'blue' ? blueF : redF;
+}
+
+function getOther(f) {
+  return f === redF ? blueF : redF;
+}
+
+function startAction(f, tier) {
+  f.actTier = tier;
+  f.actT = 0;
+  f.hitStage = 0;
+  if (tier === 1) f.actDur = 0.56;
+  else if (tier === 2) f.actDur = 0.96;
+  else if (tier === 3) f.actDur = 0.98;
+  else f.actDur = 1.6;
+}
+
+function triggerImpact(attacker, tier) {
+  const opp = getOther(attacker);
+  const midX = (attacker.root.position.x + opp.root.position.x) * 0.5;
+  const midY = STAND_Y + 1.25;
+  if (tier === 1) {
+    opp.hitTimer = 0.52;
+    opp.hitAmp = 0.46;
+    spawnFeathers(midX, midY, 0.1, 4, 1.3, false);
+  } else if (tier === 2) {
+    opp.hitTimer = 0.72;
+    opp.hitAmp = 0.74;
+    spawnFeathers(midX, midY, 0.1, 6, 1.8, false);
+  } else if (tier === 3) {
+    opp.hitTimer = 1.05;
+    opp.hitAmp = 1.05;
+    spawnFeathers(midX, midY + 0.15, 0.15, 14, 2.7, false);
+    if (attacker.team === 'red') cheerR = 1.2;
+    else cheerB = 1.2;
+  } else {
+    opp.extremeTimer = 1.5;
+    opp.hitTimer = 0.6;
+    opp.hitAmp = 0.9;
+    spawnFeathers(0, STAND_Y + 0.9, 0, 14, 2.5, true);
+    cheerR = 1.4;
+    cheerB = 1.4;
+  }
+}
+
+function updateFighter(f, dt, bal, hp, shiftX, isOver, isWinner, isLoser) {
+  const targetX = f.baseX + shiftX;
+
+  // Check fall trigger
+  if (f.state === 'log') {
+    if (bal <= 0 || (isOver && isLoser)) {
+      f.state = 'falling';
+      f.fallTimer = 0;
+      f.splashed = false;
+      f.actTier = 0;
+      f.qLen = 0;
+      f.extremeTimer = 0;
+      f.fallSide = f.team === 'red' ? 1 : 1;
+    }
+  }
+
+  if (f.state === 'falling') {
+    f.fallTimer += dt;
+    const u = Math.min(1, f.fallTimer / 0.46);
+    f.root.position.x = targetX + f.dir * (-0.35 * u);
+    f.root.position.y = STAND_Y + 0.55 * u - 2.35 * u * u;
+    f.root.position.z = 1.45 * u;
+    f.body.position.set(0, 0, 0);
+    f.body.rotation.set(0.3 * u, 0, -f.dir * 2.1 * u);
+    f.torso.rotation.set(-0.2, 0, 0);
+    f.armL.rotation.set(-2.4, 0, -0.7);
+    f.armR.rotation.set(-2.4, 0, 0.7);
+    f.legL.rotation.set(0.6 * Math.sin(f.fallTimer * 18), 0, 0);
+    f.legR.rotation.set(-0.6 * Math.sin(f.fallTimer * 18), 0, 0);
+    f.pillowPivot.scale.set(1, 1, 1);
+    f.pillowPivot.position.set(0, 0.5, 0.45);
+    if (u >= 1) {
+      if (!f.splashed) {
+        f.splashed = true;
+        spawnSplash(f.root.position.x, f.root.position.z);
+      }
+      f.state = 'splash';
+    }
+    return;
+  }
+
+  if (f.state === 'splash') {
+    f.fallTimer += dt;
+    const t = f.fallTimer - 0.46;
+    f.root.position.y = -0.35 + Math.sin(t * 11) * 0.12;
+    f.body.rotation.set(0, 0, Math.sin(t * 9) * 0.25);
+    f.armL.rotation.set(-1.6 + Math.sin(t * 16) * 0.7, 0, -0.8);
+    f.armR.rotation.set(-1.6 - Math.sin(t * 16) * 0.7, 0, 0.8);
+    f.legL.rotation.set(Math.sin(t * 14) * 0.5, 0, 0);
+    f.legR.rotation.set(-Math.sin(t * 14) * 0.5, 0, 0);
+    if (f.fallTimer >= 1.05) {
+      f.state = 'climb';
+      f.dripTimer = 0;
+    }
+    return;
+  }
+
+  if (f.state === 'climb') {
+    f.fallTimer += dt;
+    const cU = Math.min(1, (f.fallTimer - 1.05) / 0.85);
+    f.root.position.x = f.baseX * 1.15;
+    f.root.position.z = 1.45 + (-4.45 - 1.45) * cU;
+    f.root.position.y = -0.35 + (0.35 - (-0.35)) * cU;
+    f.body.rotation.set(0.28 * (1 - cU), 0, Math.sin(elapsed * 6) * 0.08);
+    f.torso.rotation.set(0.2, 0, 0);
+    f.head.rotation.set(0.25, 0, Math.sin(elapsed * 5) * 0.1);
+    f.armL.rotation.set(-0.5 + Math.sin(elapsed * 8) * 0.25, 0, -0.2);
+    f.armR.rotation.set(-0.5 - Math.sin(elapsed * 8) * 0.25, 0, 0.2);
+    f.legL.rotation.set(Math.sin(elapsed * 8) * 0.3 * (1 - cU), 0, 0);
+    f.legR.rotation.set(-Math.sin(elapsed * 8) * 0.3 * (1 - cU), 0, 0);
+    f.pillowPivot.position.set(0, 0.22, 0.42);
+    f.pillowPivot.rotation.set(0.3, 0, 0);
+
+    f.dripTimer += dt;
+    if (f.dripTimer > 0.26) {
+      f.dripTimer = 0;
+      spawnDrip(f.root.position.x, f.root.position.y + 1.05, f.root.position.z);
+    }
+
+    if (!isOver && ((f.fallTimer >= 2.5 && bal > 20) || (f.fallTimer >= 1.65 && bal > 50))) {
+      f.state = 'hop';
+      f.hopT = 0;
+      f.hopStartX = f.root.position.x;
+      f.hopStartY = f.root.position.y;
+      f.hopStartZ = f.root.position.z;
+    }
+    return;
+  }
+
+  if (f.state === 'hop') {
+    f.hopT += dt / 0.38;
+    const u = Math.min(1, f.hopT);
+    f.root.position.x = f.hopStartX + (targetX - f.hopStartX) * u;
+    f.root.position.z = f.hopStartZ * (1 - u);
+    f.root.position.y = f.hopStartY + (STAND_Y - f.hopStartY) * u + Math.sin(u * Math.PI) * 1.45;
+    f.body.rotation.set(0, 0, 0);
+    f.torso.rotation.set(0, 0, 0);
+    f.armL.rotation.set(-1.3, 0, -0.2);
+    f.armR.rotation.set(-1.3, 0, 0.2);
+    f.legL.rotation.set(-0.45 * Math.sin(u * Math.PI), 0, 0);
+    f.legR.rotation.set(-0.45 * Math.sin(u * Math.PI), 0, 0);
+    if (u >= 1) {
+      f.state = 'log';
+      f.fallTimer = 0;
+    }
+    return;
+  }
+
+  // Standing on the log
+  f.root.position.x += (targetX - f.root.position.x) * Math.min(1, dt * 7);
+  f.root.position.y = STAND_Y;
+  f.root.position.z = 0;
+
+  // Pop queued gift action
+  if (f.actTier === 0 && f.qLen > 0 && !isOver) {
+    const nextTier = f.queue[0];
+    for (let i = 0; i < f.qLen - 1; i++) f.queue[i] = f.queue[i + 1];
+    f.qLen--;
+    startAction(f, nextTier);
+  }
+
+  const balFrac = Math.max(0, Math.min(1, bal / 100));
+  const wobbleAmp = 0.045 + (1 - balFrac) * (1 - balFrac) * 0.44;
+  const wobbleSpd = 3.2 + (1 - balFrac) * 5.2;
+  f.wobblePhase += dt * wobbleSpd;
+
+  const breathSpd = 3.0 + (1 - Math.max(0, Math.min(1, hp / 100))) * 2.5;
+  const breath = Math.sin(elapsed * breathSpd + (f === redF ? 0 : 1.5));
+
+  let bodyRoll = Math.sin(f.wobblePhase) * wobbleAmp;
+  let bodyPitch = Math.cos(f.wobblePhase * 0.7) * wobbleAmp * 0.22;
+  let bodyYaw = 0;
+  let bodyY = Math.abs(breath) * 0.03;
+
+  let torsoPitch = 0.06 + breath * 0.04;
+  let torsoYaw = 0;
+  let torsoRoll = 0;
+  let headPitch = 0;
+  let headYaw = 0;
+  let headRoll = -bodyRoll * 0.45;
+
+  let armLX = -1.12;
+  let armLZ = -0.22;
+  let armRX = -1.12;
+  let armRZ = 0.22;
+  let legLX = -0.08;
+  let legRX = 0.08;
+
+  let pilX = 0;
+  let pilY = 0.42 + breath * 0.03;
+  let pilZ = 0.44;
+  let pilRX = 0;
+  let pilRZ = 0;
+  let pilScale = 1.0;
+
+  // Hit wobble recoil
+  if (f.hitTimer > 0) {
+    f.hitTimer = Math.max(0, f.hitTimer - dt);
+    const hOsc = Math.sin(f.hitTimer * 28) * f.hitAmp * (f.hitTimer / 0.8);
+    torsoPitch -= Math.abs(hOsc) * 0.45;
+    headPitch -= hOsc * 0.65;
+    headRoll += hOsc * 0.55;
+    bodyRoll += hOsc * 0.32;
+  }
+
+  // Windmill arms when balance < 35
+  if (bal < 35 && f.actTier === 0 && !isOver) {
+    const panic = (35 - bal) / 35;
+    const mill = elapsed * (11 + panic * 6);
+    armLX = mill;
+    armLZ = -1.15;
+    armRX = -mill + 1.2;
+    armRZ = 1.15;
+    pilX = 0.35;
+    pilY = 0.35 + Math.sin(mill) * 0.18;
+    pilZ = 0.32;
+    pilRZ = Math.cos(mill) * 0.7;
+    legLX = Math.sin(mill * 0.5) * 0.25;
+    legRX = -legLX;
+  }
+
+  // Extreme near-fall teeter from T4 cyclone
+  if (f.extremeTimer > 0) {
+    f.extremeTimer = Math.max(0, f.extremeTimer - dt);
+    const ex = Math.min(1, f.extremeTimer * 2);
+    const spin = elapsed * 16;
+    bodyRoll = (0.48 + Math.sin(elapsed * 11) * 0.2) * ex;
+    bodyPitch = Math.cos(elapsed * 9) * 0.18 * ex;
+    bodyY = Math.abs(Math.sin(elapsed * 12)) * 0.12 * ex;
+    legLX = -1.15 * ex;
+    legRX = 0.15;
+    armLX = spin;
+    armLZ = -1.3;
+    armRX = -spin;
+    armRZ = 1.3;
+    headRoll = Math.sin(elapsed * 18) * 0.45 * ex;
+    pilX = 0.38;
+    pilY = 0.45;
+    pilZ = 0.25;
+    pilRZ = Math.sin(spin) * 0.9;
+  }
+
+  // Taunt from onLike
+  if (f.tauntTimer > 0 && f.actTier === 0 && f.extremeTimer <= 0) {
+    f.tauntTimer = Math.max(0, f.tauntTimer - dt);
+    const tu = Math.sin((f.tauntTimer / 0.65) * Math.PI);
+    const wiggle = Math.sin(elapsed * 22);
+    torsoRoll = wiggle * 0.22 * tu;
+    torsoYaw = wiggle * 0.24 * tu;
+    headPitch = -0.18 * tu;
+    armLX = -2.35;
+    armLZ = -0.18;
+    armRX = -2.35;
+    armRZ = 0.18;
+    pilY = 0.92 + Math.abs(wiggle) * 0.1 * tu;
+    pilZ = 0.2;
+    pilRX = -0.35;
+  }
+
+  // Victory cheer
+  if (isOver && isWinner) {
+    const bounce = Math.abs(Math.sin(elapsed * 7.5));
+    bodyY = bounce * 0.28;
+    bodyRoll = Math.sin(elapsed * 3.75) * 0.08;
+    armLX = -2.55;
+    armLZ = -0.25;
+    armRX = -2.55;
+    armRZ = 0.25;
+    pilY = 0.98 + bounce * 0.1;
+    pilZ = 0.18;
+    headPitch = -0.2;
+  }
+
+  // Gift attacks
+  if (f.actTier > 0) {
+    f.actT += dt;
+    const p = Math.min(1, f.actT / f.actDur);
+    if (f.actTier === 1) {
+      if (p < 0.38) {
+        const u = p / 0.38;
+        torsoYaw = -0.68 * u;
+        torsoPitch = -0.18 * u;
+        pilX = 0.22 * u;
+        pilY = 0.58;
+        pilZ = 0.26;
+        armLX = -1.55;
+        armRX = -1.35;
+      } else if (p < 0.64) {
+        const u = (p - 0.38) / 0.26;
+        torsoYaw = -0.68 + 1.48 * u;
+        torsoPitch = -0.18 + 0.56 * u;
+        pilX = 0.22 - 0.38 * u;
+        pilY = 0.58 - 0.14 * u;
+        pilZ = 0.26 + 0.58 * u;
+        pilRX = 0.65 * u;
+        armLX = -1.2;
+        armRX = -1.2;
+        if (f.hitStage === 0 && p >= 0.49) {
+          f.hitStage = 1;
+          triggerImpact(f, 1);
+        }
+      } else {
+        const u = (p - 0.64) / 0.36;
+        torsoYaw = 0.8 * (1 - u);
+        torsoPitch = 0.38 * (1 - u);
+        pilZ = 0.84 - 0.4 * u;
+        pilRX = 0.65 * (1 - u);
+      }
+    } else if (f.actTier === 2) {
+      const half = p < 0.5 ? 0 : 1;
+      const lp = half === 0 ? p * 2 : (p - 0.5) * 2;
+      const sgn = half === 0 ? 1 : -1;
+      if (lp < 0.4) {
+        const u = lp / 0.4;
+        torsoYaw = -0.78 * sgn * u;
+        torsoPitch = -0.2 * u;
+        pilX = 0.28 * sgn * u;
+        pilY = 0.62;
+        pilZ = 0.24;
+        armLX = -1.5;
+        armRX = -1.5;
+      } else if (lp < 0.72) {
+        const u = (lp - 0.4) / 0.32;
+        torsoYaw = (-0.78 + 1.65 * u) * sgn;
+        torsoPitch = -0.2 + 0.62 * u;
+        pilX = (0.28 - 0.5 * u) * sgn;
+        pilY = 0.46;
+        pilZ = 0.24 + 0.66 * u;
+        pilRX = 0.72 * u;
+        if (half === 0 && f.hitStage === 0 && lp >= 0.52) {
+          f.hitStage = 1;
+          triggerImpact(f, 2);
+        } else if (half === 1 && f.hitStage === 1 && lp >= 0.52) {
+          f.hitStage = 2;
+          triggerImpact(f, 2);
+        }
+      } else {
+        const u = (lp - 0.72) / 0.28;
+        torsoYaw = 0.87 * sgn * (1 - u);
+        torsoPitch = 0.42 * (1 - u);
+        pilZ = 0.9 - 0.46 * u;
+      }
+    } else if (f.actTier === 3) {
+      if (p < 0.42) {
+        const u = p / 0.42;
+        pilScale = 1.0 + 0.8 * u;
+        bodyY = Math.sin(u * Math.PI * 0.5) * 0.22;
+        torsoPitch = -0.35 * u;
+        armLX = -2.45;
+        armRX = -2.45;
+        pilY = 0.42 + 0.68 * u;
+        pilZ = 0.44 - 0.26 * u;
+        pilRX = -0.55 * u;
+      } else if (p < 0.66) {
+        const u = (p - 0.42) / 0.24;
+        pilScale = 1.8;
+        bodyY = 0.22 * (1 - u);
+        torsoPitch = -0.35 + 0.85 * u;
+        armLX = -2.45 + 1.55 * u;
+        armRX = -2.45 + 1.55 * u;
+        pilY = 1.1 - 0.72 * u;
+        pilZ = 0.18 + 0.82 * u;
+        pilRX = -0.55 + 1.45 * u;
+        if (f.hitStage === 0 && p >= 0.52) {
+          f.hitStage = 1;
+          triggerImpact(f, 3);
+        }
+      } else {
+        const u = (p - 0.66) / 0.34;
+        pilScale = 1.8 - 0.8 * u;
+        torsoPitch = 0.5 * (1 - u);
+        pilY = 0.38 + 0.04 * u;
+        pilZ = 1.0 - 0.56 * u;
+        pilRX = 0.9 * (1 - u);
+      }
+    } else {
+      // Tier 4 cyclone spin
+      const spinEase = p < 0.85 ? p / 0.85 : 1;
+      bodyYaw = f.dir * spinEase * Math.PI * 6;
+      bodyY = Math.sin(p * Math.PI) * 0.24;
+      pilScale = 1.0 + 0.35 * Math.sin(p * Math.PI);
+      armLX = -1.45;
+      armLZ = -0.35;
+      armRX = -1.45;
+      armRZ = 0.35;
+      pilY = 0.52;
+      pilZ = 0.76;
+      pilRX = 0.35;
+      if (f.hitStage === 0 && p >= 0.22) {
+        f.hitStage = 1;
+        triggerImpact(f, 4);
+      }
+    }
+    if (p >= 1) f.actTier = 0;
+  }
+
+  f.body.position.set(0, bodyY, 0);
+  f.body.rotation.set(bodyPitch, bodyYaw, bodyRoll);
+  f.torso.rotation.set(torsoPitch, torsoYaw, torsoRoll);
+  f.head.rotation.set(headPitch, headYaw, headRoll);
+  f.armL.rotation.set(armLX, 0, armLZ);
+  f.armR.rotation.set(armRX, 0, armRZ);
+  f.legL.rotation.set(legLX, 0, 0);
+  f.legR.rotation.set(legRX, 0, 0);
+  f.pillowPivot.position.set(pilX, pilY, pilZ);
+  f.pillowPivot.rotation.set(pilRX, 0, pilRZ);
+  f.pillowPivot.scale.set(pilScale, pilScale, pilScale);
+}
+
+function reset() {
+  elapsed = 0;
+  cheerR = 0;
+  cheerB = 0;
+  for (let i = 0; i < 2; i++) {
+    const f = fighters[i];
+    f.state = 'log';
+    f.fallTimer = 0;
+    f.splashed = false;
+    f.actTier = 0;
+    f.actT = 0;
+    f.qLen = 0;
+    f.hitTimer = 0;
+    f.extremeTimer = 0;
+    f.tauntTimer = 0;
+    f.root.position.set(f.baseX, STAND_Y, 0);
+    f.body.position.set(0, 0, 0);
+    f.body.rotation.set(0, 0, 0);
+    f.torso.rotation.set(0, 0, 0);
+    f.head.rotation.set(0, 0, 0);
+    f.armL.rotation.set(-1.12, 0, -0.22);
+    f.armR.rotation.set(-1.12, 0, 0.22);
+    f.legL.rotation.set(-0.08, 0, 0);
+    f.legR.rotation.set(0.08, 0, 0);
+    f.pillowPivot.position.set(0, 0.42, 0.44);
+    f.pillowPivot.rotation.set(0, 0, 0);
+    f.pillowPivot.scale.set(1, 1, 1);
+  }
+  for (let i = 0; i < feathers.length; i++) {
+    feathers[i].active = false;
+    feathers[i].mesh.visible = false;
+  }
+  for (let i = 0; i < drops.length; i++) {
+    drops[i].active = false;
+    drops[i].mesh.visible = false;
+  }
+  for (let i = 0; i < rings.length; i++) {
+    rings[i].active = false;
+    rings[i].mesh.visible = false;
+  }
+}
+
+reset();
+
+return {
+  scene: scene,
+  camera: camera,
+  update: function(dt, S) {
+    dt = Math.min(Math.max(dt || 0, 0), 0.05);
+    elapsed += dt;
+    const st = S || {};
+    const pVal = typeof st.p === 'number' ? Math.max(-1, Math.min(1, st.p)) : 0;
+    const balR = typeof st.balR === 'number' ? st.balR : 100;
+    const balB = typeof st.balB === 'number' ? st.balB : 100;
+    const hpR = typeof st.hpR === 'number' ? st.hpR : 100;
+    const hpB = typeof st.hpB === 'number' ? st.hpB : 100;
+    const isOver = Boolean(st.over);
+    const winner = st.winner || '';
+
+    const shiftX = pVal * 0.42;
+    updateFighter(redF, dt, balR, hpR, shiftX, isOver, winner === 'red', winner === 'blue');
+    updateFighter(blueF, dt, balB, hpB, shiftX, isOver, winner === 'blue', winner === 'red');
+
+    // Ambient pond ripples
+    water.position.y = Math.sin(elapsed * 2.1) * 0.025;
+    ambientRingTimer -= dt;
+    if (ambientRingTimer <= 0) {
+      ambientRingTimer = 0.85 + Math.random() * 0.7;
+      spawnRing((Math.random() - 0.5) * 4.4, -2.0 + Math.random() * 6.0, 1.7, 1.4, 0.36);
+    }
+
+    for (let i = 0; i < rings.length; i++) {
+      const r = rings[i];
+      if (!r.active) continue;
+      r.t += dt;
+      const u = r.t / r.dur;
+      if (u >= 1) {
+        r.active = false;
+        r.mesh.visible = false;
+      } else {
+        const sc = 0.3 + u * r.maxS;
+        r.mesh.scale.set(sc, sc, 1);
+        r.mat.opacity = r.baseOp * (1 - u);
+      }
+    }
+
+    // Splash droplets
+    for (let i = 0; i < drops.length; i++) {
+      const d = drops[i];
+      if (!d.active) continue;
+      d.vy -= 12.5 * dt;
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.z += d.vz * dt;
+      d.mesh.position.set(d.x, d.y, d.z);
+      if (d.y < -0.05) {
+        d.active = false;
+        d.mesh.visible = false;
+      }
+    }
+
+    // Feathers
+    for (let i = 0; i < feathers.length; i++) {
+      const f = feathers[i];
+      if (!f.active) continue;
+      f.life += dt;
+      const u = f.life / f.maxLife;
+      if (u >= 1 || f.y < 0.05) {
+        f.active = false;
+        f.mesh.visible = false;
+        continue;
+      }
+      if (f.mode === 1) {
+        f.ang += dt * 9.5;
+        f.rad += dt * 0.65;
+        f.x = f.cx + Math.cos(f.ang) * f.rad;
+        f.z = f.cz + Math.sin(f.ang) * f.rad;
+        f.y += dt * 1.45;
+        if (f.life > 1.05) {
+          f.mode = 0;
+          f.vx = -Math.sin(f.ang) * 1.1;
+          f.vy = 0.3;
+          f.vz = Math.cos(f.ang) * 1.1;
+        }
+      } else {
+        f.vx *= (1 - dt * 2.4);
+        f.vz *= (1 - dt * 2.4);
+        f.vy = Math.max(-0.95, f.vy - 3.6 * dt);
+        f.x += (f.vx + Math.sin(elapsed * 6.5 + f.phase) * 0.55) * dt;
+        f.y += f.vy * dt;
+        f.z += (f.vz + Math.cos(elapsed * 5.2 + f.phase) * 0.35) * dt;
+      }
+      f.mesh.position.set(f.x, f.y, f.z);
+      f.mesh.rotation.set(
+        elapsed * 4.2 + f.phase,
+        elapsed * 3.1 + f.phase,
+        Math.sin(elapsed * 5.5 + f.phase) * 1.1
+      );
+      const sc = u > 0.72 ? Math.max(0.01, (1 - u) / 0.28) : 1;
+      f.mesh.scale.set(sc, sc, sc);
+    }
+
+    // Crowd, palms, pennants
+    cheerR = Math.max(0, cheerR - dt * 1.2);
+    cheerB = Math.max(0, cheerB - dt * 1.2);
+    for (let i = 0; i < crowd.length; i++) {
+      const c = crowd[i];
+      const boost = c.side === 'red' ? cheerR : cheerB;
+      const spd = 4.2 + boost * 6.5;
+      const amp = 0.055 + boost * 0.14;
+      c.g.position.y = c.baseY + Math.abs(Math.sin(elapsed * spd + c.phase)) * amp;
+    }
+    for (let i = 0; i < palms.length; i++) {
+      const pm = palms[i];
+      pm.crown.rotation.z = Math.sin(elapsed * 1.6 + pm.phase) * 0.06;
+      pm.crown.rotation.x = Math.cos(elapsed * 1.3 + pm.phase) * 0.04;
+    }
+    for (let i = 0; i < pennants.length; i++) {
+      const pn = pennants[i];
+      pn.mesh.rotation.x = Math.PI + Math.sin(elapsed * 4.5 + pn.phase) * 0.26;
+    }
+  },
+  onJoin: function(team) {
+    if (team === 'blue') cheerB = Math.max(cheerB, 0.7);
+    else cheerR = Math.max(cheerR, 0.7);
+  },
+  onGift: function(team, tier) {
+    const f = getFighter(team);
+    const t = Math.max(1, Math.min(4, tier || 1));
+    if (team === 'blue') cheerB = Math.max(cheerB, 0.6 + t * 0.2);
+    else cheerR = Math.max(cheerR, 0.6 + t * 0.2);
+    if (f.state !== 'log') return;
+    if (f.actTier === 0) {
+      startAction(f, t);
+    } else if (f.qLen < 4) {
+      f.queue[f.qLen++] = t;
+    }
+  },
+  onLike: function(team) {
+    const f = getFighter(team);
+    if (team === 'blue') cheerB = Math.max(cheerB, 0.5);
+    else cheerR = Math.max(cheerR, 0.5);
+    if (f.state === 'log' && f.actTier === 0) {
+      f.tauntTimer = 0.65;
+    }
+  },
+  reset: reset
+};
+
+} };
 
 </script>
 <script>
 (function(){
 "use strict";
-var CFG = {"id": "pillow", "metric": "bal", "guide": [["Gift 1–99", "ခေါင်းအုံး ရိုက်"], ["Gift 100–499", "နှစ်ချက် တွဲ ရိုက်"], ["Gift 500–999", "ခေါင်းအုံး အကြီး"], ["Gift 1000+", "မုန်တိုင်း လှည့် ရိုက်"]]};
+var CFG = {"id": "pillow", "metric": "bal", "guide": [["Gift 1–99", "ခေါင်းအုံး ရိုက်"], ["Gift 100–499", "နှစ်ချက် တွဲ ရိုက်"], ["Gift 500–999", "ခေါင်းအုံး အကြီး"], ["Gift 1000+", "မုန်တိုင်း လှည့် ရိုက်"]], "btn": ["နှစ်ချက်ရိုက်", "ခေါင်းအုံးအကြီး"], "climb": null};
 var $ = function(id){ return document.getElementById(id); };
+// ---------- team names (editable, saved on this device) ----------
+var TN = { red: 'အနီ', blue: 'အပြာ' };
+try { TN.red = localStorage.getItem('nlo_team_red') || TN.red; TN.blue = localStorage.getItem('nlo_team_blue') || TN.blue; } catch(e){}
+function tn(t){ return t==='red' ? TN.red : TN.blue; }
+function applyNames(){
+  $('nmR').textContent = '🔴 ' + TN.red; $('nmB').textContent = '🔵 ' + TN.blue;
+  $('howtoTx').textContent = 'မန့် ၁ = ' + TN.red + ' · မန့် ၂ = ' + TN.blue + ' join — Gift ပို့ရင် စမယ်';
+}
+$('gEdit').addEventListener('click', function(e){ e.stopPropagation(); $('tnR').value = TN.red; $('tnB').value = TN.blue; $('tedit').classList.add('show'); });
+$('tnCancel').addEventListener('click', function(){ $('tedit').classList.remove('show'); });
+$('tnSave').addEventListener('click', function(){
+  var r = $('tnR').value.trim(), b = $('tnB').value.trim();
+  if (r) TN.red = r.slice(0,24); if (b) TN.blue = b.slice(0,24);
+  try { localStorage.setItem('nlo_team_red', TN.red); localStorage.setItem('nlo_team_blue', TN.blue); } catch(e){}
+  applyNames(); $('tedit').classList.remove('show'); tick('✎ အသင်းနာမည်များ ပြောင်းပြီ — ' + TN.red + ' / ' + TN.blue);
+});
 // ---------- guide ----------
 CFG.guide.forEach(function(g){ var d=document.createElement('div'); d.innerHTML='<b>'+g[0]+'</b> — '+g[1]; $('gRows').appendChild(d); });
-$('guide').querySelector('.hd').addEventListener('click', function(){ $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
+$('gTog').addEventListener('click', function(e){ e.stopPropagation(); $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
 // ---------- state ----------
 var S = { p:0, hpR:100, hpB:100, hR:0, hB:0, balR:100, balB:100, scoreR:0, scoreB:0, t:0, running:false, over:false, winner:null };
 var M = { red:{members:0, gifts:0, power:0, names:[]}, blue:{members:0, gifts:0, power:0, names:[]} };
@@ -555,14 +1333,55 @@ function resize(){ var w=innerWidth, h=innerHeight; renderer.setSize(w,h); if(ga
 addEventListener('resize', resize);
 // ---------- helpers ----------
 function tierOf(coins){ return coins>=1000?4 : coins>=500?3 : coins>=100?2 : 1; }
-function showPop(big, sub){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, 2100); }
+var GC = { red:{}, blue:{} };
+var GIFT_EMOJI = [['rose','🌹'],['finger','🫰'],['heart','❤️'],['love','💗'],['crown','👑'],['lion','🦁'],['whale','🐳'],['rocket','🚀'],['car','🏎️'],['money','💸'],['star','⭐'],['tiktok','🎶'],['flower','🌸'],['diamond','💎'],['ring','💍'],['cake','🎂'],['beer','🍺'],['coffee','☕']];
+function giftEmoji(name){ var s=(name||'').toLowerCase(); for (var i=0;i<GIFT_EMOJI.length;i++) if (s.indexOf(GIFT_EMOJI[i][0])>=0) return GIFT_EMOJI[i][1]; return '🎁'; }
+function renderGifts(team){
+  var box = $(team==='red' ? 'giftsR' : 'giftsB');
+  var items = Object.keys(GC[team]).map(function(k){ return [k, GC[team][k]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0,4);
+  box.innerHTML = '';
+  items.forEach(function(it){ var d=document.createElement('div'); d.className='grow';
+    d.innerHTML = '<span>'+giftEmoji(it[0])+'</span><span class="n"></span><span class="c">×'+num(it[1])+'</span>';
+    d.querySelector('.n').textContent = it[0]; box.appendChild(d); });
+  box.style.display = items.length ? 'flex' : 'none';
+}
+// ---------- members: everyone in the LIVE is a viewer; join = team member (no limit) ----------
+var MEMBERS = { red: [], blue: [] };
+function mOther(team){ return team==='red' ? 'blue' : 'red'; }
+function mHas(team, name){ return MEMBERS[team].indexOf(name) >= 0; }
+function mAdd(team, name){ var o = mOther(team); var i = MEMBERS[o].indexOf(name); if (i>=0) MEMBERS[o].splice(i,1); if (!mHas(team, name)) MEMBERS[team].push(name); }
+function renderSide(team){ renderGifts(team); }
+function showPop(big, sub, ms){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, ms||2100); }
+var FXC = ['#ffd54d','#ff5a8a','#4da3ff','#7dff8a','#ff9d2e','#ffffff'];
+function burst(team, tier){
+  var box = $('fx'); var n = [0,0,14,24,42][tier]; if (!n) return;
+  var x0 = team==='red' ? innerWidth*0.24 : innerWidth*0.76;
+  for (var i=0;i<n;i++){
+    var d = document.createElement('div'); d.className='cf';
+    d.style.background = FXC[i % FXC.length];
+    d.style.left = (x0 + (Math.random()-0.5)*innerWidth*0.36) + 'px';
+    d.style.top = (innerHeight*0.16 + Math.random()*30) + 'px';
+    box.appendChild(d);
+    var dx = (Math.random()-0.5)*120, dy = innerHeight*(0.28+Math.random()*0.3), rot = (Math.random()-0.5)*540;
+    var anim = d.animate([
+      { transform:'translate(0,0) rotate(0deg)', opacity:1 },
+      { transform:'translate('+dx+'px,'+dy+'px) rotate('+rot+'deg)', opacity:0.15 }
+    ], { duration: 950+Math.random()*650, easing:'cubic-bezier(.2,.7,.3,1)' });
+    (function(el, a){ a.onfinish = function(){ el.remove(); }; })(d, anim);
+  }
+  if (tier>=4){
+    var f = $('flash'); f.style.borderColor = team==='red' ? '#ff4d7e' : '#3fa9ff';
+    f.animate([{opacity:0},{opacity:0.85, offset:0.25},{opacity:0}], { duration: 900, easing:'ease-out' });
+  }
+}
 function tick(txt){ var d=document.createElement('div'); d.textContent=txt; var box=$('ticker'); box.appendChild(d); while(box.children.length>4) box.removeChild(box.firstChild); setTimeout(function(){ d.style.opacity='0.35'; }, 6000); setTimeout(function(){ d.remove(); }, 9000); }
 function num(n){ return String(n).replace(/\d/g, function(c){ return '၀၁၂၃၄၅၆၇၈၉'[+c]; }); }
 // ---------- game numbers ----------
 function applyGift(team, tier, name, giftName){
   var foe = team==='red' ? 'blue' : 'red';
   M[team].gifts++; M[team].power += tier;
-  if (game) game.onGift(team, tier);
+  GC[team][giftName] = (GC[team][giftName]||0) + 1; renderGifts(team);
+  if (game) game.onGift(team, tier, name);
   var feat = CFG.guide[tier-1][1];
   if (CFG.metric==='p'){ S.p += (team==='red'?1:-1) * [0,.10,.22,.40,.70][tier]; }
   else if (CFG.metric==='h'){ if(team==='red') S.hR=Math.min(1,S.hR+[0,.03,.07,.13,.22][tier]); else S.hB=Math.min(1,S.hB+[0,.03,.07,.13,.22][tier]);
@@ -570,11 +1389,12 @@ function applyGift(team, tier, name, giftName){
   else if (CFG.metric==='hp'){ var dmg=[0,4,9,16,30][tier]; if(foe==='red') S.hpR=Math.max(0,S.hpR-dmg); else S.hpB=Math.max(0,S.hpB-dmg); lastHit[foe]=S.t; }
   else if (CFG.metric==='bal'){ var bd=[0,6,13,22,40][tier]; if(foe==='red') S.balR=Math.max(0,S.balR-bd); else S.balB=Math.max(0,S.balB-bd); lastHit[foe]=S.t; }
   else if (CFG.metric==='goal'){ S.p += (team==='red'?1:-1) * [0,.12,.26,.45,.85][tier]; if(tier===3) goldUntil[team]=S.t+5; if(tier===4 && Math.abs(S.p)>0.55){ goal(team); } }
-  if (tier>=3) showPop((team==='red'?'အနီ':'အပြာ')+' — '+feat, name+' က '+giftName+' ပို့တယ်');
-  tick('🎁 '+name+' → '+(team==='red'?'အနီ':'အပြာ')+' · '+feat);
+  showPop(tn(team)+' — '+feat, name+' က '+giftName+' ပို့တယ်', tier>=4 ? 2600 : tier>=3 ? 2100 : 1500);
+  burst(team, tier);
+  tick('🎁 '+name+' → '+tn(team)+' · '+feat);
   syncHud();
 }
-function goal(team){ if(team==='red') S.scoreR++; else S.scoreB++; showPop('ဂိုး!!!', (team==='red'?'အနီ':'အပြာ')+' ဂိုး ဝင်တယ်'); S.p=0; if(game) game.reset(); syncHud(); }
+function goal(team){ if(team==='red') S.scoreR++; else S.scoreB++; showPop('ဂိုး!!!', tn(team)+' ဂိုး ဝင်တယ်'); S.p=0; if(game) game.reset(); syncHud(); }
 function winCheck(){
   if (S.over) return;
   var w=null;
@@ -586,11 +1406,12 @@ function winCheck(){
   if (w) endRound(w);
 }
 function endRound(w){ S.over=true; S.winner=w; S.running=false; if(w==='red') M.red.wins=(M.red.wins||0)+1; else M.blue.wins=(M.blue.wins||0)+1;
-  showPop('🏆 '+(w==='red'?'အနီ':'အပြာ')+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
+  showPop('🏆 '+tn(w)+' အနိုင်ရ!', 'ပွဲစဉ် '+num(round)+' ပြီးပြီ — နောက် ပွဲစဉ် မကြာမီ');
   setTimeout(newRound, 6000); syncHud(); }
-function newRound(){ round++; S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
+function newRound(){ round++;
+  S.p=0; S.hpR=S.hpB=100; S.hR=S.hB=0; S.balR=S.balB=100; S.t=0; S.over=false; S.winner=null; S.running=true; timeLeft=90; if(game) game.reset(); $('rd').textContent=num(round); syncHud(); }
 function syncHud(){
-  $('mR').textContent=num(M.red.members); $('mB').textContent=num(M.blue.members);
+  $('pR').textContent=num(MEMBERS.red.length); $('pB').textContent=num(MEMBERS.blue.length);
   $('gR').textContent=num(M.red.gifts); $('gB').textContent=num(M.blue.gifts);
   $('sc').textContent = num(M.red.wins||0)+' — '+num(M.blue.wins||0);
   var pctR=50, pctB=50;
@@ -600,13 +1421,23 @@ function syncHud(){
   else if (CFG.metric==='bal'){ pctR=S.balR; pctB=S.balB; }
   else if (CFG.metric==='goal'){ pctR=50+S.p*50; pctB=100-pctR; $('sc').textContent=num(S.scoreR)+' — '+num(S.scoreB); }
   $('bR').style.width=pctR+'%'; $('bB').style.width=pctB+'%';
+  var vsR = pctR;
+  if (CFG.metric!=='p' && CFG.metric!=='goal'){ var tot = pctR+pctB; vsR = tot>0 ? pctR/tot*100 : 50; }
+  $('vsR').style.width=vsR+'%'; $('vsB').style.width=(100-vsR)+'%';
+  $('vsL').textContent=num(Math.round(vsR))+'%'; $('vsRp').textContent=num(Math.round(100-vsR))+'%';
 }
 // ---------- events ----------
 function onEvent(ev){
   if (!ev || !ev.kind) return;
   var team = ev.team==='blue' ? 'blue' : 'red';
-  if (ev.kind==='join'){ M[team].members++; if(ev.name && M[team].names.indexOf(ev.name)<0) M[team].names.push(ev.name); if(game) game.onJoin(team); tick('👋 '+ev.name+' → '+(team==='red'?'အနီ':'အပြာ')+' ဝင်တယ်'); }
-  else if (ev.kind==='gift'){ applyGift(team, tierOf(ev.coins||1), ev.name||'ပရိသတ်', ev.gift||'Gift'); }
+  if (ev.kind==='join'){ var jn = ev.name||'Viewer'; var jo = mOther(team); var was = mHas(team, jn);
+    mAdd(team, jn);
+    if (!was) tick('👋 '+jn+' → '+tn(team)+' ဝင်ပြီ');
+    if(game) game.onJoin(team); renderSide(team); renderSide(jo); }
+  else if (ev.kind==='gift'){ var gn = ev.name||'Viewer';
+    if (!mHas(team, gn)){ mAdd(team, gn); renderSide(mOther(team)); }
+    renderSide(team);
+    applyGift(team, tierOf(ev.coins||1), gn, ev.gift||'Gift'); }
   else if (ev.kind==='like'){ if(game) game.onLike(team); var tr = (M.red.power<M.blue.power)?'red':(M.blue.power<M.red.power?'blue':null); if(tr && CFG.metric==='p') S.p += (tr==='red'?1:-1)*0.02; }
   else if (ev.kind==='chat'){ tick('💬 '+ev.name+': '+(ev.text||'').slice(0,40)); }
   syncHud();
@@ -615,13 +1446,22 @@ addEventListener('message', function(e){ var d=e.data; if(d && d.nlo===1) onEven
 if (parent && parent!==window) parent.postMessage({nlo:1, kind:'ready', game:CFG.id}, '*');
 // ---------- demo (standalone debug) ----------
 if (window.parent===window){
-  $('demo').classList.add('show');
+  document.body.classList.add('standalone');
+  $('demoR').classList.add('show'); $('demoB').classList.add('show');
   var names=['Aung Aung','May May','Ko Ko','Thiri','Zaw Zaw','Nilar'];
-  [['R1','အနီ ၁ join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
-   ['B1','အပြာ ၂ join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }],
-   ['GR','အနီ gift',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }],
-   ['GB','အပြာ gift',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }]
-  ].forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $('demo').appendChild(btn); });
+  var demoDefs=[
+   ['demoR','Join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
+   ['demoB','Join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }]
+  ];
+  if (CFG.climb){
+    demoDefs.push(['demoR',CFG.climb,function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Heart',coins:99}); }]);
+    demoDefs.push(['demoB',CFG.climb,function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Heart',coins:99}); }]);
+  }
+  demoDefs.push(['demoR',CFG.btn[0],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:199}); }]);
+  demoDefs.push(['demoR',CFG.btn[1],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Crown',coins:599}); }]);
+  demoDefs.push(['demoB',CFG.btn[0],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:199}); }]);
+  demoDefs.push(['demoB',CFG.btn[1],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Crown',coins:599}); }]);
+  demoDefs.forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $(b[0]).appendChild(btn); });
 }
 // ---------- loop ----------
 S.running = true;
@@ -646,7 +1486,7 @@ function frame(now){
   }
   if (game){ game.update(dt, S); renderer.render(game.scene, game.camera); }
 }
-resize(); syncHud(); requestAnimationFrame(frame);
+resize(); applyNames(); syncHud(); requestAnimationFrame(frame);
 })();
 </script>
 </body></html>
