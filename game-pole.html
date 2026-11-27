@@ -50,10 +50,12 @@
  padding:2.5px 7px;font-size:11px;color:#fff;text-shadow:0 1px 3px #000a;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .grow .n{opacity:.92;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .grow .c{margin-left:auto;font-weight:800}
-#demo{position:fixed;right:8px;top:336px;z-index:9;display:none;flex-direction:column;gap:5px}
-#demo button{background:rgba(255,255,255,.13);color:#fff;border:1px solid #ffffff59;border-radius:9px;padding:6px 9px;font-size:12px;
+.democol{position:fixed;top:150px;z-index:9;display:none;flex-direction:column;gap:5px}
+#demoR{left:8px} #demoB{right:8px}
+.democol button{background:rgba(255,255,255,.13);color:#fff;border:1px solid #ffffff59;border-radius:9px;padding:6px 9px;font-size:12px;
  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 10px #0003;text-shadow:0 1px 3px #0009}
-#demo.show{display:flex}
+.democol.show{display:flex}
+body.standalone #sideR,body.standalone #sideB{top:292px}
 #gEdit{font-size:11.5px;font-weight:700;background:rgba(255,255,255,.13);border:1px solid #ffffff59;border-radius:8px;
  padding:3px 9px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 #tedit{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:20;background:rgba(4,6,16,.45)}
@@ -89,7 +91,7 @@
 <label>🔴 အသင်း ၁ (မန့် ၁)</label><input id="tnR" maxlength="24">
 <label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
 <div class="row"><button id="tnCancel">မပြင်တော့</button><button id="tnSave">သိမ်းမယ်</button></div></div></div>
-<div id="demo"></div>
+<div class="democol" id="demoR"></div><div class="democol" id="demoB"></div>
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
 <script>
@@ -515,6 +517,11 @@ const billColors = [0x4cc462, 0xf27ea9, 0x52b6e8, 0xf2c94c, 0x62d478];
     flashT: 0,
     cheerT: 0,
     tugT: 0,
+    fallT: 0,
+    fallFrom: 0,
+    ladderT: 0,
+    supAH: { x: px + sign * 0.88, z: 0.55 },
+    supBH: { x: px - sign * 0.72, z: 0.72 },
     slideToBase: false
   };
 });
@@ -809,6 +816,8 @@ function updateSide(st, targetH, dt, running, over, winner) {
   if (st.flashT > 0) st.flashT = Math.max(0, st.flashT - dt);
   if (st.cheerT > 0) st.cheerT = Math.max(0, st.cheerT - dt);
   if (st.tugT > 0) st.tugT = Math.max(0, st.tugT - dt);
+  if (st.ladderT > 0) st.ladderT = Math.max(0, st.ladderT - dt);
+  if (st.fallT > 0) { st.fallT = Math.max(0, st.fallT - dt); if (st.fallT <= 0) st.scrambleT = Math.max(st.scrambleT, 0.9); }
 
   // Visual grease dip
   if (st.greaseT > 0) {
@@ -897,7 +906,14 @@ function updateSide(st, targetH, dt, running, over, winner) {
   // Position climber on 0..9 range (feet at 0..8.45, hands reach 10)
   const c = st.climber;
   let yPos = Math.max(0, st.hSmooth * 8.45 - st.greaseDip);
-  const isClimbing = st.scrambleT > 0 || st.windT > 0 || st.lightningT > 0 || st.tugT > 0 || st.climbVel > 0.015;
+  const fallP = st.fallT > 0 ? 1 - st.fallT / 1.6 : 1;
+  const falling = st.fallT > 0 && fallP < 0.34;
+  const downed = st.fallT > 0 && fallP >= 0.34;
+  if (st.fallT > 0) {
+    if (falling) { const fk = fallP / 0.34; yPos = st.fallFrom * (1 - fk * fk); }
+    else yPos = 0;
+  }
+  const isClimbing = st.fallT <= 0 && (st.scrambleT > 0 || st.windT > 0 || st.lightningT > 0 || st.tugT > 0 || st.climbVel > 0.015);
 
   if (isWin) {
     yPos = 8.45;
@@ -921,7 +937,17 @@ function updateSide(st, targetH, dt, running, over, winner) {
     }
     c.legL.rotation.set(-0.95, 0, -0.25);
     c.legR.rotation.set(-0.95, 0, 0.25);
-  } else if (st.greaseT > 0) {
+  } else if (downed) {
+    // Slumped on the ground after the fall, stars moment
+    const sl2 = Math.sin(timeAcc * 3.2);
+    c.hips.position.y = 0.62;
+    c.torso.rotation.set(0.38, 0, sl2 * 0.06);
+    c.head.rotation.set(0.42, sl2 * 0.4, 0.12);
+    c.armL.rotation.set(-0.7, 0, -0.9);
+    c.armR.rotation.set(-0.7, 0, 0.9);
+    c.legL.rotation.set(-0.35, 0, -0.55);
+    c.legR.rotation.set(-0.35, 0, 0.55);
+  } else if (falling || st.greaseT > 0) {
     // Squeak-flail wobble
     const fl = Math.sin(timeAcc * 32);
     c.hips.position.y = 0.72;
@@ -1000,6 +1026,41 @@ function updateSide(st, targetH, dt, running, over, winner) {
   sB.armR.rotation.set(0, 0, 2.55 + bB * 0.35);
   sB.legL.rotation.set(bB * 0.18, 0, -0.08);
   sB.legR.rotation.set(-bB * 0.18, 0, 0.08);
+
+  // Human ladder (T3): B climbs onto A's shoulders at the pole base
+  if (st.ladderT > 0) {
+    const lp = 1 - st.ladderT / 2.4;
+    const seg = function(a, b, x) { return Math.max(0, Math.min(1, (x - a) / (b - a))); };
+    const mv = seg(0, 0.28, lp), up = seg(0.30, 0.55, lp), dn = seg(0.85, 1, lp);
+    const ease = function(k) { return k * k * (3 - 2 * k); };
+    const lerp = function(a, b, k) { return a + (b - a) * k; };
+    const ax = lerp(st.supAH.x, st.px + st.sign * 0.55, ease(mv));
+    const az = lerp(st.supAH.z, 0.98, ease(mv));
+    const bx = lerp(st.supBH.x, st.px + st.sign * 0.55, ease(mv));
+    const bz = lerp(st.supBH.z, 0.98, ease(mv));
+    const by = ease(up) * (1 - ease(dn)) * 1.04;
+    const back = ease(dn);
+    // A: braced base of the ladder, arms up holding B
+    sA.root.position.set(lerp(ax, st.supAH.x, back), 0, lerp(az, st.supAH.z, back));
+    sA.root.rotation.y = lerp(-st.sign * 0.1, -st.sign * 0.35, back);
+    sA.hips.position.y = 0.66 - Math.sin(Math.min(1, up) * Math.PI) * 0.07 * (1 - dn);
+    sA.torso.rotation.set(0.2, 0, 0);
+    sA.head.rotation.set(-0.4, 0, 0);
+    sA.armL.rotation.set(-0.3, 0, -2.7);
+    sA.armR.rotation.set(-0.3, 0, 2.7);
+    sA.legL.rotation.set(-0.3, 0, -0.3);
+    sA.legR.rotation.set(-0.3, 0, 0.3);
+    // B: climbs up, stands on A's shoulders, reaches for the climber
+    sB.root.position.set(lerp(bx, st.supBH.x, back), by * (1 - back), lerp(bz, st.supBH.z, back));
+    sB.root.rotation.y = lerp(st.sign * 0.1, st.sign * 0.45, back);
+    sB.hips.position.y = 0.72;
+    sB.torso.rotation.set(-0.05, 0, Math.sin(timeAcc * 7) * 0.05 * (by > 0.5 ? 1 : 0.2));
+    sB.head.rotation.set(-0.42, 0, 0);
+    sB.armL.rotation.set(-0.2, 0, -2.85);
+    sB.armR.rotation.set(-0.2, 0, 2.85);
+    sB.legL.rotation.set(by > 0.05 && up < 1 ? -0.5 : -0.06, 0, -0.1);
+    sB.legR.rotation.set(by > 0.05 && up < 1 ? 0.3 : 0.06, 0, 0.1);
+  }
 }
 
 const game = {
@@ -1196,8 +1257,10 @@ const game = {
         );
       }
     } else if (tier === 2) {
-      // Grease attack on OTHER pole
+      // Grease attack on OTHER pole — climber slips and FALLS
       ost.greaseT = Math.max(ost.greaseT, 0.8);
+      ost.fallFrom = Math.max(0, ost.hSmooth * 8.45 - ost.greaseDip);
+      ost.fallT = 1.6;
       for (let i = 0; i < 14; i++) {
         spawnP(
           ost.px + (Math.random() - 0.5) * 0.5,
@@ -1213,8 +1276,8 @@ const game = {
         );
       }
     } else if (tier === 3) {
-      // Wind boost
-      st.windT = Math.max(st.windT, 1.2);
+      // Human ladder boost — supporters stack up at the base
+      st.ladderT = 2.4;
       st.scrambleT = Math.max(st.scrambleT, 1.2);
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2;
@@ -1271,6 +1334,10 @@ const game = {
       st.flashT = 0;
       st.cheerT = 0;
       st.tugT = 0;
+      st.fallT = 0;
+      st.ladderT = 0;
+      st.supA.root.position.set(st.supAH.x, 0, st.supAH.z);
+      st.supB.root.position.set(st.supBH.x, 0, st.supBH.z);
       st.flashRing.visible = false;
       st.boltGlow.visible = false;
       st.climberPivot.rotation.y = st.baseYaw;
@@ -1294,7 +1361,7 @@ return game;
 <script>
 (function(){
 "use strict";
-var CFG = {"id": "pole", "metric": "h", "guide": [["Gift 1–99", "တက်အား ဖြည့်"], ["Gift 100–499", "ပြိုင်ဘက် တိုင်ကို ချောဆီ သုတ် — ချော်ကျ"], ["Gift 500–999", "လေပွေ တက် အမြန်"], ["Gift 1000+", "မိုးကြိုး တက် — ထိပ်နား ခုန်တက်"]]};
+var CFG = {"id": "pole", "metric": "h", "guide": [["Gift 1–99", "တက်အား ဖြည့်"], ["Gift 100–499", "ချောဆီ ဆွဲချ — တက်သူ ပြုတ်ကျ"], ["Gift 500–999", "လူလှေကား — ဆက်တက် အမြန်"], ["Gift 1000+", "မိုးကြိုး တက် — ထိပ်နား ခုန်တက်"]]};
 var $ = function(id){ return document.getElementById(id); };
 // ---------- team names (editable, saved on this device) ----------
 var TN = { red: 'အနီ', blue: 'အပြာ' };
@@ -1468,13 +1535,16 @@ addEventListener('message', function(e){ var d=e.data; if(d && d.nlo===1) onEven
 if (parent && parent!==window) parent.postMessage({nlo:1, kind:'ready', game:CFG.id}, '*');
 // ---------- demo (standalone debug) ----------
 if (window.parent===window){
-  $('demo').classList.add('show');
+  document.body.classList.add('standalone');
+  $('demoR').classList.add('show'); $('demoB').classList.add('show');
   var names=['Aung Aung','May May','Ko Ko','Thiri','Zaw Zaw','Nilar'];
-  [['R1','အနီ ၁ join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
-   ['B1','အပြာ ၂ join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }],
-   ['GR','အနီ gift',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }],
-   ['GB','အပြာ gift',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:[1,30,199,599,2150][Math.random()*5|0]}); }]
-  ].forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $('demo').appendChild(btn); });
+  [['demoR','အနီ ၁ join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
+   ['demoR','အနီ Gift 1',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:199}); }],
+   ['demoR','အနီ Gift 2',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Crown',coins:599}); }],
+   ['demoB','အပြာ ၂ join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }],
+   ['demoB','အပြာ Gift 1',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:199}); }],
+   ['demoB','အပြာ Gift 2',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Crown',coins:599}); }]
+  ].forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $(b[0]).appendChild(btn); });
 }
 // ---------- loop ----------
 S.running = true;
