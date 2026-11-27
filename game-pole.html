@@ -52,8 +52,8 @@
 .grow .c{margin-left:auto;font-weight:800}
 .democol{position:fixed;top:150px;z-index:9;display:none;flex-direction:column;gap:5px}
 #demoR{left:8px} #demoB{right:8px}
-.democol button{background:rgba(255,255,255,.13);color:#fff;border:1px solid #ffffff59;border-radius:9px;padding:6px 9px;font-size:12px;
- backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 10px #0003;text-shadow:0 1px 3px #0009}
+.democol button{background:rgba(22,90,230,.62);color:#fff;border:1px solid #a8c8ff;border-radius:9px;padding:7px 10px;font-size:12.5px;font-weight:700;
+ backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 10px #003a8c66;text-shadow:0 1px 3px #000c}
 .democol.show{display:flex}
 body.standalone #sideR,body.standalone #sideB{top:292px}
 #gEdit{font-size:11.5px;font-weight:700;background:rgba(255,255,255,.13);border:1px solid #ffffff59;border-radius:8px;
@@ -819,6 +819,17 @@ function updateSide(st, targetH, dt, running, over, winner) {
   if (st.ladderT > 0) st.ladderT = Math.max(0, st.ladderT - dt);
   if (st.fallT > 0) { st.fallT = Math.max(0, st.fallT - dt); if (st.fallT <= 0) st.scrambleT = Math.max(st.scrambleT, 0.9); }
 
+  // Human-tower envelopes (T3): A sits at base, B climbs onto A, climber on top
+  const lad = { a: 0, moveB: 0, up: 0, form: 0 };
+  if (st.ladderT > 0) {
+    const lp2 = 1 - st.ladderT / 3.0;
+    const sg2 = function(a, b, x) { return Math.max(0, Math.min(1, (x - a) / (b - a))); };
+    lad.a = sg2(0, 0.2, lp2) * (1 - sg2(0.9, 1, lp2));
+    lad.moveB = sg2(0.18, 0.38, lp2) * (1 - sg2(0.85, 0.97, lp2));
+    lad.up = sg2(0.3, 0.5, lp2) * (1 - sg2(0.85, 0.97, lp2));
+    lad.form = sg2(0.45, 0.6, lp2) * (1 - sg2(0.85, 0.97, lp2));
+  }
+
   // Visual grease dip
   if (st.greaseT > 0) {
     const gProg = 1 - st.greaseT / 0.8;
@@ -913,6 +924,10 @@ function updateSide(st, targetH, dt, running, over, winner) {
     if (falling) { const fk = fallP / 0.34; yPos = st.fallFrom * (1 - fk * fk); }
     else yPos = 0;
   }
+  if (lad.form > 0 && st.fallT <= 0) {
+    const ek = lad.form * lad.form * (3 - 2 * lad.form);
+    yPos = yPos + (2.28 - yPos) * ek;
+  }
   const isClimbing = st.fallT <= 0 && (st.scrambleT > 0 || st.windT > 0 || st.lightningT > 0 || st.tugT > 0 || st.climbVel > 0.015);
 
   if (isWin) {
@@ -957,6 +972,16 @@ function updateSide(st, targetH, dt, running, over, winner) {
     c.armR.rotation.set(-1.35 - fl * 0.75, 0, 0.55 + Math.abs(fl) * 0.45);
     c.legL.rotation.set(-0.6 - fl * 0.65, 0, -0.5);
     c.legR.rotation.set(-0.6 + fl * 0.65, 0, 0.5);
+  } else if (lad.form > 0.5) {
+    // Standing on top of the human tower, reaching for the prize
+    const wv2 = Math.sin(timeAcc * 6);
+    c.hips.position.y = 0.72;
+    c.torso.rotation.set(-0.04, st.sign * 0.2, wv2 * 0.05);
+    c.head.rotation.set(-0.42, st.sign * 0.3, 0);
+    c.armL.rotation.set(-1.5, 0, -0.3);
+    c.armR.rotation.set(-2.95 + Math.sin(timeAcc * 5) * 0.12, 0, 0.25);
+    c.legL.rotation.set(-0.07, 0, -0.09);
+    c.legR.rotation.set(-0.07, 0, 0.09);
   } else if (isClimbing) {
     const speed = st.lightningT > 0 ? 22 : (st.scrambleT > 0 || st.windT > 0 ? 18 : 11);
     st.climbPhase += dt * speed;
@@ -1027,39 +1052,33 @@ function updateSide(st, targetH, dt, running, over, winner) {
   sB.legL.rotation.set(bB * 0.18, 0, -0.08);
   sB.legR.rotation.set(-bB * 0.18, 0, 0.08);
 
-  // Human ladder (T3): B climbs onto A's shoulders at the pole base
+  // Human tower ON the pole (T3): A sits at the base hugging the pole,
+  // B stands on A's shoulders hugging the pole, climber stands on B
   if (st.ladderT > 0) {
-    const lp = 1 - st.ladderT / 2.4;
-    const seg = function(a, b, x) { return Math.max(0, Math.min(1, (x - a) / (b - a))); };
-    const mv = seg(0, 0.28, lp), up = seg(0.30, 0.55, lp), dn = seg(0.85, 1, lp);
-    const ease = function(k) { return k * k * (3 - 2 * k); };
     const lerp = function(a, b, k) { return a + (b - a) * k; };
-    const ax = lerp(st.supAH.x, st.px + st.sign * 0.55, ease(mv));
-    const az = lerp(st.supAH.z, 0.98, ease(mv));
-    const bx = lerp(st.supBH.x, st.px + st.sign * 0.55, ease(mv));
-    const bz = lerp(st.supBH.z, 0.98, ease(mv));
-    const by = ease(up) * (1 - ease(dn)) * 1.04;
-    const back = ease(dn);
-    // A: braced base of the ladder, arms up holding B
-    sA.root.position.set(lerp(ax, st.supAH.x, back), 0, lerp(az, st.supAH.z, back));
-    sA.root.rotation.y = lerp(-st.sign * 0.1, -st.sign * 0.35, back);
-    sA.hips.position.y = 0.66 - Math.sin(Math.min(1, up) * Math.PI) * 0.07 * (1 - dn);
-    sA.torso.rotation.set(0.2, 0, 0);
-    sA.head.rotation.set(-0.4, 0, 0);
-    sA.armL.rotation.set(-0.3, 0, -2.7);
-    sA.armR.rotation.set(-0.3, 0, 2.7);
-    sA.legL.rotation.set(-0.3, 0, -0.3);
-    sA.legR.rotation.set(-0.3, 0, 0.3);
-    // B: climbs up, stands on A's shoulders, reaches for the climber
-    sB.root.position.set(lerp(bx, st.supBH.x, back), by * (1 - back), lerp(bz, st.supBH.z, back));
-    sB.root.rotation.y = lerp(st.sign * 0.1, st.sign * 0.45, back);
+    const ez = function(k) { return k * k * (3 - 2 * k); };
+    const aK = ez(lad.a), bM = ez(lad.moveB), bU = ez(lad.up);
+    // A — base anchor: seated at the pole, legs folded, arms hugging the pole
+    sA.root.position.set(lerp(st.supAH.x, st.px + st.sign * 0.05, aK), 0, lerp(st.supAH.z, 0.37, aK));
+    sA.root.rotation.y = lerp(-st.sign * 0.35, Math.PI, aK);
+    sA.hips.position.y = lerp(0.66, 0.40, aK);
+    sA.torso.rotation.set(lerp(0.14, 0.10, aK), 0, 0);
+    sA.head.rotation.set(lerp(-0.28, -0.30, aK), 0, 0);
+    sA.armL.rotation.set(lerp(-0.4, -1.45, aK), 0, lerp(-2.35, -0.38, aK));
+    sA.armR.rotation.set(lerp(-0.4, -1.45, aK), 0, lerp(2.35, 0.38, aK));
+    sA.legL.rotation.set(lerp(-0.22, -1.85, aK), 0, lerp(-0.16, -0.55, aK));
+    sA.legR.rotation.set(lerp(-0.22, -1.85, aK), 0, lerp(0.16, 0.55, aK));
+    // B — stands on A's shoulders, hugging the pole
+    sB.root.position.set(lerp(st.supBH.x, st.px + st.sign * 0.05, bM), 1.04 * bU, lerp(st.supBH.z, 0.37, bM));
+    sB.root.rotation.y = lerp(st.sign * 0.45, Math.PI, bM);
     sB.hips.position.y = 0.72;
-    sB.torso.rotation.set(-0.05, 0, Math.sin(timeAcc * 7) * 0.05 * (by > 0.5 ? 1 : 0.2));
-    sB.head.rotation.set(-0.42, 0, 0);
-    sB.armL.rotation.set(-0.2, 0, -2.85);
-    sB.armR.rotation.set(-0.2, 0, 2.85);
-    sB.legL.rotation.set(by > 0.05 && up < 1 ? -0.5 : -0.06, 0, -0.1);
-    sB.legR.rotation.set(by > 0.05 && up < 1 ? 0.3 : 0.06, 0, 0.1);
+    sB.torso.rotation.set(lerp(-0.06, 0.06, bU), 0, Math.sin(timeAcc * 7) * 0.04 * bU);
+    sB.head.rotation.set(-0.38, 0, 0);
+    sB.armL.rotation.set(lerp(0, -1.5, bM), 0, lerp(-2.55, -0.32, bM));
+    sB.armR.rotation.set(lerp(0, -1.5, bM), 0, lerp(2.55, 0.32, bM));
+    const midB = bU > 0.05 && bU < 0.95 ? 1 : 0;
+    sB.legL.rotation.set(midB ? -0.55 : -0.05, 0, -0.09);
+    sB.legR.rotation.set(midB ? 0.35 : 0.05, 0, 0.09);
   }
 }
 
@@ -1277,7 +1296,7 @@ const game = {
       }
     } else if (tier === 3) {
       // Human ladder boost — supporters stack up at the base
-      st.ladderT = 2.4;
+      st.ladderT = 3.0;
       st.scrambleT = Math.max(st.scrambleT, 1.2);
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * Math.PI * 2;
@@ -1361,7 +1380,7 @@ return game;
 <script>
 (function(){
 "use strict";
-var CFG = {"id": "pole", "metric": "h", "guide": [["Gift 1–99", "တက်အား ဖြည့်"], ["Gift 100–499", "ချောဆီ ဆွဲချ — တက်သူ ပြုတ်ကျ"], ["Gift 500–999", "လူလှေကား — ဆက်တက် အမြန်"], ["Gift 1000+", "မိုးကြိုး တက် — ထိပ်နား ခုန်တက်"]]};
+var CFG = {"id": "pole", "metric": "h", "guide": [["Gift 1–99", "တက်အား ဖြည့်"], ["Gift 100–499", "ချောဆီ ဆွဲချ — တက်သူ ပြုတ်ကျ"], ["Gift 500–999", "လူလှေကား — ဆက်တက် အမြန်"], ["Gift 1000+", "မိုးကြိုး တက် — ထိပ်နား ခုန်တက်"]], "btn": ["ချောဆီဆွဲချ", "လူလှေကား"]};
 var $ = function(id){ return document.getElementById(id); };
 // ---------- team names (editable, saved on this device) ----------
 var TN = { red: 'အနီ', blue: 'အပြာ' };
@@ -1539,11 +1558,11 @@ if (window.parent===window){
   $('demoR').classList.add('show'); $('demoB').classList.add('show');
   var names=['Aung Aung','May May','Ko Ko','Thiri','Zaw Zaw','Nilar'];
   [['demoR','အနီ ၁ join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
-   ['demoR','အနီ Gift 1',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:199}); }],
-   ['demoR','အနီ Gift 2',function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Crown',coins:599}); }],
+   ['demoR','အနီ '+CFG.btn[0],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:199}); }],
+   ['demoR','အနီ '+CFG.btn[1],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Crown',coins:599}); }],
    ['demoB','အပြာ ၂ join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }],
-   ['demoB','အပြာ Gift 1',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:199}); }],
-   ['demoB','အပြာ Gift 2',function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Crown',coins:599}); }]
+   ['demoB','အပြာ '+CFG.btn[0],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:199}); }],
+   ['demoB','အပြာ '+CFG.btn[1],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Crown',coins:599}); }]
   ].forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $(b[0]).appendChild(btn); });
 }
 // ---------- loop ----------
