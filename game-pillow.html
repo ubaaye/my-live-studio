@@ -11,7 +11,7 @@
 *{box-sizing:border-box} html{-webkit-text-size-adjust:100%;text-size-adjust:100%} html,body{margin:0;height:100%;background:#070a18;overflow:hidden;
  font-family:"Optimistic AI VF",system-ui,sans-serif;color:#eef1ff;-webkit-user-select:none;user-select:none}
 #stage{position:fixed;inset:0} #stage canvas{display:block}
-.hud{position:fixed;top:5px;left:5px;right:5px;display:flex;gap:5px;z-index:5;pointer-events:none}
+.hud{position:fixed;top:25px;left:5px;right:5px;display:flex;gap:5px;z-index:5;pointer-events:none}
 .team{flex:1;background:rgba(8,10,26,.38);border:1.5px solid #ffffff2a;border-radius:10px;padding:2px 6px;
  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .team.red{border-color:#ff4d7e;box-shadow:0 0 12px #ff4d7e44,inset 0 0 12px #ff4d7e14}
@@ -22,7 +22,7 @@
 .red .bar i{background:linear-gradient(90deg,#ff2e63,#ff7aa8)}.blue .bar i{background:linear-gradient(90deg,#2e9bff,#7ac2ff)}
 .mid{width:48px;text-align:center;background:rgba(8,10,26,.38);border:1.5px solid #ffd54dcc;border-radius:10px;padding:2px;
  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 0 12px #ffd54d33}
-#vsbar{position:fixed;top:8%;left:7px;right:7px;height:10px;z-index:5;border-radius:999px;overflow:hidden;pointer-events:none;
+#vsbar{position:fixed;top:13%;left:7px;right:7px;height:10px;z-index:5;border-radius:999px;overflow:hidden;pointer-events:none;
  background:rgba(8,10,26,.45);border:1px solid #ffffff40;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 #vsR{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ff2e63,#ff7aa8);transition:width .3s}
 #vsB{position:absolute;right:0;top:0;bottom:0;background:linear-gradient(90deg,#7ac2ff,#2e9bff);transition:width .3s}
@@ -31,20 +31,21 @@
 .mid .tm{font-size:3.19vw;font-weight:900;line-height:1} .mid .sc{font-size:2.36vw;margin-top:1px} .mid .rd{font-size:2.08vw;opacity:.8}
 #ticker{position:fixed;left:50%;transform:translateX(-50%);bottom:5px;z-index:5;font-size:2.78vw;line-height:1.5;pointer-events:none;text-shadow:0 1px 3px #000;text-align:center;width:max-content;max-width:46vw}
 #ticker div{background:rgba(5,8,20,.55);display:block;padding:2px 8px;border-radius:8px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gpanel{position:fixed;top:31%;z-index:6;background:rgba(10,14,24,.8);border:1px solid rgba(255,215,130,.45);
+.gpanel{position:fixed;top:15.5%;z-index:6;background:rgba(10,14,24,.8);border:1px solid rgba(255,215,130,.45);
  border-radius:10px;padding:5px 6px;font-size:2.05vw;line-height:1.5;font-weight:600;color:#f7efdb;
- backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.4);text-shadow:0 1px 2px #000;width:auto;max-width:24.5vw;box-sizing:border-box}
+ backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.4);text-shadow:0 1px 2px #000;width:auto;max-width:23.5vw;box-sizing:border-box}
 #guideL{left:4px} #guideR{right:4px}
 .gpanel .hd{font-weight:800;font-size:2.2vw;color:#ffd97a;margin-bottom:2px;line-height:1.35;white-space:nowrap}
 .gpanel .ctlrow{display:flex;gap:5px;align-items:center;margin:2px 0 4px;flex-wrap:wrap}
 .gpanel .hd2{font-weight:800;font-size:2.2vw;color:#ffd97a;margin-top:3px;line-height:1.35;white-space:nowrap}
 .gpanel .rows b{color:#ffd97a;font-weight:800} .gpanel .r{white-space:nowrap}
+#roster .r{overflow:hidden;text-overflow:ellipsis;max-width:100%}
 #popup{position:fixed;bottom:16%;left:50%;right:auto;max-width:37vw;overflow:hidden;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:translateX(-50%) scale(.92);transition:all .2s;
  background:rgba(16,12,4,.92);border:1.5px solid #ffd97a;border-radius:13px;padding:6px 8px;width:max-content;max-width:37vw;box-shadow:0 8px 28px rgba(0,0,0,.55)}
 #popup.show{opacity:1;transform:translateX(-50%) scale(1)}
 #popup .big{display:block;color:#ffe9b0;font-weight:800;font-size:2.6vw;line-height:1.3;text-shadow:0 1px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #popup .sub{display:block;margin-top:2px;font-size:2.5vw;font-weight:700;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#sideR,#sideB{position:fixed;top:9.5%;z-index:5;display:flex;flex-direction:column;gap:3px;pointer-events:none;width:20vw;max-width:76px}
+#sideR,#sideB{display:none!important;position:fixed;top:9.5%;z-index:5;display:flex;flex-direction:column;gap:3px;pointer-events:none;width:20vw;max-width:76px}
 #sideR{left:4px} #sideB{right:4px}
 #giftsR,#giftsB{display:none;flex-direction:column;gap:3px}
 .qbox{display:none;background:rgba(255,255,255,.10);border:1px dashed #ffffff70;border-radius:8px;padding:3px 7px;
@@ -88,7 +89,7 @@ body.clean #cleanExit{display:flex}
 <div id="flash"></div><div id="fx"></div>
 <div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
 <div class="gpanel" id="guideL"><div class="hd"><span>🎁 Send Gift Guide</span></div><div class="ctlrow"><span id="gEdit">✎ အသင်းပြင်</span><button id="cleanBtn">📺 LIVE mode</button></div><div class="rows" id="gRowsL"></div></div>
-<div class="gpanel" id="guideR"><div class="hd"><span>👤 အသင်းဝင်</span></div><div class="hd2">💬 Comment Guide</div><div class="rows" id="gRowsR"></div></div>
+<div class="gpanel" id="guideR"><div class="hd"><span>👤 အသင်းဝင်</span></div><div class="rows" id="roster"></div></div>
 <div id="tedit"><div class="card"><h3>✎ အသင်းနာမည်များ ပြင်ရန်</h3>
 <label>🔴 အသင်း ၁ (မန့် ၁)</label><input id="tnR" maxlength="24">
 <label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
@@ -980,7 +981,7 @@ $('tnSave').addEventListener('click', function(){
 var TIER_ICONS = ['🎁','💎','👑','🔥'];
 var TIERP=['1+','100+','500+','1000+'];
 CFG.guide.forEach(function(g, i){ var d=document.createElement('div'); d.className='r'; d.innerHTML=TIER_ICONS[i]+' <b>'+TIERP[i]+'</b> '+CFG.short[i]; $('gRowsL').appendChild(d); });
-[['၁','🔴 အနီ'],['၂','🔵 အပြာ'],['Gift','🎁 auto'],['Like','👍 အားပေး']].forEach(function(r){ var d=document.createElement('div'); d.className='r'; d.innerHTML='<b>"'+r[0]+'"</b> – '+r[1]; $('gRowsR').appendChild(d); });
+/* right panel now shows the joined-viewers roster (renderRoster) */
 // ---------- state ----------
 var S = { p:0, hpR:100, hpB:100, hR:0, hB:0, balR:100, balB:100, scoreR:0, scoreB:0, t:0, running:false, over:false, winner:null };
 var M = { red:{members:0, gifts:0, power:0, names:[]}, blue:{members:0, gifts:0, power:0, names:[]} };
@@ -1009,10 +1010,18 @@ function renderGifts(team){
 }
 // ---------- members: everyone in the LIVE is a viewer; join = team member (no limit) ----------
 var MEMBERS = { red: [], blue: [] };
+var JOINLOG = [];
+function renderRoster(){ var box=$('roster'); if(!box) return; box.innerHTML='';
+  if(!JOINLOG.length){ var e=document.createElement('div'); e.className='r'; e.style.opacity='.6'; e.textContent='မရှိသေး'; box.appendChild(e); return; }
+  var items = JOINLOG.slice(-9).reverse();
+  items.forEach(function(it){ var d=document.createElement('div'); d.className='r'; d.textContent=(it[0]==='red'?'🔴 ':'🔵 ')+it[1]; box.appendChild(d); });
+  if(JOINLOG.length>9){ var m=document.createElement('div'); m.className='r'; m.style.opacity='.75'; m.textContent='… +'+(JOINLOG.length-9); box.appendChild(m); } }
 function mOther(team){ return team==='red' ? 'blue' : 'red'; }
 function mHas(team, name){ return MEMBERS[team].indexOf(name) >= 0; }
 function mAdd(team, name){ var o = mOther(team); var i = MEMBERS[o].indexOf(name); if (i>=0) MEMBERS[o].splice(i,1); if (!mHas(team, name)) MEMBERS[team].push(name); }
+var _mAdd = mAdd; mAdd = function(team, name){ _mAdd(team, name); for (var j=JOINLOG.length-1;j>=0;j--) if (JOINLOG[j][1]===name) JOINLOG.splice(j,1); JOINLOG.push([team, name]); renderRoster(); };
 function renderSide(team){ renderGifts(team); }
+renderRoster();
 function showPop(big, sub, ms){ $('popBig').textContent=big; $('popSub').textContent=sub||''; var p=$('popup'); p.classList.add('show'); clearTimeout(showPop._t); showPop._t=setTimeout(function(){ p.classList.remove('show'); }, ms||2100); }
 var FXC = ['#ffd54d','#ff5a8a','#4da3ff','#7dff8a','#ff9d2e','#ffffff'];
 function burst(team, tier){
