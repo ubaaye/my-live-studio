@@ -688,6 +688,12 @@ function frame(now){
   if (game){ game.update(dt, S); renderer.render(game.scene, game.camera); }
 }
 resize(); applyNames(); syncHud(); requestAnimationFrame(frame);
+// ---------- screen wake lock: keep the phone awake during LIVE ----------
+var _wl=null;
+function keepAwake(){ if(!('wakeLock' in navigator)) return; navigator.wakeLock.request('screen').then(function(w){ _wl=w; }).catch(function(){}); }
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') keepAwake(); });
+window.addEventListener('pointerdown',function(){ if(!_wl) keepAwake(); });
+keepAwake();
 var _cb=$('cleanBtn'),_cx=$('cleanExit');
 function setClean(on){ document.body.classList.toggle('clean',on);
   if(on){ try{ var p=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); if(p&&p.catch)p.catch(function(){}); }catch(e){} }

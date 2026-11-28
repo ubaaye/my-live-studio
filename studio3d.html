@@ -638,6 +638,12 @@ function setOutput(on){
 }
 $('btnOutput').addEventListener('click', () => setOutput(true));
 $('exitOutput').addEventListener('click', () => setOutput(false));
+// ---------- screen wake lock: keep the phone awake during LIVE ----------
+let _wl=null;
+function keepAwake(){ if('wakeLock' in navigator) navigator.wakeLock.request('screen').then(w=>{ _wl=w; }).catch(()=>{}); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') keepAwake(); });
+window.addEventListener('pointerdown',()=>{ if(!_wl) keepAwake(); });
+keepAwake();
 buildHub();
 syncVoiceBtn();
 try { if (localStorage.getItem('nlo_live_route') === 'relay') setTimeout(() => connectLive(true), 600); } catch(e){}
