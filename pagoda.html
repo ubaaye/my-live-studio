@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="my"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#070a18">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>ဘုရားရှိခိုး ပူဇော်ပွဲ — NLO Live Studio</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -57,6 +62,9 @@
   #cleanExit { position:absolute; z-index:30; right:8px; bottom:8px; width:26px; height:26px; border-radius:50%;
     background:rgba(0,0,0,.35); color:#fff; border:1px solid rgba(255,255,255,.4); font-size:13px; display:none;
     align-items:center; justify-content:center; opacity:.45; cursor:pointer; }
+  #musBtn { position:absolute; z-index:30; right:8px; top:46%; width:26px; height:26px; border-radius:50%;
+    background:rgba(0,0,0,.35); color:#fff; border:1px solid rgba(255,255,255,.4); font-size:12px; display:flex;
+    align-items:center; justify-content:center; opacity:.55; padding:0; cursor:pointer; }
   body.clean #ctrl, body.clean .demo, body.clean #cleanBtn { display:none !important; }
   body.clean #cleanExit { display:flex; }
 </style></head>
@@ -74,27 +82,12 @@
     <div class="row">👑 1000+ → အထူး ပူဇော်</div>
   </div>
   <div class="panel" id="guideR">
-    <div class="row"><b>👤 Join – Pay Homage</b></div>
-    <div class="row"><b>💬 Comment Guide</b></div>
-    <div class="row">"Follow" – 🌹 ပန်း</div>
-    <div class="row">"Share" – 💧 ရေချမ်း</div>
-    <div class="row">"🙏" – ရှိခိုး</div>
-    <div class="row">"ပန်း" – 🌹 ပန်း</div>
-    <div class="row">"ရေချမ်း" – 💧 ရေချမ်း</div>
-    <div class="row">"သစ်သီး" – 🍇 သစ်သီး</div>
+    <div class="row"><b>👥 ပူဇော်သူများ</b></div>
+    <div id="pgRoster"></div>
   </div>
   <div id="giftPop"><div class="g1" id="giftPop1"></div><div class="g2" id="giftPop2"></div></div>
   <div id="feed"></div>
-  <div id="counts"><span>🌹 <b id="cF">0</b></span><span>💧 <b id="cW">0</b></span><span>🍇 <b id="cFr">0</b></span><span>👥 <b id="cP">0</b></span></div>
   <div id="toast"></div>
-  <div class="demo" id="demoBar">
-    <button data-demo="join">👤 Join</button>
-    <button data-demo="homage">🙏 ရှိခိုး</button>
-    <button data-demo="flower">🌹 ပန်း</button>
-    <button data-demo="water">💧 ရေချမ်း</button>
-    <button data-demo="fruit">🍇 သစ်သီး</button>
-    <button data-demo="gift">👑 Gift 1000+</button>
-  </div>
   <div id="ctrl">
     <div><span id="dot"></span><span id="liveText">LIVE မချိတ်ရသေးပါ</span></div>
     <div class="row">
@@ -113,6 +106,7 @@
   </div>
   <button id="cleanBtn">📺 LIVE mode</button>
   <button id="cleanExit">✕</button>
+  <button id="musBtn" title="music">🔊</button>
 </div></div>
 <script>
 'use strict';
@@ -138,8 +132,8 @@ function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show');
 function feed(msg){ const d = document.createElement('div'); d.textContent = msg; feedEl.appendChild(d);
   while (feedEl.children.length > 5) feedEl.removeChild(feedEl.firstChild);
   setTimeout(()=>{ if (d.parentNode) d.parentNode.removeChild(d); }, 9000); }
-function syncCounts(){ $('cF').textContent = S.offer.flower; $('cW').textContent = S.offer.water;
-  $('cFr').textContent = S.offer.fruit; $('cP').textContent = S.people; }
+function syncCounts(){ const m = { cF: S.offer.flower, cW: S.offer.water, cFr: S.offer.fruit, cP: S.people };
+  for (const k in m) { const el = $(k); if (el) el.textContent = m[k]; } }
 
 /* ================= devotees ================= */
 const SHIRTS = ['#f5f2ea','#f5f2ea','#7a2e2e','#8c3a34','#f5f2ea','#6d2f3a'];
@@ -170,6 +164,13 @@ const slots = [];
   syncCounts();
 })();
 const byName = new Map();   // viewer name -> slot
+const pgRoster = [];
+function renderPgRoster(){ const box = $('pgRoster'); if (!box) return; box.innerHTML = '';
+  if (!pgRoster.length) { const e = document.createElement('div'); e.className = 'row'; e.style.opacity = '.6'; e.textContent = 'မရှိသေး'; box.appendChild(e); return; }
+  pgRoster.slice(-9).reverse().forEach(n => { const d = document.createElement('div'); d.className = 'row';
+    d.style.cssText = 'overflow:hidden;text-overflow:ellipsis;max-width:150px'; d.textContent = '🙏 ' + n; box.appendChild(d); });
+  if (pgRoster.length > 9) { const mm = document.createElement('div'); mm.className = 'row'; mm.style.opacity = '.75'; mm.textContent = '… +' + (pgRoster.length - 9); box.appendChild(mm); } }
+function noteJoin(name){ const i = pgRoster.indexOf(name); if (i >= 0) pgRoster.splice(i, 1); pgRoster.push(name); renderPgRoster(); }
 function freeSlot(){ // prefer front rows
   const cand = slots.filter(sl => !sl.taken);
   cand.sort((a,b) => b.y - a.y);
@@ -186,7 +187,7 @@ function joinUser(name){
 }
 function placeInstant(name){
   const sl = freeSlot(); if (!sl) return;
-  sl.taken = true; sl.ambient = false; sl.fig.name = name; byName.set(name, sl); S.people++;
+  sl.taken = true; sl.ambient = false; sl.fig.name = name; byName.set(name, sl); noteJoin(name); S.people++;
   bowSlot(sl, 3); syncCounts();
 }
 function startWalker(name){
@@ -440,7 +441,7 @@ function updateWalkers(dt){
     else if (w.phase === 'toseat') { w.k += dt / 1.05; const e = w.k >= 1 ? 1 : (1 - Math.pow(1 - w.k, 2));
         w.x = lerp(w.fx, w.slot.x, e); w.y = lerp(w.fy, w.slot.y + 4, e);
         if (w.k >= 1) { const sl = w.slot; sl.ambient = false; sl.fig = w.fig; sl.fig.name = w.name; sl.tagUntil = S.t + 4.5;
-          byName.set(w.name, sl); S.people++; bowSlot(sl, 1); syncCounts(); walkers.splice(i, 1); } }
+          byName.set(w.name, sl); noteJoin(w.name); S.people++; bowSlot(sl, 1); syncCounts(); walkers.splice(i, 1); } }
   }
 }
 function updateParts(dt){
@@ -590,6 +591,32 @@ function setClean(on){ document.body.classList.toggle('clean', on);
 $('cleanBtn').addEventListener('click', () => setClean(true));
 $('cleanExit').addEventListener('click', () => setClean(false));
 if (/[?&](clean|live)(=|&|$)/.test(location.search)) document.body.classList.add('clean');
+/* ---------- screen wake lock: keep the phone awake during LIVE ---------- */
+let _wl = null;
+function keepAwake(){ if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(w => { _wl = w; }).catch(() => {}); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
+window.addEventListener('pointerdown', () => { if (!_wl) keepAwake(); });
+keepAwake();
+/* ---------- background music: cheerful festival loop (WebAudio synth, no files) ---------- */
+const MUS = { ctx: null, on: true, timer: null, step: 0, dest: null };
+const MUS_SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+const MUS_MEL = [0,-1,2,-1,4,-1,2,1, 0,-1,2,-1,4,-1,-1,-1, 5,-1,4,2,1,-1,2,-1, 0,-1,2,1,0,-1,-1,-1];
+const MUS_BASS = [0,-1,-1,-1,3,-1,-1,-1, 0,-1,-1,-1,3,-1,4,-1];
+function musNote(f, t, dur, type, vol){ const o = MUS.ctx.createOscillator(), g = MUS.ctx.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(MUS.dest); o.start(t); o.stop(t + dur + 0.05); }
+function musKick(t){ const o = MUS.ctx.createOscillator(), g = MUS.ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12); g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14); o.connect(g); g.connect(MUS.dest); o.start(t); o.stop(t + 0.16); }
+function musHat(t){ const len = MUS.ctx.sampleRate * 0.04, buf = MUS.ctx.createBuffer(1, len, MUS.ctx.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len); const s = MUS.ctx.createBufferSource(); s.buffer = buf; const f = MUS.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 6500; const g = MUS.ctx.createGain(); g.gain.value = 0.12; s.connect(f); f.connect(g); g.connect(MUS.dest); s.start(t); }
+function musStep(){ if (!MUS.ctx || !MUS.on) return; const t = MUS.ctx.currentTime + 0.06, i = MUS.step % 32;
+  const m = MUS_MEL[i]; if (m >= 0) musNote(MUS_SCALE[m], t, 0.24, 'triangle', 0.16);
+  const b = MUS_BASS[MUS.step % 16]; if (b >= 0) musNote(MUS_SCALE[b] / 2, t, 0.32, 'sine', 0.14);
+  if (i % 4 === 0) musKick(t); if (i % 4 === 2) musHat(t);
+  MUS.step++; MUS.timer = setTimeout(musStep, 60 / 116 / 2 * 1000); }
+function musStart(){ if (!MUS.on) return; if (!MUS.ctx) { try { MUS.ctx = new (window.AudioContext || window.webkitAudioContext)(); MUS.dest = MUS.ctx.createGain(); MUS.dest.gain.value = 0.6; MUS.dest.connect(MUS.ctx.destination); } catch(e) { return; } }
+  if (MUS.ctx.state === 'suspended') MUS.ctx.resume(); if (!MUS.timer) musStep(); }
+function musStop(){ if (MUS.timer) { clearTimeout(MUS.timer); MUS.timer = null; } if (MUS.ctx) MUS.ctx.suspend(); }
+window.addEventListener('pointerdown', musStart);
+window.__MUS = MUS;
+$('musBtn').addEventListener('click', e => { e.stopPropagation(); MUS.on = !MUS.on; $('musBtn').textContent = MUS.on ? '🔊' : '🔇'; if (MUS.on) musStart(); else musStop(); });
+renderPgRoster();
 window.PAGODA = { join: joinUser, comment: doComment, gift: doGift, like: doLike, homage: doHomage, offer: doOffer,
   follow: n => doOffer('flower', n, 'Follow'), share: n => doOffer('water', n, 'Share') };
 </script>
