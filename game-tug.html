@@ -69,6 +69,10 @@ body.standalone #sideR,body.standalone #sideB{top:252px}
 #tedit .row{display:flex;gap:8px;margin-top:14px}
 #tedit button{flex:1;padding:9px;border-radius:9px;border:1px solid #ffffff59;background:rgba(255,255,255,.13);
  color:#fff;font-size:13.5px;font-weight:700;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#cleanBtn{position:fixed;right:10px;bottom:122px;z-index:30;background:rgba(24,20,12,.78);color:#fff;border:1px solid #ffffff55;border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:800;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 3px 10px #0006}
+#cleanExit{position:fixed;right:8px;bottom:8px;z-index:30;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.35);color:#fff;border:1px solid #ffffff40;font-size:13px;display:none;align-items:center;justify-content:center;opacity:.45;padding:0}
+body.clean #guide,body.clean .democol,body.clean #tedit,body.clean #cleanBtn{display:none!important}
+body.clean #cleanExit{display:flex}
 #fx{position:fixed;inset:0;z-index:7;pointer-events:none;overflow:hidden}
 #fx .cf{position:absolute;width:8px;height:12px;border-radius:2px;opacity:.95}
 #flash{position:fixed;inset:0;z-index:6;pointer-events:none;opacity:0;border:3px solid transparent;border-radius:6px}
@@ -92,6 +96,7 @@ body.standalone #sideR,body.standalone #sideB{top:252px}
 <label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
 <div class="row"><button id="tnCancel">မပြင်တော့</button><button id="tnSave">သိမ်းမယ်</button></div></div></div>
 <div class="democol" id="demoR"></div><div class="democol" id="demoB"></div>
+<button id="cleanBtn">📺 LIVE mode</button><button id="cleanExit">✕</button>
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
 <script>
@@ -704,6 +709,13 @@ function frame(now){
   if (game){ game.update(dt, S); renderer.render(game.scene, game.camera); }
 }
 resize(); applyNames(); syncHud(); requestAnimationFrame(frame);
+var _cb=$('cleanBtn'),_cx=$('cleanExit');
+function setClean(on){ document.body.classList.toggle('clean',on);
+  if(on){ try{ var p=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); if(p&&p.catch)p.catch(function(){}); }catch(e){} }
+  else { try{ if(document.exitFullscreen)document.exitFullscreen(); }catch(e){} } }
+if(_cb) _cb.onclick=function(){ setClean(true); };
+if(_cx) _cx.onclick=function(){ setClean(false); };
+if(/[?&](clean|live)(=|&|$)/.test(location.search)) document.body.classList.add('clean');
 })();
 </script>
 </body></html>
