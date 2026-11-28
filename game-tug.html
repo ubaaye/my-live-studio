@@ -31,7 +31,7 @@
 .mid .tm{font-size:3.19vw;font-weight:900;line-height:1} .mid .sc{font-size:2.36vw;margin-top:1px} .mid .rd{font-size:2.08vw;opacity:.8}
 #ticker{position:fixed;left:50%;transform:translateX(-50%);bottom:5px;z-index:5;font-size:2.78vw;line-height:1.5;pointer-events:none;text-shadow:0 1px 3px #000;text-align:center;width:max-content;max-width:46vw}
 #ticker div{background:rgba(5,8,20,.55);display:block;padding:2px 8px;border-radius:8px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gpanel{position:fixed;bottom:6px;z-index:6;background:rgba(10,14,24,.8);border:1px solid rgba(255,215,130,.45);
+.gpanel{position:fixed;top:31%;z-index:6;background:rgba(10,14,24,.8);border:1px solid rgba(255,215,130,.45);
  border-radius:10px;padding:5px 6px;font-size:2.05vw;line-height:1.5;font-weight:600;color:#f7efdb;
  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.4);text-shadow:0 1px 2px #000;width:auto;max-width:24.5vw;box-sizing:border-box}
 #guideL{left:4px} #guideR{right:4px}
@@ -67,6 +67,7 @@
 #tedit button{flex:1;padding:9px;border-radius:9px;border:1px solid #ffffff59;background:rgba(255,255,255,.13);
  color:#fff;font-size:13.5px;font-weight:700;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 #cleanBtn{background:rgba(24,20,12,.78);color:#fff;border:1px solid #ffffff55;border-radius:999px;padding:1px 5px;font-size:2.22vw;font-weight:800;cursor:pointer}
+#musBtn{position:fixed;right:5px;top:54%;z-index:30;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.35);border:1px solid #ffffff40;font-size:12px;display:flex;align-items:center;justify-content:center;opacity:.55;padding:0;cursor:pointer}
 #cleanExit{position:fixed;right:5px;top:46%;z-index:30;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.35);color:#fff;border:1px solid #ffffff40;font-size:13px;display:none;align-items:center;justify-content:center;opacity:.45;padding:0}
 body.clean .democol,body.clean #tedit,body.clean #cleanBtn,body.clean #gEdit{display:none!important}
 body.clean #cleanExit{display:flex}
@@ -93,6 +94,7 @@ body.clean #cleanExit{display:flex}
 <label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
 <div class="row"><button id="tnCancel">မပြင်တော့</button><button id="tnSave">သိမ်းမယ်</button></div></div></div>
 <button id="cleanExit">✕</button>
+<button id="musBtn" title="music">🔊</button>
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
 <script>
@@ -661,7 +663,7 @@ function onEvent(ev){
   else if (ev.kind==='chat'){ tick('💬 '+ev.name+': '+(ev.text||'').slice(0,40)); }
   syncHud();
 }
-addEventListener('message', function(e){ var d=e.data; if(d && d.nlo===1) onEvent(d); });
+addEventListener('message', function(e){ var d=e.data; if(d && d.nlo===1){ musStart(); onEvent(d); } });
 if (parent && parent!==window) parent.postMessage({nlo:1, kind:'ready', game:CFG.id}, '*');
 if (window.parent===window) document.body.classList.add('standalone');
 // ---------- loop ----------
@@ -694,6 +696,25 @@ function keepAwake(){ if(!('wakeLock' in navigator)) return; navigator.wakeLock.
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') keepAwake(); });
 window.addEventListener('pointerdown',function(){ if(!_wl) keepAwake(); });
 keepAwake();
+// ---------- background music: cheerful festival loop (WebAudio synth, no files) ----------
+var MUS={ctx:null,on:true,timer:null,step:0,dest:null};
+var MUS_SCALE=[261.63,293.66,329.63,392.00,440.00,523.25];
+var MUS_MEL=[0,-1,2,-1,4,-1,2,1, 0,-1,2,-1,4,-1,-1,-1, 5,-1,4,2,1,-1,2,-1, 0,-1,2,1,0,-1,-1,-1];
+var MUS_BASS=[0,-1,-1,-1,3,-1,-1,-1, 0,-1,-1,-1,3,-1,4,-1];
+function musNote(f,t,dur,type,vol){ var o=MUS.ctx.createOscillator(),g=MUS.ctx.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.connect(g); g.connect(MUS.dest); o.start(t); o.stop(t+dur+0.05); }
+function musKick(t){ var o=MUS.ctx.createOscillator(),g=MUS.ctx.createGain(); o.type='sine'; o.frequency.setValueAtTime(130,t); o.frequency.exponentialRampToValueAtTime(42,t+0.12); g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.14); o.connect(g); g.connect(MUS.dest); o.start(t); o.stop(t+0.16); }
+function musHat(t){ var len=MUS.ctx.sampleRate*0.04, buf=MUS.ctx.createBuffer(1,len,MUS.ctx.sampleRate), d=buf.getChannelData(0); for(var i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len); var s=MUS.ctx.createBufferSource(); s.buffer=buf; var f=MUS.ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=6500; var g=MUS.ctx.createGain(); g.gain.value=0.12; s.connect(f); f.connect(g); g.connect(MUS.dest); s.start(t); }
+function musStep(){ if(!MUS.ctx||!MUS.on) return; var t=MUS.ctx.currentTime+0.06, i=MUS.step%32;
+  var m=MUS_MEL[i]; if(m>=0) musNote(MUS_SCALE[m],t,0.24,'triangle',0.16);
+  var b=MUS_BASS[MUS.step%16]; if(b>=0) musNote(MUS_SCALE[b]/2,t,0.32,'sine',0.14);
+  if(i%4===0) musKick(t); if(i%4===2) musHat(t);
+  MUS.step++; MUS.timer=setTimeout(musStep, 60/116/2*1000); }
+function musStart(){ if(!MUS.on) return; if(!MUS.ctx){ try{ MUS.ctx=new (window.AudioContext||window.webkitAudioContext)(); MUS.dest=MUS.ctx.createGain(); MUS.dest.gain.value=0.6; MUS.dest.connect(MUS.ctx.destination); }catch(e){ return; } }
+  if(MUS.ctx.state==='suspended') MUS.ctx.resume(); if(!MUS.timer) musStep(); }
+function musStop(){ if(MUS.timer){ clearTimeout(MUS.timer); MUS.timer=null; } if(MUS.ctx) MUS.ctx.suspend(); }
+window.addEventListener('pointerdown', musStart);
+window.__MUS = MUS;
+var _mb=$('musBtn'); if(_mb) _mb.onclick=function(e){ e.stopPropagation(); MUS.on=!MUS.on; _mb.textContent=MUS.on?'🔊':'🔇'; if(MUS.on) musStart(); else musStop(); };
 var _cb=$('cleanBtn'),_cx=$('cleanExit');
 function setClean(on){ document.body.classList.toggle('clean',on);
   if(on){ try{ var p=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); if(p&&p.catch)p.catch(function(){}); }catch(e){} }
