@@ -332,15 +332,16 @@ GAME3D['tug'] = { create: function(THREE) {
     var dirToCenter = isRed ? 1 : -1;         // facing
     var joins = G.joins[tm.team];
     var count = 5 + Math.min(4, joins);
-    var frontX = m.centerX - dirToCenter * 62 * s - dirToCenter * G.dispP * m.winDist * 0.38;
-    // keep the whole line in frame even at full stretch
-    var backLimit = 10 + (count - 1) * 31 * s;
-    if (isRed) frontX = Math.max(frontX, backLimit);
-    else frontX = Math.min(frontX, viewW - backLimit);
+    var frontX = m.centerX - dirToCenter * 64 * s - dirToCenter * G.dispP * m.winDist * 0.38;
+    // always leave empty space between the two teams: the front pullers keep
+    // their distance from the centre at every join count — when the line grows,
+    // pullers pack tighter on their own side instead of crushing the middle
+    var maxLen = (m.centerX - 64 * s) - 12;
+    var spacing = count > 1 ? Math.min(31 * s, maxLen / (count - 1)) : 31 * s;
     var lean = 0.30 + tm.pulse * 0.16 + Math.sin(tm.phase) * 0.045;
     if (tm.stumbleT > 0) lean *= 0.55;
     for (var i = count - 1; i >= 0; i--) {
-      var x = frontX - dirToCenter * i * 31 * s;
+      var x = frontX - dirToCenter * i * spacing;
       ctx.save();
       ctx.translate(x, m.groundY + 10 * s);
       ctx.scale(dirToCenter, 1);
