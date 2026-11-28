@@ -95,1203 +95,861 @@ body.standalone #sideR,body.standalone #sideB{top:252px}
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
 <script>
-GAME3D['pillow'] = { create: function(THREE) { const T = THREE; const scene = new T.Scene(); const skyCol = 0xf8cb8e; scene.background = new T.Color(skyCol); scene.fog = new T.Fog(skyCol, 15, 36);
+/* Pillow fight — 2D festival scene (user-supplied design, 2026-11-28).
+   The scene is drawn on an offscreen 2D canvas (450x800 logical, 2x backing)
+   and shown through a CanvasTexture on a fullscreen quad, so the standard
+   NLO wrapper (HUD, guide, popups, postMessage, demo) works unchanged.
+   Balance numbers live in the wrapper state S (balR/balB); this module only
+   mirrors them for wobble/knock-off and plays the strike animations:
+   T1 single hit, T2 double hit, T3 giant pillow, T4 storm barrage. */
+GAME3D['pillow'] = { create: function(THREE) {
+  var T = THREE;
+  var LW = 450, LH = 800, DPR = 2;
+  var cv = document.createElement('canvas');
+  cv.width = LW * DPR; cv.height = LH * DPR;
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  var viewW = LW, viewH = LH;
 
+  var tex = new T.CanvasTexture(cv);
+  if ('colorSpace' in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+  tex.generateMipmaps = false;
+  tex.minFilter = T.LinearFilter;
+  var scene = new T.Scene();
+  var camera = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  var quad = new T.Mesh(new T.PlaneGeometry(2, 2), new T.MeshBasicMaterial({ map: tex }));
+  scene.add(quad);
 
+  var COMBAT = { WINDUP_TIME: 0.17, SWING_TIME: 0.14, RECOVER_TIME: 0.24, HITSTUN_TIME: 0.28 };
 
-const camera = new T.PerspectiveCamera(55, 0.5625, 0.2, 60);
-camera.position.set(0, 3.4, 8.2);
-camera.lookAt(0, 1.7, -0.3);
+  var G = {
+    time: 0, shakeMag: 0, poleFlex: 0, poleFlexVel: 0, crowdExcitement: 0,
+    fluffParticles: [], strawParticles: [], impactBursts: [], popups: [],
+    crowd: [], flagColors: ['#ef4444', '#facc15', '#3b82f6', '#22c55e', '#ffffff', '#f97316'],
+    overPlayed: false
+  };
 
-const hemi = new T.HemisphereLight(0xfff5dc, 0x8b6e4b, 0.95);
-scene.add(hemi);
-
-const dirLight = new T.DirectionalLight(0xfff0c8, 1.35);
-dirLight.position.set(4.5, 11.0, 6.5);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.width = 1024;
-dirLight.shadow.mapSize.height = 1024;
-dirLight.shadow.camera.left = -4.6;
-dirLight.shadow.camera.right = 4.6;
-dirLight.shadow.camera.top = 5.6;
-dirLight.shadow.camera.bottom = -3.6;
-dirLight.shadow.camera.near = 1.0;
-dirLight.shadow.camera.far = 22.0;
-dirLight.shadow.bias = -0.001;
-scene.add(dirLight);
-
-function stdMat(color, rough, extra) {
-  const cfg = { color: color, roughness: rough !== undefined ? rough : 0.82, metalness: 0.02 };
-  if (extra) {
-    for (const k in extra) cfg[k] = extra[k];
+  function createPlayer(team, facing) {
+    return {
+      team: team, facing: facing,
+      balance: 100,
+      state: 'idle', stateTimer: 0, strikeCd: 0, hasHitThisSwing: false,
+      queue: 0, heavy: false, pillowScale: 1,
+      tilt: 0, tiltVel: 0, wobblePhase: team === 'red' ? 0 : Math.PI * 0.7,
+      fallX: 0, fallY: 0, fallVx: 0, fallVy: 0, fallRot: 0, fallRotVel: 0, landedInStraw: false,
+      tagName: '', tagUntil: 0
+    };
   }
-  return new T.MeshStandardMaterial(cfg);
-}
+  var L = createPlayer('red', 1);    // left fighter = red team
+  var R = createPlayer('blue', -1);  // right fighter = blue team
+  function fighter(team) { return team === 'red' ? L : R; }
+  function foeOf(pl) { return pl === L ? R : L; }
 
-const M = {
-  water: stdMat(0x1f8ac9, 0.18, { metalness: 0.12 }),
-  sand: stdMat(0xd9a667, 0.88),
-  sandDark: stdMat(0xba8548, 0.88),
-  bamboo: stdMat(0xbba64e, 0.78),
-  bambooDark: stdMat(0x7d6c2c, 0.82),
-  wood: stdMat(0x9a6438, 0.85),
-  woodDark: stdMat(0x6e4424, 0.88),
-  roof: stdMat(0xc83a2b, 0.82),
-  gold: stdMat(0xf4bc3a, 0.75),
-  bannerRed: stdMat(0xd62839, 0.82),
-  trunk: stdMat(0x825a36, 0.88),
-  frond: stdMat(0x3a8f3e, 0.82),
-  rope: stdMat(0x5a4630, 0.9),
-  skin: stdMat(0xdc9e70, 0.8),
-  eye: stdMat(0x1c1412, 0.75),
-  thanaka: stdMat(0xf6eaab, 0.85),
-  redTop: stdMat(0xe63946, 0.8),
-  redLongyi: stdMat(0x8f1d28, 0.85, { side: T.DoubleSide }),
-  blueTop: stdMat(0x1d78e6, 0.8),
-  blueLongyi: stdMat(0x10438a, 0.85, { side: T.DoubleSide }),
-  pillow: stdMat(0xfbf7ef, 0.88),
-  feather: stdMat(0xffffff, 0.85, { side: T.DoubleSide }),
-  drop: stdMat(0xe4f9ff, 0.22),
-  crowd: [
-    stdMat(0xe85d75, 0.84),
-    stdMat(0xf4a236, 0.84),
-    stdMat(0x2fa87b, 0.84),
-    stdMat(0x9b5de5, 0.84),
-    stdMat(0x2892d7, 0.84),
-    stdMat(0xf26444, 0.84)
-  ],
-  pennant: [
-    stdMat(0xe63946, 0.82),
-    stdMat(0xf4c430, 0.82),
-    stdMat(0x18a999, 0.82),
-    stdMat(0xd9387a, 0.82),
-    stdMat(0xf27d24, 0.82)
-  ]
-};
+  (function initCrowd() {
+    var shirtColors = ['#334155', '#475569', '#1e293b', '#3f3f46', '#292524', '#1e3a5f', '#4c1d3d'];
+    for (var i = 0; i < 26; i++) {
+      G.crowd.push({
+        xNorm: (i + 0.5) / 26 + (Math.random() - 0.5) * 0.025,
+        scale: 0.78 + Math.random() * 0.34,
+        phase: Math.random() * Math.PI * 2,
+        color: shirtColors[i % shirtColors.length],
+        armsUp: Math.random() > 0.55
+      });
+    }
+  })();
 
-function makePillowGeo() {
-  const g = new T.BoxGeometry(0.62, 0.48, 0.34, 4, 4, 4);
-  const pos = g.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    const nx = x / 0.31;
-    const ny = y / 0.24;
-    const nz = z / 0.17;
-    const r2 = nx * nx + ny * ny;
-    const puff = 1 + 0.34 * Math.max(0, 1 - r2 * 0.55);
-    const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
-    const k = 0.72 + 0.28 / Math.max(1, len);
-    pos.setXYZ(i, x * k, y * k, z * k * puff);
+  function getStageMetrics() {
+    var s = Math.max(0.62, Math.min(Math.min(viewW / 440, viewH / 760), 1.45));
+    var centerX = viewW * 0.5;
+    var poleY = viewH * 0.54;
+    var poleHalfLen = Math.min(viewW * 0.44, 290 * s);
+    return { s: s, centerX: centerX, poleY: poleY, poleHalfLen: poleHalfLen,
+             strawY: poleY + 128 * s, p1X: centerX - 66 * s, p2X: centerX + 66 * s, isPortrait: true };
   }
-  g.computeVertexNormals();
-  return g;
-}
+  function baseXOf(pl, m) { return pl === L ? m.p1X : m.p2X; }
 
-const G = {
-  head: new T.SphereGeometry(0.22, 14, 12),
-  eye: new T.SphereGeometry(0.032, 7, 6),
-  thanaka: new T.CylinderGeometry(0.06, 0.06, 0.012, 10),
-  gaung: new T.TorusGeometry(0.205, 0.052, 8, 16),
-  torso: new T.BoxGeometry(0.44, 0.6, 0.28),
-  longyi: new T.CylinderGeometry(0.22, 0.28, 0.52, 12, 1, true),
-  limb: new T.CapsuleGeometry(0.072, 0.42, 4, 8),
-  leg: new T.CapsuleGeometry(0.082, 0.5, 4, 8),
-  pillow: makePillowGeo(),
-  trim: new T.BoxGeometry(0.64, 0.09, 0.39),
-  crowdBody: new T.CylinderGeometry(0.16, 0.22, 0.58, 8),
-  crowdHead: new T.SphereGeometry(0.16, 8, 7),
-  pennant: new T.ConeGeometry(0.24, 0.44, 3),
-  frond: new T.ConeGeometry(0.38, 2.35, 4),
-  ring: new T.RingGeometry(0.18, 0.29, 20),
-  drop: new T.SphereGeometry(0.11, 7, 6),
-  feather: new T.PlaneGeometry(0.2, 0.1)
-};
-
-const LOG_Y = 1.45;
-const LOG_R = 0.22;
-const STAND_Y = LOG_Y + LOG_R;
-
-// Pond and banks
-const water = new T.Mesh(new T.PlaneGeometry(24, 16), M.water);
-water.rotation.x = -Math.PI / 2;
-water.position.set(0, 0, 2.2);
-water.receiveShadow = true;
-scene.add(water);
-
-const farBank = new T.Mesh(new T.BoxGeometry(24, 0.9, 13), M.sand);
-farBank.position.set(0, -0.15, -10.5);
-farBank.receiveShadow = true;
-scene.add(farBank);
-
-const sideMoundGeo = new T.BoxGeometry(5.5, 1.1, 6.5);
-const leftBank = new T.Mesh(sideMoundGeo, M.sandDark);
-leftBank.position.set(-5.8, 0.05, -2.5);
-leftBank.receiveShadow = true;
-scene.add(leftBank);
-
-const rightBank = new T.Mesh(sideMoundGeo, M.sandDark);
-rightBank.position.set(5.8, 0.05, -2.5);
-rightBank.receiveShadow = true;
-scene.add(rightBank);
-
-// Main bamboo log and supports
-const logMesh = new T.Mesh(new T.CylinderGeometry(LOG_R, LOG_R, 8.2, 16), M.bamboo);
-logMesh.rotation.z = Math.PI / 2;
-logMesh.position.set(0, LOG_Y, 0);
-logMesh.castShadow = true;
-logMesh.receiveShadow = true;
-scene.add(logMesh);
-
-const nodeGeo = new T.TorusGeometry(LOG_R + 0.012, 0.025, 6, 16);
-for (let i = 0; i < 2; i++) {
-  const node = new T.Mesh(nodeGeo, M.bambooDark);
-  node.rotation.y = Math.PI / 2;
-  node.position.set(i === 0 ? -1.45 : 1.45, LOG_Y, 0);
-  scene.add(node);
-}
-
-const postGeo = new T.CylinderGeometry(0.085, 0.1, 2.5, 8);
-const supportX = [-2.75, 2.75];
-for (let i = 0; i < 2; i++) {
-  const sx = supportX[i];
-  const p1 = new T.Mesh(postGeo, M.bambooDark);
-  p1.position.set(sx, 0.72, -0.22);
-  p1.rotation.x = 0.28;
-  scene.add(p1);
-  const p2 = new T.Mesh(postGeo, M.bambooDark);
-  p2.position.set(sx, 0.72, 0.22);
-  p2.rotation.x = -0.28;
-  scene.add(p2);
-}
-
-// Bamboo fence on far bank
-const fencePostGeo = new T.CylinderGeometry(0.07, 0.08, 1.35, 7);
-const fenceXs = [-3.2, 0, 3.2];
-for (let i = 0; i < 3; i++) {
-  const fp = new T.Mesh(fencePostGeo, M.bambooDark);
-  fp.position.set(fenceXs[i], 0.9, -4.6);
-  scene.add(fp);
-}
-const fenceRailGeo = new T.CylinderGeometry(0.055, 0.055, 8.6, 7);
-for (let i = 0; i < 2; i++) {
-  const fr = new T.Mesh(fenceRailGeo, M.bamboo);
-  fr.rotation.z = Math.PI / 2;
-  fr.position.set(0, 0.72 + i * 0.48, -4.6);
-  scene.add(fr);
-}
-
-// Tiered stands
-const step1 = new T.Mesh(new T.BoxGeometry(7.6, 0.6, 1.0), M.wood);
-step1.position.set(0, 0.6, -5.65);
-scene.add(step1);
-
-const step2 = new T.Mesh(new T.BoxGeometry(7.6, 1.25, 1.0), M.woodDark);
-step2.position.set(0, 0.92, -6.6);
-scene.add(step2);
-
-const backBoard = new T.Mesh(new T.BoxGeometry(7.8, 1.1, 0.16), M.wood);
-backBoard.position.set(0, 2.05, -7.15);
-scene.add(backBoard);
-
-// Fair pavilions and banners
-const pavPoleGeo = new T.CylinderGeometry(0.09, 0.1, 3.8, 7);
-const pavRoofGeo = new T.ConeGeometry(1.75, 1.35, 4);
-const pavTrimGeo = new T.BoxGeometry(2.5, 0.22, 2.5);
-const pavXs = [-2.9, 2.9];
-for (let i = 0; i < 2; i++) {
-  const px = pavXs[i];
-  const poleL = new T.Mesh(pavPoleGeo, M.bambooDark);
-  poleL.position.set(px - 0.85, 2.2, -7.2);
-  scene.add(poleL);
-  const poleR = new T.Mesh(pavPoleGeo, M.bambooDark);
-  poleR.position.set(px + 0.85, 2.2, -7.2);
-  scene.add(poleR);
-  const roof = new T.Mesh(pavRoofGeo, M.roof);
-  roof.position.set(px, 4.75, -7.2);
-  roof.rotation.y = Math.PI / 4;
-  scene.add(roof);
-  const trim = new T.Mesh(pavTrimGeo, M.gold);
-  trim.position.set(px, 4.08, -7.2);
-  scene.add(trim);
-}
-
-const bannerGeo = new T.BoxGeometry(0.52, 1.55, 0.08);
-for (let i = 0; i < 2; i++) {
-  const b = new T.Mesh(bannerGeo, i === 0 ? M.bannerRed : M.gold);
-  b.position.set(i === 0 ? -0.95 : 0.95, 2.75, -7.02);
-  scene.add(b);
-}
-
-// Crowd on stands
-const crowd = [];
-const crowdCoords = [
-  [-2.35, 1.18, -5.6, 'red'],
-  [-0.85, 1.18, -5.6, 'red'],
-  [0.85, 1.18, -5.6, 'blue'],
-  [2.35, 1.18, -5.6, 'blue'],
-  [-1.75, 1.82, -6.55, 'red'],
-  [-0.45, 1.82, -6.55, 'red'],
-  [0.45, 1.82, -6.55, 'blue'],
-  [1.75, 1.82, -6.55, 'blue']
-];
-for (let i = 0; i < crowdCoords.length; i++) {
-  const c = crowdCoords[i];
-  const g = new T.Group();
-  const body = new T.Mesh(G.crowdBody, M.crowd[i % M.crowd.length]);
-  body.position.y = 0.29;
-  g.add(body);
-  const head = new T.Mesh(G.crowdHead, M.skin);
-  head.position.y = 0.72;
-  g.add(head);
-  g.position.set(c[0], c[1], c[2]);
-  scene.add(g);
-  crowd.push({ g: g, baseY: c[1], phase: i * 1.17, side: c[3] });
-}
-
-// Palm trees
-const palms = [];
-const trunkGeo = new T.CylinderGeometry(0.13, 0.24, 6.2, 7);
-const palmSpecs = [
-  { x: -3.7, z: -8.3, tilt: 0.14 },
-  { x: 3.7, z: -8.3, tilt: -0.14 }
-];
-for (let i = 0; i < 2; i++) {
-  const sp = palmSpecs[i];
-  const pg = new T.Group();
-  pg.position.set(sp.x, 0.2, sp.z);
-  pg.rotation.z = sp.tilt;
-  const trunk = new T.Mesh(trunkGeo, M.trunk);
-  trunk.position.y = 3.1;
-  pg.add(trunk);
-  const crown = new T.Group();
-  crown.position.y = 6.15;
-  pg.add(crown);
-  const frondAngles = [0.2, 1.75, 3.35, 4.9];
-  for (let f = 0; f < 4; f++) {
-    const fg = new T.Group();
-    fg.rotation.y = frondAngles[f];
-    const fm = new T.Mesh(G.frond, M.frond);
-    fm.scale.set(1.0, 1.0, 0.24);
-    fm.position.set(1.05, -0.15, 0);
-    fm.rotation.z = -1.25;
-    fg.add(fm);
-    crown.add(fg);
+  /* ---------------- particles & popups ---------------- */
+  function spawnFluff(x, y, count) {
+    count = count || 16;
+    for (var i = 0; i < count; i++) {
+      var angle = Math.random() * Math.PI * 2, speed = 45 + Math.random() * 175;
+      G.fluffParticles.push({ x: x, y: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 40,
+        size: 4 + Math.random() * 6, rot: Math.random() * Math.PI * 2, rotVel: (Math.random() - 0.5) * 6,
+        life: 0.75 + Math.random() * 0.65, maxLife: 1.4, isFeather: Math.random() > 0.65 });
+    }
+    if (G.fluffParticles.length > 420) G.fluffParticles.splice(0, G.fluffParticles.length - 420);
   }
-  scene.add(pg);
-  palms.push({ crown: crown, phase: i * 2.1 });
-}
-
-// Overhead pennant strings
-const pennants = [];
-const ropeGeo = new T.CylinderGeometry(0.022, 0.022, 8.6, 5);
-const stringSpecs = [
-  { y: 6.15, z: -2.8, sag: 0.42 },
-  { y: 7.25, z: -1.2, sag: 0.48 }
-];
-for (let s = 0; s < 2; s++) {
-  const ss = stringSpecs[s];
-  const rope = new T.Mesh(ropeGeo, M.rope);
-  rope.rotation.z = Math.PI / 2;
-  rope.position.set(0, ss.y - ss.sag * 0.5, ss.z);
-  scene.add(rope);
-  for (let k = 0; k < 5; k++) {
-    const fx = -2.4 + k * 1.2;
-    const norm = fx / 3.4;
-    const fy = ss.y - ss.sag * (1 - norm * norm);
-    const flag = new T.Mesh(G.pennant, M.pennant[(k + s * 2) % M.pennant.length]);
-    flag.scale.set(1, 1, 0.16);
-    flag.rotation.x = Math.PI;
-    flag.position.set(fx, fy - 0.22, ss.z);
-    scene.add(flag);
-    pennants.push({ mesh: flag, phase: k * 0.9 + s * 1.7 });
+  function spawnStrawSplash(x, y, count) {
+    count = count || 26;
+    for (var i = 0; i < count; i++) {
+      var angle = -Math.PI * 0.15 - Math.random() * Math.PI * 0.7, speed = 90 + Math.random() * 230;
+      G.strawParticles.push({ x: x + (Math.random() - 0.5) * 45, y: y + (Math.random() - 0.5) * 12,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        len: 10 + Math.random() * 14, rot: Math.random() * Math.PI * 2, rotVel: (Math.random() - 0.5) * 11,
+        life: 0.7 + Math.random() * 0.55, maxLife: 1.25, color: Math.random() > 0.4 ? '#f59e0b' : '#fde047' });
+    }
   }
-}
+  function spawnImpactBurst(x, y, color) {
+    G.impactBursts.push({ x: x, y: y, radius: 10, maxRadius: 56, life: 0.22, maxLife: 0.22, color: color || '#fef08a' });
+  }
+  function spawnPopup(x, y, text, color, stroke) {
+    G.popups.push({ x: x, y: y, vy: -55, text: text, color: color || '#fef08a', stroke: stroke || '#7c2d12', life: 0.95, maxLife: 0.95 });
+    if (G.popups.length > 6) G.popups.shift();
+  }
 
-// Articulated person builder
-function makePerson(team) {
-  const isRed = team === 'red';
-  const topMat = isRed ? M.redTop : M.blueTop;
-  const longyiMat = isRed ? M.redLongyi : M.blueLongyi;
-  const dir = isRed ? 1 : -1;
+  /* ---------------- combat (visual only; balance owned by wrapper) ---------------- */
+  function triggerStrike(pl) {
+    if (pl.state === 'falling' || pl.state === 'fallen') return;
+    if (pl.strikeCd > 0) return;
+    if (pl.state !== 'idle' && pl.state !== 'recover') return;
+    pl.state = 'windup';
+    pl.stateTimer = COMBAT.WINDUP_TIME;
+    pl.strikeCd = 0.34;
+    pl.hasHitThisSwing = false;
+    pl.tiltVel -= pl.facing * 2.1;
+  }
+  function queueStrikes(pl, n, heavy) {
+    pl.queue = Math.min(6, pl.queue + n);
+    if (heavy) { pl.heavy = true; pl.pillowScale = 1.75; }
+  }
+  function knockOffPole(loser, winner) {
+    var m = getStageMetrics();
+    loser.state = 'falling';
+    loser.landedInStraw = false;
+    loser.fallX = baseXOf(loser, m);
+    loser.fallY = m.poleY;
+    loser.fallVx = -loser.facing * (120 + Math.random() * 55) * m.s;
+    loser.fallVy = -190 * m.s;
+    loser.fallRot = loser.tilt;
+    loser.fallRotVel = -loser.facing * (7.5 + Math.random() * 3);
+    loser.queue = 0;
+    if (winner) { winner.state = 'victory'; winner.stateTimer = 5; }
+    G.crowdExcitement = 1.0;
+    G.shakeMag = 10;
+  }
+  function visualHit(attacker, defender) {
+    var m = getStageMetrics();
+    var midX = m.centerX, hitY = m.poleY - 62 * m.s;
+    var heavy = attacker.heavy;
+    // simultaneous swing = pillow clash
+    if (defender.state === 'swing' && !defender.hasHitThisSwing) {
+      defender.hasHitThisSwing = true;
+      attacker.tiltVel -= attacker.facing * 4.5;
+      defender.tiltVel -= defender.facing * 4.5;
+      G.shakeMag = 7; G.poleFlexVel += 120;
+      spawnFluff(midX, hitY, 22);
+      spawnImpactBurst(midX, hitY, '#ffffff');
+      spawnPopup(midX, hitY - 26 * m.s, 'ဒုန်း!', '#ffffff', '#1e293b');
+      return;
+    }
+    defender.state = 'hitstun';
+    defender.stateTimer = COMBAT.HITSTUN_TIME;
+    defender.tiltVel -= defender.facing * (heavy ? 9.2 : 6.6);
+    G.shakeMag = heavy ? 11 : 6.5;
+    G.poleFlexVel += heavy ? 185 : 120;
+    G.crowdExcitement = Math.min(1, G.crowdExcitement + (heavy ? 0.85 : 0.45));
+    var defX = baseXOf(defender, m);
+    spawnFluff(defX - defender.facing * 12 * m.s, hitY, heavy ? 30 : 16);
+    spawnImpactBurst(defX - defender.facing * 10 * m.s, hitY, heavy ? '#fde047' : '#ffffff');
+    spawnPopup(defX, hitY - 28 * m.s, heavy ? 'ဖောင်း! ပြင်းတယ်!' : 'ဖောင်!', heavy ? '#fde047' : '#ffffff', '#991b1b');
+    if (defender.balance <= 0) knockOffPole(defender, attacker);
+  }
 
-  const root = new T.Group();
-  root.rotation.y = dir * Math.PI * 0.44;
+  function updatePlayer(pl, dt) {
+    var m = getStageMetrics();
+    if (pl.strikeCd > 0) pl.strikeCd = Math.max(0, pl.strikeCd - dt);
 
-  const body = new T.Group();
-  root.add(body);
+    if (pl.state === 'falling') {
+      pl.fallVy += 920 * m.s * dt;
+      pl.fallX += pl.fallVx * dt;
+      pl.fallY += pl.fallVy * dt;
+      pl.fallRot += pl.fallRotVel * dt;
+      if (pl.fallY >= m.strawY - 8 * m.s && !pl.landedInStraw) {
+        pl.fallY = m.strawY - 8 * m.s;
+        pl.fallX = Math.max(56, Math.min(viewW - 56, pl.fallX));
+        pl.landedInStraw = true;
+        pl.state = 'fallen';
+        spawnStrawSplash(pl.fallX, m.strawY, 32);
+        G.shakeMag = 8;
+      }
+      return;
+    }
+    if (pl.state === 'fallen') return;
 
-  const legL = new T.Group();
-  legL.position.set(-0.14, 0.72, 0);
-  const legLMesh = new T.Mesh(G.leg, M.skin);
-  legLMesh.position.y = -0.35;
-  legLMesh.castShadow = true;
-  legL.add(legLMesh);
-  body.add(legL);
+    if (pl.state === 'windup') {
+      pl.stateTimer -= dt;
+      if (pl.stateTimer <= 0) {
+        pl.state = 'swing';
+        pl.stateTimer = COMBAT.SWING_TIME;
+        pl.tiltVel += pl.facing * 4.4;
+      }
+    } else if (pl.state === 'swing') {
+      pl.stateTimer -= dt;
+      if (!pl.hasHitThisSwing && pl.stateTimer <= COMBAT.SWING_TIME * 0.65) {
+        pl.hasHitThisSwing = true;
+        visualHit(pl, foeOf(pl));
+      }
+      if (pl.stateTimer <= 0 && pl.state === 'swing') {
+        pl.state = 'recover';
+        pl.stateTimer = COMBAT.RECOVER_TIME;
+        if (pl.heavy) { pl.heavy = false; pl.pillowScale = 1; }
+      }
+    } else if (pl.state === 'recover' || pl.state === 'hitstun') {
+      pl.stateTimer -= dt;
+      if (pl.stateTimer <= 0) pl.state = 'idle';
+    } else if (pl.state === 'victory') {
+      pl.stateTimer -= dt;
+      if (pl.stateTimer <= 0 && !G.overPlayed) pl.state = 'idle';
+    }
 
-  const legR = new T.Group();
-  legR.position.set(0.14, 0.72, 0);
-  const legRMesh = new T.Mesh(G.leg, M.skin);
-  legRMesh.position.y = -0.35;
-  legRMesh.castShadow = true;
-  legR.add(legRMesh);
-  body.add(legR);
+    // start the next queued strike
+    if ((pl.state === 'idle' || pl.state === 'recover') && pl.queue > 0 && pl.strikeCd <= 0) {
+      pl.queue--;
+      triggerStrike(pl);
+    }
 
-  const torso = new T.Group();
-  torso.position.set(0, 0.72, 0);
-  body.add(torso);
+    // spring-damper balance wobble on the bamboo pole
+    var instability = (100 - Math.max(0, pl.balance)) / 100;
+    pl.wobblePhase += dt * (2.8 + instability * 5.2);
+    var targetTilt = Math.sin(pl.wobblePhase) * (0.045 + instability * 0.24);
+    if (pl.state === 'windup') targetTilt = -pl.facing * 0.22;
+    else if (pl.state === 'swing') targetTilt = pl.facing * 0.30;
+    else if (pl.state === 'victory') targetTilt = Math.sin(G.time * 7) * 0.1;
+    var acc = (targetTilt - pl.tilt) * 36 - pl.tiltVel * 6.2;
+    pl.tiltVel += acc * dt;
+    pl.tilt += pl.tiltVel * dt;
+    pl.tilt = Math.max(-0.85, Math.min(0.85, pl.tilt));
+  }
 
-  const torsoMesh = new T.Mesh(G.torso, topMat);
-  torsoMesh.position.y = 0.34;
-  torsoMesh.castShadow = true;
-  torso.add(torsoMesh);
+  function updateParticles(dt) {
+    var i, f;
+    for (i = G.fluffParticles.length - 1; i >= 0; i--) {
+      f = G.fluffParticles[i];
+      f.life -= dt;
+      if (f.life <= 0) { G.fluffParticles.splice(i, 1); continue; }
+      f.vx *= 0.94;
+      f.vy = f.vy * 0.94 + 38 * dt;
+      f.x += f.vx * dt + Math.sin(G.time * 5 + i) * 14 * dt;
+      f.y += f.vy * dt;
+      f.rot += f.rotVel * dt;
+    }
+    for (i = G.strawParticles.length - 1; i >= 0; i--) {
+      var st = G.strawParticles[i];
+      st.life -= dt;
+      if (st.life <= 0) { G.strawParticles.splice(i, 1); continue; }
+      st.vy += 580 * dt;
+      st.x += st.vx * dt;
+      st.y += st.vy * dt;
+      st.rot += st.rotVel * dt;
+    }
+    for (i = G.impactBursts.length - 1; i >= 0; i--) {
+      var b = G.impactBursts[i];
+      b.life -= dt;
+      if (b.life <= 0) { G.impactBursts.splice(i, 1); continue; }
+      var t = 1 - b.life / b.maxLife;
+      b.radius = 12 + (b.maxRadius - 12) * t;
+    }
+    for (i = G.popups.length - 1; i >= 0; i--) {
+      var pop = G.popups[i];
+      pop.life -= dt;
+      if (pop.life <= 0) { G.popups.splice(i, 1); continue; }
+      pop.y += pop.vy * dt;
+      pop.vy *= 0.94;
+    }
+  }
 
-  const longyiMesh = new T.Mesh(G.longyi, longyiMat);
-  longyiMesh.position.y = -0.18;
-  longyiMesh.castShadow = true;
-  torso.add(longyiMesh);
+  /* ---------------- drawing (adapted from the user's 2D design) ---------------- */
+  function drawSkyAndSun() {
+    var skyGrad = ctx.createLinearGradient(0, 0, 0, viewH);
+    skyGrad.addColorStop(0, '#38bdf8');
+    skyGrad.addColorStop(0.45, '#bae6fd');
+    skyGrad.addColorStop(0.75, '#fef3c7');
+    skyGrad.addColorStop(1, '#fde68a');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, viewW, viewH);
+    var sunX = viewW * 0.82, sunY = viewH * 0.17;
+    var sunGlow = ctx.createRadialGradient(sunX, sunY, 12, sunX, sunY, 130);
+    sunGlow.addColorStop(0, 'rgba(255, 251, 210, 0.95)');
+    sunGlow.addColorStop(0.35, 'rgba(253, 224, 71, 0.45)');
+    sunGlow.addColorStop(1, 'rgba(253, 224, 71, 0)');
+    ctx.fillStyle = sunGlow;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 130, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+    for (var i = 0; i < 3; i++) {
+      var cx = ((G.time * (9 + i * 3) + i * 320) % (viewW + 200)) - 100;
+      var cy = viewH * (0.14 + i * 0.07);
+      ctx.beginPath();
+      ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+      ctx.arc(cx + 22, cy - 8, 28, 0, Math.PI * 2);
+      ctx.arc(cx + 46, cy, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 
-  const head = new T.Group();
-  head.position.set(0, 0.7, 0);
-  torso.add(head);
+  function drawPalmTree(baseX, baseY, scale, leanDir) {
+    ctx.save();
+    ctx.translate(baseX, baseY);
+    var sway = Math.sin(G.time * 1.4 + baseX * 0.01) * 8 * scale;
+    var topX = leanDir * 32 * scale + sway;
+    var topY = -210 * scale;
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 14 * scale;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(leanDir * 14 * scale, -105 * scale, topX, topY);
+    ctx.stroke();
+    var frondAngles = [-2.6, -2.1, -1.5, -0.9, -0.4, 0.25];
+    frondAngles.forEach(function(ang, idx) {
+      var fSway = Math.sin(G.time * 2.1 + idx) * 0.06;
+      ctx.save();
+      ctx.translate(topX, topY);
+      ctx.rotate(ang + fSway);
+      ctx.fillStyle = idx % 2 === 0 ? '#15803d' : '#16a34a';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(38 * scale, -18 * scale, 78 * scale, 8 * scale);
+      ctx.quadraticCurveTo(36 * scale, 4 * scale, 0, 6 * scale);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
 
-  const headMesh = new T.Mesh(G.head, M.skin);
-  headMesh.position.y = 0.2;
-  headMesh.castShadow = true;
-  head.add(headMesh);
+  function drawBuntingFlags(m) {
+    function drawString(x1, y1, x2, y2, sag, flagCount) {
+      var wind = Math.sin(G.time * 2.6 + y1 * 0.02) * 6;
+      ctx.strokeStyle = 'rgba(71, 85, 105, 0.65)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo((x1 + x2) / 2, (y1 + y2) / 2 + sag + wind, x2, y2);
+      ctx.stroke();
+      for (var i = 1; i < flagCount; i++) {
+        var t = i / flagCount, omt = 1 - t;
+        var cx = (x1 + x2) / 2, cy = (y1 + y2) / 2 + sag + wind;
+        var px = omt * omt * x1 + 2 * omt * t * cx + t * t * x2;
+        var py = omt * omt * y1 + 2 * omt * t * cy + t * t * y2;
+        var fw = 12 * m.s, fh = 18 * m.s;
+        var flutter = Math.sin(G.time * 5 + i * 0.9) * 3;
+        ctx.fillStyle = G.flagColors[i % G.flagColors.length];
+        ctx.beginPath();
+        ctx.moveTo(px - fw * 0.5, py);
+        ctx.lineTo(px + fw * 0.5, py);
+        ctx.lineTo(px + flutter, py + fh);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    drawString(-10, viewH * 0.11, viewW * 0.55, viewH * 0.17, 36 * m.s, 14);
+    drawString(viewW * 0.45, viewH * 0.16, viewW + 10, viewH * 0.10, 34 * m.s, 14);
+  }
 
-  const eyeL = new T.Mesh(G.eye, M.eye);
-  eyeL.position.set(-0.075, 0.22, 0.195);
-  head.add(eyeL);
-  const eyeR = new T.Mesh(G.eye, M.eye);
-  eyeR.position.set(0.075, 0.22, 0.195);
-  head.add(eyeR);
+  function drawBackgroundAndCrowd(m) {
+    var horizonY = m.poleY + 42 * m.s;
+    ctx.fillStyle = '#86efac';
+    ctx.beginPath();
+    ctx.moveTo(0, viewH);
+    ctx.lineTo(0, horizonY - 26 * m.s);
+    ctx.quadraticCurveTo(viewW * 0.25, horizonY - 58 * m.s, viewW * 0.5, horizonY - 30 * m.s);
+    ctx.quadraticCurveTo(viewW * 0.78, horizonY - 62 * m.s, viewW, horizonY - 22 * m.s);
+    ctx.lineTo(viewW, viewH);
+    ctx.closePath();
+    ctx.fill();
+    drawPalmTree(viewW * 0.08, horizonY + 12 * m.s, m.s * 0.92, 1);
+    drawPalmTree(viewW * 0.92, horizonY + 12 * m.s, m.s * 0.95, -1);
+    var crowdBaseY = m.poleY + 76 * m.s;
+    G.crowd.forEach(function(person) {
+      var px = person.xNorm * viewW;
+      var ps = person.scale * m.s;
+      var jumpAmp = (3 + G.crowdExcitement * 16) * ps;
+      var jump = Math.abs(Math.sin(G.time * (3.2 + G.crowdExcitement * 7) + person.phase)) * jumpAmp;
+      var py = crowdBaseY - jump;
+      ctx.fillStyle = person.color;
+      ctx.globalAlpha = 0.72;
+      ctx.beginPath();
+      ctx.roundRect(px - 12 * ps, py - 24 * ps, 24 * ps, 38 * ps, 10 * ps);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px, py - 34 * ps, 9.5 * ps, 0, Math.PI * 2);
+      ctx.fill();
+      if (person.armsUp || G.crowdExcitement > 0.25) {
+        ctx.strokeStyle = person.color;
+        ctx.lineWidth = 4.5 * ps;
+        ctx.lineCap = 'round';
+        var wave = Math.sin(G.time * 10 + person.phase) * 5 * ps;
+        ctx.beginPath();
+        ctx.moveTo(px - 10 * ps, py - 18 * ps);
+        ctx.lineTo(px - 19 * ps, py - 36 * ps + wave);
+        ctx.moveTo(px + 10 * ps, py - 18 * ps);
+        ctx.lineTo(px + 19 * ps, py - 36 * ps - wave);
+        ctx.stroke();
+      }
+    });
+    ctx.globalAlpha = 1;
+    var groundGrad = ctx.createLinearGradient(0, m.poleY + 60 * m.s, 0, viewH);
+    groundGrad.addColorStop(0, '#d97706');
+    groundGrad.addColorStop(0.25, '#b45309');
+    groundGrad.addColorStop(1, '#78350f');
+    ctx.fillStyle = groundGrad;
+    ctx.fillRect(0, m.poleY + 72 * m.s, viewW, viewH - (m.poleY + 72 * m.s));
+  }
 
-  const thL = new T.Mesh(G.thanaka, M.thanaka);
-  thL.position.set(-0.145, 0.155, 0.155);
-  thL.rotation.set(Math.PI / 2, 0, 0.55);
-  head.add(thL);
-  const thR = new T.Mesh(G.thanaka, M.thanaka);
-  thR.position.set(0.145, 0.155, 0.155);
-  thR.rotation.set(Math.PI / 2, 0, -0.55);
-  head.add(thR);
+  function drawGoldenRiceStraw(m) {
+    var y = m.strawY;
+    var moundW = m.poleHalfLen * 1.18;
+    var strawGrad = ctx.createLinearGradient(0, y - 34 * m.s, 0, y + 60 * m.s);
+    strawGrad.addColorStop(0, '#fde047');
+    strawGrad.addColorStop(0.45, '#f59e0b');
+    strawGrad.addColorStop(1, '#b45309');
+    ctx.fillStyle = strawGrad;
+    ctx.beginPath();
+    ctx.moveTo(m.centerX - moundW, y + 55 * m.s);
+    ctx.quadraticCurveTo(m.centerX - moundW * 0.55, y - 38 * m.s, m.centerX, y - 24 * m.s);
+    ctx.quadraticCurveTo(m.centerX + moundW * 0.55, y - 38 * m.s, m.centerX + moundW, y + 55 * m.s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.lineCap = 'round';
+    for (var i = -14; i <= 14; i++) {
+      var sx = m.centerX + (i / 14) * (moundW * 0.85);
+      var sy = y - 6 * m.s + (Math.abs(i % 3) * 7 * m.s);
+      ctx.strokeStyle = i % 2 === 0 ? '#fef08a' : '#d97706';
+      ctx.lineWidth = 2.4 * m.s;
+      ctx.beginPath();
+      ctx.moveTo(sx - 10 * m.s, sy + 4 * m.s);
+      ctx.lineTo(sx + 10 * m.s, sy - 4 * m.s);
+      ctx.stroke();
+    }
+  }
 
-  const gaung = new T.Mesh(G.gaung, topMat);
-  gaung.position.set(0, 0.31, -0.01);
-  gaung.rotation.x = Math.PI / 2 - 0.18;
-  head.add(gaung);
+  function drawBambooStage(m) {
+    var leftX = m.centerX - m.poleHalfLen;
+    var rightX = m.centerX + m.poleHalfLen;
+    var poleY = m.poleY;
+    var flex = G.poleFlex * 0.14 * m.s;
+    var footY = m.strawY + 26 * m.s;
+    function drawAFrame(x) {
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#3f6212';
+      ctx.lineWidth = 11 * m.s;
+      ctx.beginPath();
+      ctx.moveTo(x, poleY - 12 * m.s);
+      ctx.lineTo(x - 28 * m.s, footY);
+      ctx.stroke();
+      ctx.strokeStyle = '#4d7c0f';
+      ctx.lineWidth = 11 * m.s;
+      ctx.beginPath();
+      ctx.moveTo(x, poleY - 12 * m.s);
+      ctx.lineTo(x + 28 * m.s, footY);
+      ctx.stroke();
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 4.5 * m.s;
+      ctx.beginPath();
+      ctx.moveTo(x - 10 * m.s, poleY - 6 * m.s);
+      ctx.lineTo(x + 10 * m.s, poleY + 6 * m.s);
+      ctx.moveTo(x + 10 * m.s, poleY - 6 * m.s);
+      ctx.lineTo(x - 10 * m.s, poleY + 6 * m.s);
+      ctx.stroke();
+    }
+    drawAFrame(leftX + 16 * m.s);
+    drawAFrame(rightX - 16 * m.s);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#15803d';
+    ctx.lineWidth = 22 * m.s;
+    ctx.beginPath();
+    ctx.moveTo(leftX, poleY);
+    ctx.quadraticCurveTo(m.centerX, poleY + flex, rightX, poleY);
+    ctx.stroke();
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 6 * m.s;
+    ctx.beginPath();
+    ctx.moveTo(leftX + 6 * m.s, poleY - 5 * m.s);
+    ctx.quadraticCurveTo(m.centerX, poleY - 5 * m.s + flex, rightX - 6 * m.s, poleY - 5 * m.s);
+    ctx.stroke();
+    var segments = 7;
+    for (var i = 1; i < segments; i++) {
+      var t = i / segments;
+      var nx = leftX + (rightX - leftX) * t;
+      var ny = poleY + 2 * (1 - t) * t * flex;
+      ctx.strokeStyle = '#14532d';
+      ctx.lineWidth = 2.6 * m.s;
+      ctx.beginPath();
+      ctx.moveTo(nx, ny - 10 * m.s);
+      ctx.lineTo(nx, ny + 10 * m.s);
+      ctx.stroke();
+    }
+  }
 
-  const armL = new T.Group();
-  armL.position.set(-0.28, 0.56, 0);
-  const armLMesh = new T.Mesh(G.limb, M.skin);
-  armLMesh.position.y = -0.26;
-  armLMesh.castShadow = true;
-  armL.add(armLMesh);
-  torso.add(armL);
+  function drawCharacter(pl, m) {
+    var s = m.s;
+    var isRed = pl.team === 'red';
+    var flexOffset = G.poleFlex * 0.08 * s;
+    var baseX = baseXOf(pl, m);
+    var baseY = m.poleY + flexOffset;
+    var rot = pl.tilt;
+    if (pl.state === 'falling' || pl.state === 'fallen') {
+      baseX = pl.fallX;
+      baseY = pl.fallY;
+      rot = pl.fallRot;
+    }
+    ctx.save();
+    ctx.translate(baseX, baseY);
+    ctx.rotate(rot);
+    ctx.scale(pl.facing, 1);
 
-  const armR = new T.Group();
-  armR.position.set(0.28, 0.56, 0);
-  const armRMesh = new T.Mesh(G.limb, M.skin);
-  armRMesh.position.y = -0.26;
-  armRMesh.castShadow = true;
-  armR.add(armRMesh);
-  torso.add(armR);
+    var shirtColor = isRed ? '#dc2626' : '#2563eb';
+    var shirtShadow = isRed ? '#b91c1c' : '#1d4ed8';
+    var longyiBase = isRed ? '#6b2737' : '#1e3a5f';
+    var longyiStripe = isRed ? '#f59e0b' : '#60a5fa';
+    var pillowBg = isRed ? '#fef2f2' : '#eff6ff';
+    var pillowPattern = isRed ? '#ef4444' : '#3b82f6';
+    var skin = '#d99a6c';
+    var skinDark = '#b87a4e';
 
-  const pillowPivot = new T.Group();
-  pillowPivot.position.set(0, 0.42, 0.44);
-  const pillowMesh = new T.Mesh(G.pillow, M.pillow);
-  pillowMesh.castShadow = true;
-  pillowPivot.add(pillowMesh);
-  const trimMesh = new T.Mesh(G.trim, topMat);
-  pillowPivot.add(trimMesh);
-  torso.add(pillowPivot);
+    // back dangling leg
+    var legSwing = Math.sin(pl.wobblePhase * 1.2) * 5 * s;
+    ctx.strokeStyle = skinDark;
+    ctx.lineWidth = 10 * s;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-4 * s, 6 * s);
+    ctx.lineTo(-10 * s + legSwing, 34 * s);
+    ctx.stroke();
 
-  scene.add(root);
+    // back arm (tucked behind back; flails when falling)
+    ctx.strokeStyle = skinDark;
+    ctx.lineWidth = 8.5 * s;
+    ctx.beginPath();
+    if (pl.state === 'falling' || pl.state === 'fallen') {
+      ctx.moveTo(-10 * s, -48 * s);
+      ctx.lineTo(-34 * s, -72 * s);
+    } else {
+      ctx.moveTo(-10 * s, -46 * s);
+      ctx.quadraticCurveTo(-24 * s, -30 * s, -12 * s, -16 * s);
+    }
+    ctx.stroke();
+
+    // longyi
+    ctx.fillStyle = longyiBase;
+    ctx.beginPath();
+    ctx.roundRect(-20 * s, -18 * s, 40 * s, 28 * s, 10 * s);
+    ctx.fill();
+    ctx.strokeStyle = longyiStripe;
+    ctx.lineWidth = 2 * s;
+    ctx.globalAlpha = 0.65;
+    ctx.beginPath();
+    ctx.moveTo(-16 * s, -10 * s); ctx.lineTo(16 * s, -10 * s);
+    ctx.moveTo(-16 * s, -2 * s);  ctx.lineTo(16 * s, -2 * s);
+    ctx.moveTo(-6 * s, -16 * s);  ctx.lineTo(-6 * s, 8 * s);
+    ctx.moveTo(6 * s, -16 * s);   ctx.lineTo(6 * s, 8 * s);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // front dangling leg
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 11 * s;
+    ctx.beginPath();
+    ctx.moveTo(5 * s, 4 * s);
+    ctx.lineTo(12 * s - legSwing, 32 * s);
+    ctx.lineTo(4 * s - legSwing, 48 * s);
+    ctx.stroke();
+
+    // torso
+    ctx.fillStyle = shirtColor;
+    ctx.beginPath();
+    ctx.roundRect(-18 * s, -62 * s, 36 * s, 48 * s, 12 * s);
+    ctx.fill();
+    ctx.fillStyle = shirtShadow;
+    ctx.beginPath();
+    ctx.roundRect(-18 * s, -62 * s, 10 * s, 48 * s, 8 * s);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2 * s;
+    ctx.beginPath();
+    ctx.arc(2 * s, -61 * s, 7 * s, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+
+    // head & face
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(2 * s, -80 * s, 17 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1e1b18';
+    ctx.beginPath();
+    ctx.arc(0 * s, -84 * s, 17.5 * s, Math.PI * 0.92, Math.PI * 2.02);
+    ctx.quadraticCurveTo(10 * s, -94 * s, -14 * s, -82 * s);
+    ctx.fill();
+    ctx.fillStyle = '#1e1b18';
+    ctx.strokeStyle = '#1e1b18';
+    ctx.lineWidth = 2 * s;
+    if (pl.state === 'hitstun' || pl.state === 'falling' || pl.state === 'fallen') {
+      ctx.beginPath();
+      ctx.moveTo(6 * s, -85 * s); ctx.lineTo(12 * s, -79 * s);
+      ctx.moveTo(12 * s, -85 * s); ctx.lineTo(6 * s, -79 * s);
+      ctx.stroke();
+      ctx.fillStyle = '#7f1d1d';
+      ctx.beginPath();
+      ctx.arc(10 * s, -71 * s, 4 * s, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (pl.state === 'windup' || pl.state === 'swing') {
+      ctx.beginPath();
+      ctx.arc(9 * s, -82 * s, 2.5 * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(5 * s, -88 * s); ctx.lineTo(14 * s, -85 * s);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(9 * s, -73 * s, 4 * s, 0, Math.PI);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(9 * s, -82 * s, 2.5 * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(9 * s, -75 * s, 4.5 * s, 0.15, Math.PI * 0.85);
+      ctx.stroke();
+    }
+
+    // front arm + pillow
+    var armAngle = -0.35;
+    if (pl.state === 'windup') {
+      var tw = 1 - pl.stateTimer / COMBAT.WINDUP_TIME;
+      armAngle = -0.35 - tw * 1.45;
+    } else if (pl.state === 'swing') {
+      var ts = 1 - pl.stateTimer / COMBAT.SWING_TIME;
+      armAngle = -1.8 + ts * 2.55;
+    } else if (pl.state === 'recover') {
+      var tr = 1 - pl.stateTimer / COMBAT.RECOVER_TIME;
+      armAngle = 0.75 - tr * 1.1;
+    } else if (pl.state === 'victory') {
+      armAngle = -1.7 + Math.sin(G.time * 12) * 0.25;
+    } else if (pl.state === 'falling') {
+      armAngle = -2.2;
+    }
+    ctx.save();
+    ctx.translate(6 * s, -48 * s);
+    ctx.rotate(armAngle);
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 9 * s;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(28 * s, 0);
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(28 * s, 0);
+    ctx.rotate(0.18);
+    ctx.scale(pl.pillowScale, pl.pillowScale);
+    ctx.fillStyle = pillowBg;
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2 * s;
+    ctx.beginPath();
+    ctx.roundRect(-6 * s, -19 * s, 44 * s, 32 * s, 12 * s);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = pillowPattern;
+    ctx.lineWidth = 3 * s;
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(6 * s, -16 * s);  ctx.lineTo(6 * s, 10 * s);
+    ctx.moveTo(18 * s, -16 * s); ctx.lineTo(18 * s, 10 * s);
+    ctx.moveTo(30 * s, -16 * s); ctx.lineTo(30 * s, 10 * s);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    if (pl.state === 'swing') {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.lineWidth = 6 * s;
+      ctx.beginPath();
+      ctx.arc(-20 * s, 0, 48 * s, -0.7, 0.1);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawEffects(m) {
+    G.impactBursts.forEach(function(b) {
+      var alpha = b.life / b.maxLife;
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.strokeStyle = b.color;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = 4 * m.s;
+      for (var i = 0; i < 8; i++) {
+        var ang = (i / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ang) * b.radius * 0.45, Math.sin(ang) * b.radius * 0.45);
+        ctx.lineTo(Math.cos(ang) * b.radius, Math.sin(ang) * b.radius);
+        ctx.stroke();
+      }
+      ctx.restore();
+    });
+    G.fluffParticles.forEach(function(f) {
+      var alpha = Math.min(1, f.life / 0.35);
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(f.rot);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#ffffff';
+      if (f.isFeather) {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, f.size * 1.4, f.size * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, f.size * 0.7, 0, Math.PI * 2);
+        ctx.arc(f.size * 0.4, -f.size * 0.2, f.size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+    G.strawParticles.forEach(function(st) {
+      var alpha = Math.min(1, st.life / 0.3);
+      ctx.save();
+      ctx.translate(st.x, st.y);
+      ctx.rotate(st.rot);
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = st.color;
+      ctx.lineWidth = 3 * m.s;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-st.len * 0.5, 0);
+      ctx.lineTo(st.len * 0.5, 0);
+      ctx.stroke();
+      ctx.restore();
+    });
+    G.popups.forEach(function(pop) {
+      var t = 1 - pop.life / pop.maxLife;
+      var scale = t < 0.18 ? 0.6 + (t / 0.18) * 0.55 : 1.05;
+      var alpha = pop.life < 0.25 ? pop.life / 0.25 : 1;
+      ctx.save();
+      ctx.translate(pop.x, pop.y);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+      ctx.font = '800 ' + Math.round(20 * m.s) + 'px "Noto Sans Myanmar", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5 * m.s;
+      ctx.strokeStyle = pop.stroke;
+      ctx.strokeText(pop.text, 0, 0);
+      ctx.fillStyle = pop.color;
+      ctx.fillText(pop.text, 0, 0);
+      ctx.restore();
+    });
+  }
+
+  function drawNameTag(pl, m) {
+    if (!pl.tagName || G.time > pl.tagUntil) return;
+    if (pl.state === 'falling' || pl.state === 'fallen') return;
+    var x = baseXOf(pl, m);
+    var y = m.poleY - 128 * m.s;
+    ctx.save();
+    ctx.font = '700 ' + Math.round(13 * m.s) + 'px "Noto Sans Myanmar", system-ui, sans-serif';
+    var w = ctx.measureText(pl.tagName).width + 18 * m.s;
+    var h = 21 * m.s;
+    ctx.fillStyle = 'rgba(10, 12, 24, 0.72)';
+    ctx.strokeStyle = pl.team === 'red' ? '#ff4d7e' : '#3fa9ff';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pl.tagName, x, y + 1);
+    ctx.restore();
+  }
+
+  function render() {
+    var m = getStageMetrics();
+    ctx.save();
+    if (G.shakeMag > 0.2) {
+      ctx.translate((Math.random() - 0.5) * G.shakeMag * 2, (Math.random() - 0.5) * G.shakeMag * 2);
+    }
+    drawSkyAndSun();
+    drawBackgroundAndCrowd(m);
+    drawBuntingFlags(m);
+    drawGoldenRiceStraw(m);
+    drawBambooStage(m);
+    if (L.state === 'swing') { drawCharacter(R, m); drawCharacter(L, m); }
+    else { drawCharacter(L, m); drawCharacter(R, m); }
+    drawEffects(m);
+    drawNameTag(L, m);
+    drawNameTag(R, m);
+    ctx.restore();
+  }
+
+  /* ---------------- wrapper interface ---------------- */
+  function reset() {
+    var rp = L.wobblePhase, bp = R.wobblePhase;
+    L = createPlayer('red', 1);
+    R = createPlayer('blue', -1);
+    L.wobblePhase = rp; R.wobblePhase = bp;
+    G.fluffParticles = []; G.strawParticles = []; G.impactBursts = []; G.popups = [];
+    G.poleFlex = 0; G.poleFlexVel = 0; G.overPlayed = false;
+  }
+
+  function update(dt, S) {
+    G.time += dt;
+    // mirror wrapper balance for wobble + knock-off
+    L.balance = S.balR;
+    R.balance = S.balB;
+    // round end: knock-off if a balance hit zero, else winner bounce
+    if (S.over && !G.overPlayed) {
+      G.overPlayed = true;
+      var loser = S.winner === 'red' ? R : L;
+      var winner = S.winner === 'red' ? L : R;
+      if (loser.balance <= 0 && loser.state !== 'falling' && loser.state !== 'fallen') {
+        knockOffPole(loser, winner);
+      } else if (winner.state !== 'falling' && winner.state !== 'fallen') {
+        winner.state = 'victory';
+        winner.stateTimer = 5;
+        G.crowdExcitement = 1.0;
+      }
+    }
+    if (!S.over && G.overPlayed) G.overPlayed = false;
+
+    var poleAcc = -G.poleFlex * 95 - G.poleFlexVel * 8.5;
+    G.poleFlexVel += poleAcc * dt;
+    G.poleFlex += G.poleFlexVel * dt;
+    if (G.shakeMag > 0) G.shakeMag = Math.max(0, G.shakeMag - 32 * dt);
+    if (G.crowdExcitement > 0) G.crowdExcitement = Math.max(0, G.crowdExcitement - 0.65 * dt);
+
+    updatePlayer(L, dt);
+    updatePlayer(R, dt);
+    updateParticles(dt);
+    render();
+    tex.needsUpdate = true;
+  }
 
   return {
-    team: team,
-    dir: dir,
-    baseX: isRed ? -1.12 : 1.12,
-    root: root,
-    body: body,
-    torso: torso,
-    head: head,
-    armL: armL,
-    armR: armR,
-    legL: legL,
-    legR: legR,
-    pillowPivot: pillowPivot,
-    state: 'log',
-    fallTimer: 0,
-    splashed: false,
-    dripTimer: 0,
-    fallSide: isRed ? 1 : -1,
-    hopStartX: 0,
-    hopStartY: 0,
-    hopStartZ: 0,
-    hopT: 0,
-    actTier: 0,
-    actT: 0,
-    actDur: 0,
-    hitStage: 0,
-    queue: [0, 0, 0, 0],
-    qLen: 0,
-    hitTimer: 0,
-    hitAmp: 0,
-    extremeTimer: 0,
-    tauntTimer: 0,
-    wobblePhase: isRed ? 0 : 1.9
+    scene: scene,
+    camera: camera,
+    update: update,
+    onJoin: function(team) {
+      G.crowdExcitement = Math.min(1, G.crowdExcitement + 0.45);
+      var f = fighter(team);
+      if (f.state === 'idle') { f.state = 'victory'; f.stateTimer = 0.7; }
+    },
+    onGift: function(team, tier, name) {
+      var f = fighter(team);
+      f.tagName = name || '';
+      f.tagUntil = G.time + 1.6;
+      if (tier === 1) queueStrikes(f, 1, false);
+      else if (tier === 2) queueStrikes(f, 2, false);
+      else if (tier === 3) queueStrikes(f, 1, true);
+      else { queueStrikes(f, 4, false); G.crowdExcitement = 1.0; }
+    },
+    onLike: function(team) {
+      G.crowdExcitement = Math.min(1, G.crowdExcitement + 0.3);
+    },
+    reset: reset
   };
-}
-
-const redF = makePerson('red');
-const blueF = makePerson('blue');
-const fighters = [redF, blueF];
-
-// Water rings pool
-const rings = [];
-for (let i = 0; i < 6; i++) {
-  const rMat = new T.MeshBasicMaterial({
-    color: 0xdff7ff,
-    transparent: true,
-    opacity: 0,
-    depthWrite: false
-  });
-  const rm = new T.Mesh(G.ring, rMat);
-  rm.rotation.x = -Math.PI / 2;
-  rm.visible = false;
-  scene.add(rm);
-  rings.push({ mesh: rm, mat: rMat, active: false, t: 0, dur: 1, maxS: 2, baseOp: 0.5 });
-}
-
-function spawnRing(x, z, maxS, dur, op) {
-  for (let i = 0; i < rings.length; i++) {
-    const r = rings[i];
-    if (!r.active) {
-      r.active = true;
-      r.t = 0;
-      r.dur = dur;
-      r.maxS = maxS;
-      r.baseOp = op;
-      r.mesh.position.set(x, 0.03, z);
-      r.mesh.scale.set(0.3, 0.3, 1);
-      r.mat.opacity = op;
-      r.mesh.visible = true;
-      return;
-    }
-  }
-}
-
-// Splash droplets pool
-const drops = [];
-for (let i = 0; i < 8; i++) {
-  const dm = new T.Mesh(G.drop, M.drop);
-  dm.visible = false;
-  scene.add(dm);
-  drops.push({ mesh: dm, active: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, s: 1 });
-}
-
-function spawnSplash(x, z) {
-  spawnRing(x, z, 3.6, 1.05, 0.85);
-  spawnRing(x, z, 2.3, 0.72, 0.7);
-  for (let i = 0; i < drops.length; i++) {
-    const d = drops[i];
-    const ang = (i / drops.length) * Math.PI * 2 + (i % 2) * 0.25;
-    const spd = 1.4 + (i % 3) * 0.65;
-    d.active = true;
-    d.x = x;
-    d.y = 0.15;
-    d.z = z;
-    d.vx = Math.cos(ang) * spd;
-    d.vy = 3.8 + (i % 4) * 0.65;
-    d.vz = Math.sin(ang) * spd;
-    d.s = 0.85 + (i % 3) * 0.25;
-    d.mesh.scale.set(d.s, d.s, d.s);
-    d.mesh.position.set(d.x, d.y, d.z);
-    d.mesh.visible = true;
-  }
-}
-
-function spawnDrip(x, y, z) {
-  for (let i = 0; i < drops.length; i++) {
-    const d = drops[i];
-    if (!d.active) {
-      d.active = true;
-      d.x = x + (Math.random() - 0.5) * 0.35;
-      d.y = y;
-      d.z = z + (Math.random() - 0.5) * 0.25;
-      d.vx = 0;
-      d.vy = -0.3;
-      d.vz = 0;
-      d.s = 0.42;
-      d.mesh.scale.set(0.42, 0.55, 0.42);
-      d.mesh.position.set(d.x, d.y, d.z);
-      d.mesh.visible = true;
-      return;
-    }
-  }
-}
-
-// Feathers pool
-const feathers = [];
-for (let i = 0; i < 14; i++) {
-  const fm = new T.Mesh(G.feather, M.feather);
-  fm.visible = false;
-  scene.add(fm);
-  feathers.push({
-    mesh: fm, active: false, mode: 0,
-    x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
-    cx: 0, cz: 0, ang: 0, rad: 0,
-    life: 0, maxLife: 1.5, phase: i * 0.83
-  });
-}
-
-function spawnFeathers(x, y, z, count, spread, tornado) {
-  let spawned = 0;
-  for (let i = 0; i < feathers.length && spawned < count; i++) {
-    const f = feathers[i];
-    if (!f.active || count >= 12) {
-      f.active = true;
-      f.mode = tornado ? 1 : 0;
-      f.life = 0;
-      f.maxLife = tornado ? 2.1 : (1.35 + (i % 4) * 0.22);
-      f.cx = x;
-      f.cz = z;
-      f.ang = (spawned / Math.max(1, count)) * Math.PI * 2;
-      f.rad = 0.35 + (spawned % 3) * 0.28;
-      if (tornado) {
-        f.x = x + Math.cos(f.ang) * f.rad;
-        f.y = y - 0.4 + (spawned / count) * 1.4;
-        f.z = z + Math.sin(f.ang) * f.rad;
-        f.vx = 0;
-        f.vy = 0;
-        f.vz = 0;
-      } else {
-        f.x = x + (Math.random() - 0.5) * 0.35;
-        f.y = y + (Math.random() - 0.5) * 0.3;
-        f.z = z + (Math.random() - 0.5) * 0.35;
-        f.vx = (Math.random() - 0.5) * spread * 2.2;
-        f.vy = 1.4 + Math.random() * spread * 1.4;
-        f.vz = (Math.random() - 0.5) * spread * 1.8;
-      }
-      f.mesh.scale.set(1, 1, 1);
-      f.mesh.position.set(f.x, f.y, f.z);
-      f.mesh.visible = true;
-      spawned++;
-    }
-  }
-}
-
-let elapsed = 0;
-let ambientRingTimer = 0.4;
-let cheerR = 0;
-let cheerB = 0;
-
-function getFighter(team) {
-  return team === 'blue' ? blueF : redF;
-}
-
-function getOther(f) {
-  return f === redF ? blueF : redF;
-}
-
-function startAction(f, tier) {
-  f.actTier = tier;
-  f.actT = 0;
-  f.hitStage = 0;
-  if (tier === 1) f.actDur = 0.56;
-  else if (tier === 2) f.actDur = 0.96;
-  else if (tier === 3) f.actDur = 0.98;
-  else f.actDur = 1.6;
-}
-
-function triggerImpact(attacker, tier) {
-  const opp = getOther(attacker);
-  const midX = (attacker.root.position.x + opp.root.position.x) * 0.5;
-  const midY = STAND_Y + 1.25;
-  if (tier === 1) {
-    opp.hitTimer = 0.52;
-    opp.hitAmp = 0.46;
-    spawnFeathers(midX, midY, 0.1, 4, 1.3, false);
-  } else if (tier === 2) {
-    opp.hitTimer = 0.72;
-    opp.hitAmp = 0.74;
-    spawnFeathers(midX, midY, 0.1, 6, 1.8, false);
-  } else if (tier === 3) {
-    opp.hitTimer = 1.05;
-    opp.hitAmp = 1.05;
-    spawnFeathers(midX, midY + 0.15, 0.15, 14, 2.7, false);
-    if (attacker.team === 'red') cheerR = 1.2;
-    else cheerB = 1.2;
-  } else {
-    opp.extremeTimer = 1.5;
-    opp.hitTimer = 0.6;
-    opp.hitAmp = 0.9;
-    spawnFeathers(0, STAND_Y + 0.9, 0, 14, 2.5, true);
-    cheerR = 1.4;
-    cheerB = 1.4;
-  }
-}
-
-function updateFighter(f, dt, bal, hp, shiftX, isOver, isWinner, isLoser) {
-  const targetX = f.baseX + shiftX;
-
-  // Check fall trigger
-  if (f.state === 'log') {
-    if (bal <= 0 || (isOver && isLoser)) {
-      f.state = 'falling';
-      f.fallTimer = 0;
-      f.splashed = false;
-      f.actTier = 0;
-      f.qLen = 0;
-      f.extremeTimer = 0;
-      f.fallSide = f.team === 'red' ? 1 : 1;
-    }
-  }
-
-  if (f.state === 'falling') {
-    f.fallTimer += dt;
-    const u = Math.min(1, f.fallTimer / 0.46);
-    f.root.position.x = targetX + f.dir * (-0.35 * u);
-    f.root.position.y = STAND_Y + 0.55 * u - 2.35 * u * u;
-    f.root.position.z = 1.45 * u;
-    f.body.position.set(0, 0, 0);
-    f.body.rotation.set(0.3 * u, 0, -f.dir * 2.1 * u);
-    f.torso.rotation.set(-0.2, 0, 0);
-    f.armL.rotation.set(-2.4, 0, -0.7);
-    f.armR.rotation.set(-2.4, 0, 0.7);
-    f.legL.rotation.set(0.6 * Math.sin(f.fallTimer * 18), 0, 0);
-    f.legR.rotation.set(-0.6 * Math.sin(f.fallTimer * 18), 0, 0);
-    f.pillowPivot.scale.set(1, 1, 1);
-    f.pillowPivot.position.set(0, 0.5, 0.45);
-    if (u >= 1) {
-      if (!f.splashed) {
-        f.splashed = true;
-        spawnSplash(f.root.position.x, f.root.position.z);
-      }
-      f.state = 'splash';
-    }
-    return;
-  }
-
-  if (f.state === 'splash') {
-    f.fallTimer += dt;
-    const t = f.fallTimer - 0.46;
-    f.root.position.y = -0.35 + Math.sin(t * 11) * 0.12;
-    f.body.rotation.set(0, 0, Math.sin(t * 9) * 0.25);
-    f.armL.rotation.set(-1.6 + Math.sin(t * 16) * 0.7, 0, -0.8);
-    f.armR.rotation.set(-1.6 - Math.sin(t * 16) * 0.7, 0, 0.8);
-    f.legL.rotation.set(Math.sin(t * 14) * 0.5, 0, 0);
-    f.legR.rotation.set(-Math.sin(t * 14) * 0.5, 0, 0);
-    if (f.fallTimer >= 1.05) {
-      f.state = 'climb';
-      f.dripTimer = 0;
-    }
-    return;
-  }
-
-  if (f.state === 'climb') {
-    f.fallTimer += dt;
-    const cU = Math.min(1, (f.fallTimer - 1.05) / 0.85);
-    f.root.position.x = f.baseX * 1.15;
-    f.root.position.z = 1.45 + (-4.45 - 1.45) * cU;
-    f.root.position.y = -0.35 + (0.35 - (-0.35)) * cU;
-    f.body.rotation.set(0.28 * (1 - cU), 0, Math.sin(elapsed * 6) * 0.08);
-    f.torso.rotation.set(0.2, 0, 0);
-    f.head.rotation.set(0.25, 0, Math.sin(elapsed * 5) * 0.1);
-    f.armL.rotation.set(-0.5 + Math.sin(elapsed * 8) * 0.25, 0, -0.2);
-    f.armR.rotation.set(-0.5 - Math.sin(elapsed * 8) * 0.25, 0, 0.2);
-    f.legL.rotation.set(Math.sin(elapsed * 8) * 0.3 * (1 - cU), 0, 0);
-    f.legR.rotation.set(-Math.sin(elapsed * 8) * 0.3 * (1 - cU), 0, 0);
-    f.pillowPivot.position.set(0, 0.22, 0.42);
-    f.pillowPivot.rotation.set(0.3, 0, 0);
-
-    f.dripTimer += dt;
-    if (f.dripTimer > 0.26) {
-      f.dripTimer = 0;
-      spawnDrip(f.root.position.x, f.root.position.y + 1.05, f.root.position.z);
-    }
-
-    if (!isOver && ((f.fallTimer >= 2.5 && bal > 20) || (f.fallTimer >= 1.65 && bal > 50))) {
-      f.state = 'hop';
-      f.hopT = 0;
-      f.hopStartX = f.root.position.x;
-      f.hopStartY = f.root.position.y;
-      f.hopStartZ = f.root.position.z;
-    }
-    return;
-  }
-
-  if (f.state === 'hop') {
-    f.hopT += dt / 0.38;
-    const u = Math.min(1, f.hopT);
-    f.root.position.x = f.hopStartX + (targetX - f.hopStartX) * u;
-    f.root.position.z = f.hopStartZ * (1 - u);
-    f.root.position.y = f.hopStartY + (STAND_Y - f.hopStartY) * u + Math.sin(u * Math.PI) * 1.45;
-    f.body.rotation.set(0, 0, 0);
-    f.torso.rotation.set(0, 0, 0);
-    f.armL.rotation.set(-1.3, 0, -0.2);
-    f.armR.rotation.set(-1.3, 0, 0.2);
-    f.legL.rotation.set(-0.45 * Math.sin(u * Math.PI), 0, 0);
-    f.legR.rotation.set(-0.45 * Math.sin(u * Math.PI), 0, 0);
-    if (u >= 1) {
-      f.state = 'log';
-      f.fallTimer = 0;
-    }
-    return;
-  }
-
-  // Standing on the log
-  f.root.position.x += (targetX - f.root.position.x) * Math.min(1, dt * 7);
-  f.root.position.y = STAND_Y;
-  f.root.position.z = 0;
-
-  // Pop queued gift action
-  if (f.actTier === 0 && f.qLen > 0 && !isOver) {
-    const nextTier = f.queue[0];
-    for (let i = 0; i < f.qLen - 1; i++) f.queue[i] = f.queue[i + 1];
-    f.qLen--;
-    startAction(f, nextTier);
-  }
-
-  const balFrac = Math.max(0, Math.min(1, bal / 100));
-  const wobbleAmp = 0.045 + (1 - balFrac) * (1 - balFrac) * 0.44;
-  const wobbleSpd = 3.2 + (1 - balFrac) * 5.2;
-  f.wobblePhase += dt * wobbleSpd;
-
-  const breathSpd = 3.0 + (1 - Math.max(0, Math.min(1, hp / 100))) * 2.5;
-  const breath = Math.sin(elapsed * breathSpd + (f === redF ? 0 : 1.5));
-
-  let bodyRoll = Math.sin(f.wobblePhase) * wobbleAmp;
-  let bodyPitch = Math.cos(f.wobblePhase * 0.7) * wobbleAmp * 0.22;
-  let bodyYaw = 0;
-  let bodyY = Math.abs(breath) * 0.03;
-
-  let torsoPitch = 0.06 + breath * 0.04;
-  let torsoYaw = 0;
-  let torsoRoll = 0;
-  let headPitch = 0;
-  let headYaw = 0;
-  let headRoll = -bodyRoll * 0.45;
-
-  let armLX = -1.12;
-  let armLZ = -0.22;
-  let armRX = -1.12;
-  let armRZ = 0.22;
-  let legLX = -0.08;
-  let legRX = 0.08;
-
-  let pilX = 0;
-  let pilY = 0.42 + breath * 0.03;
-  let pilZ = 0.44;
-  let pilRX = 0;
-  let pilRZ = 0;
-  let pilScale = 1.0;
-
-  // Hit wobble recoil
-  if (f.hitTimer > 0) {
-    f.hitTimer = Math.max(0, f.hitTimer - dt);
-    const hOsc = Math.sin(f.hitTimer * 28) * f.hitAmp * (f.hitTimer / 0.8);
-    torsoPitch -= Math.abs(hOsc) * 0.45;
-    headPitch -= hOsc * 0.65;
-    headRoll += hOsc * 0.55;
-    bodyRoll += hOsc * 0.32;
-  }
-
-  // Windmill arms when balance < 35
-  if (bal < 35 && f.actTier === 0 && !isOver) {
-    const panic = (35 - bal) / 35;
-    const mill = elapsed * (11 + panic * 6);
-    armLX = mill;
-    armLZ = -1.15;
-    armRX = -mill + 1.2;
-    armRZ = 1.15;
-    pilX = 0.35;
-    pilY = 0.35 + Math.sin(mill) * 0.18;
-    pilZ = 0.32;
-    pilRZ = Math.cos(mill) * 0.7;
-    legLX = Math.sin(mill * 0.5) * 0.25;
-    legRX = -legLX;
-  }
-
-  // Extreme near-fall teeter from T4 cyclone
-  if (f.extremeTimer > 0) {
-    f.extremeTimer = Math.max(0, f.extremeTimer - dt);
-    const ex = Math.min(1, f.extremeTimer * 2);
-    const spin = elapsed * 16;
-    bodyRoll = (0.48 + Math.sin(elapsed * 11) * 0.2) * ex;
-    bodyPitch = Math.cos(elapsed * 9) * 0.18 * ex;
-    bodyY = Math.abs(Math.sin(elapsed * 12)) * 0.12 * ex;
-    legLX = -1.15 * ex;
-    legRX = 0.15;
-    armLX = spin;
-    armLZ = -1.3;
-    armRX = -spin;
-    armRZ = 1.3;
-    headRoll = Math.sin(elapsed * 18) * 0.45 * ex;
-    pilX = 0.38;
-    pilY = 0.45;
-    pilZ = 0.25;
-    pilRZ = Math.sin(spin) * 0.9;
-  }
-
-  // Taunt from onLike
-  if (f.tauntTimer > 0 && f.actTier === 0 && f.extremeTimer <= 0) {
-    f.tauntTimer = Math.max(0, f.tauntTimer - dt);
-    const tu = Math.sin((f.tauntTimer / 0.65) * Math.PI);
-    const wiggle = Math.sin(elapsed * 22);
-    torsoRoll = wiggle * 0.22 * tu;
-    torsoYaw = wiggle * 0.24 * tu;
-    headPitch = -0.18 * tu;
-    armLX = -2.35;
-    armLZ = -0.18;
-    armRX = -2.35;
-    armRZ = 0.18;
-    pilY = 0.92 + Math.abs(wiggle) * 0.1 * tu;
-    pilZ = 0.2;
-    pilRX = -0.35;
-  }
-
-  // Victory cheer
-  if (isOver && isWinner) {
-    const bounce = Math.abs(Math.sin(elapsed * 7.5));
-    bodyY = bounce * 0.28;
-    bodyRoll = Math.sin(elapsed * 3.75) * 0.08;
-    armLX = -2.55;
-    armLZ = -0.25;
-    armRX = -2.55;
-    armRZ = 0.25;
-    pilY = 0.98 + bounce * 0.1;
-    pilZ = 0.18;
-    headPitch = -0.2;
-  }
-
-  // Gift attacks
-  if (f.actTier > 0) {
-    f.actT += dt;
-    const p = Math.min(1, f.actT / f.actDur);
-    if (f.actTier === 1) {
-      if (p < 0.38) {
-        const u = p / 0.38;
-        torsoYaw = -0.68 * u;
-        torsoPitch = -0.18 * u;
-        pilX = 0.22 * u;
-        pilY = 0.58;
-        pilZ = 0.26;
-        armLX = -1.55;
-        armRX = -1.35;
-      } else if (p < 0.64) {
-        const u = (p - 0.38) / 0.26;
-        torsoYaw = -0.68 + 1.48 * u;
-        torsoPitch = -0.18 + 0.56 * u;
-        pilX = 0.22 - 0.38 * u;
-        pilY = 0.58 - 0.14 * u;
-        pilZ = 0.26 + 0.58 * u;
-        pilRX = 0.65 * u;
-        armLX = -1.2;
-        armRX = -1.2;
-        if (f.hitStage === 0 && p >= 0.49) {
-          f.hitStage = 1;
-          triggerImpact(f, 1);
-        }
-      } else {
-        const u = (p - 0.64) / 0.36;
-        torsoYaw = 0.8 * (1 - u);
-        torsoPitch = 0.38 * (1 - u);
-        pilZ = 0.84 - 0.4 * u;
-        pilRX = 0.65 * (1 - u);
-      }
-    } else if (f.actTier === 2) {
-      const half = p < 0.5 ? 0 : 1;
-      const lp = half === 0 ? p * 2 : (p - 0.5) * 2;
-      const sgn = half === 0 ? 1 : -1;
-      if (lp < 0.4) {
-        const u = lp / 0.4;
-        torsoYaw = -0.78 * sgn * u;
-        torsoPitch = -0.2 * u;
-        pilX = 0.28 * sgn * u;
-        pilY = 0.62;
-        pilZ = 0.24;
-        armLX = -1.5;
-        armRX = -1.5;
-      } else if (lp < 0.72) {
-        const u = (lp - 0.4) / 0.32;
-        torsoYaw = (-0.78 + 1.65 * u) * sgn;
-        torsoPitch = -0.2 + 0.62 * u;
-        pilX = (0.28 - 0.5 * u) * sgn;
-        pilY = 0.46;
-        pilZ = 0.24 + 0.66 * u;
-        pilRX = 0.72 * u;
-        if (half === 0 && f.hitStage === 0 && lp >= 0.52) {
-          f.hitStage = 1;
-          triggerImpact(f, 2);
-        } else if (half === 1 && f.hitStage === 1 && lp >= 0.52) {
-          f.hitStage = 2;
-          triggerImpact(f, 2);
-        }
-      } else {
-        const u = (lp - 0.72) / 0.28;
-        torsoYaw = 0.87 * sgn * (1 - u);
-        torsoPitch = 0.42 * (1 - u);
-        pilZ = 0.9 - 0.46 * u;
-      }
-    } else if (f.actTier === 3) {
-      if (p < 0.42) {
-        const u = p / 0.42;
-        pilScale = 1.0 + 0.8 * u;
-        bodyY = Math.sin(u * Math.PI * 0.5) * 0.22;
-        torsoPitch = -0.35 * u;
-        armLX = -2.45;
-        armRX = -2.45;
-        pilY = 0.42 + 0.68 * u;
-        pilZ = 0.44 - 0.26 * u;
-        pilRX = -0.55 * u;
-      } else if (p < 0.66) {
-        const u = (p - 0.42) / 0.24;
-        pilScale = 1.8;
-        bodyY = 0.22 * (1 - u);
-        torsoPitch = -0.35 + 0.85 * u;
-        armLX = -2.45 + 1.55 * u;
-        armRX = -2.45 + 1.55 * u;
-        pilY = 1.1 - 0.72 * u;
-        pilZ = 0.18 + 0.82 * u;
-        pilRX = -0.55 + 1.45 * u;
-        if (f.hitStage === 0 && p >= 0.52) {
-          f.hitStage = 1;
-          triggerImpact(f, 3);
-        }
-      } else {
-        const u = (p - 0.66) / 0.34;
-        pilScale = 1.8 - 0.8 * u;
-        torsoPitch = 0.5 * (1 - u);
-        pilY = 0.38 + 0.04 * u;
-        pilZ = 1.0 - 0.56 * u;
-        pilRX = 0.9 * (1 - u);
-      }
-    } else {
-      // Tier 4 cyclone spin
-      const spinEase = p < 0.85 ? p / 0.85 : 1;
-      bodyYaw = f.dir * spinEase * Math.PI * 6;
-      bodyY = Math.sin(p * Math.PI) * 0.24;
-      pilScale = 1.0 + 0.35 * Math.sin(p * Math.PI);
-      armLX = -1.45;
-      armLZ = -0.35;
-      armRX = -1.45;
-      armRZ = 0.35;
-      pilY = 0.52;
-      pilZ = 0.76;
-      pilRX = 0.35;
-      if (f.hitStage === 0 && p >= 0.22) {
-        f.hitStage = 1;
-        triggerImpact(f, 4);
-      }
-    }
-    if (p >= 1) f.actTier = 0;
-  }
-
-  f.body.position.set(0, bodyY, 0);
-  f.body.rotation.set(bodyPitch, bodyYaw, bodyRoll);
-  f.torso.rotation.set(torsoPitch, torsoYaw, torsoRoll);
-  f.head.rotation.set(headPitch, headYaw, headRoll);
-  f.armL.rotation.set(armLX, 0, armLZ);
-  f.armR.rotation.set(armRX, 0, armRZ);
-  f.legL.rotation.set(legLX, 0, 0);
-  f.legR.rotation.set(legRX, 0, 0);
-  f.pillowPivot.position.set(pilX, pilY, pilZ);
-  f.pillowPivot.rotation.set(pilRX, 0, pilRZ);
-  f.pillowPivot.scale.set(pilScale, pilScale, pilScale);
-}
-
-function reset() {
-  elapsed = 0;
-  cheerR = 0;
-  cheerB = 0;
-  for (let i = 0; i < 2; i++) {
-    const f = fighters[i];
-    f.state = 'log';
-    f.fallTimer = 0;
-    f.splashed = false;
-    f.actTier = 0;
-    f.actT = 0;
-    f.qLen = 0;
-    f.hitTimer = 0;
-    f.extremeTimer = 0;
-    f.tauntTimer = 0;
-    f.root.position.set(f.baseX, STAND_Y, 0);
-    f.body.position.set(0, 0, 0);
-    f.body.rotation.set(0, 0, 0);
-    f.torso.rotation.set(0, 0, 0);
-    f.head.rotation.set(0, 0, 0);
-    f.armL.rotation.set(-1.12, 0, -0.22);
-    f.armR.rotation.set(-1.12, 0, 0.22);
-    f.legL.rotation.set(-0.08, 0, 0);
-    f.legR.rotation.set(0.08, 0, 0);
-    f.pillowPivot.position.set(0, 0.42, 0.44);
-    f.pillowPivot.rotation.set(0, 0, 0);
-    f.pillowPivot.scale.set(1, 1, 1);
-  }
-  for (let i = 0; i < feathers.length; i++) {
-    feathers[i].active = false;
-    feathers[i].mesh.visible = false;
-  }
-  for (let i = 0; i < drops.length; i++) {
-    drops[i].active = false;
-    drops[i].mesh.visible = false;
-  }
-  for (let i = 0; i < rings.length; i++) {
-    rings[i].active = false;
-    rings[i].mesh.visible = false;
-  }
-}
-
-reset();
-
-return {
-  scene: scene,
-  camera: camera,
-  update: function(dt, S) {
-    dt = Math.min(Math.max(dt || 0, 0), 0.05);
-    elapsed += dt;
-    const st = S || {};
-    const pVal = typeof st.p === 'number' ? Math.max(-1, Math.min(1, st.p)) : 0;
-    const balR = typeof st.balR === 'number' ? st.balR : 100;
-    const balB = typeof st.balB === 'number' ? st.balB : 100;
-    const hpR = typeof st.hpR === 'number' ? st.hpR : 100;
-    const hpB = typeof st.hpB === 'number' ? st.hpB : 100;
-    const isOver = Boolean(st.over);
-    const winner = st.winner || '';
-
-    const shiftX = pVal * 0.42;
-    updateFighter(redF, dt, balR, hpR, shiftX, isOver, winner === 'red', winner === 'blue');
-    updateFighter(blueF, dt, balB, hpB, shiftX, isOver, winner === 'blue', winner === 'red');
-
-    // Ambient pond ripples
-    water.position.y = Math.sin(elapsed * 2.1) * 0.025;
-    ambientRingTimer -= dt;
-    if (ambientRingTimer <= 0) {
-      ambientRingTimer = 0.85 + Math.random() * 0.7;
-      spawnRing((Math.random() - 0.5) * 4.4, -2.0 + Math.random() * 6.0, 1.7, 1.4, 0.36);
-    }
-
-    for (let i = 0; i < rings.length; i++) {
-      const r = rings[i];
-      if (!r.active) continue;
-      r.t += dt;
-      const u = r.t / r.dur;
-      if (u >= 1) {
-        r.active = false;
-        r.mesh.visible = false;
-      } else {
-        const sc = 0.3 + u * r.maxS;
-        r.mesh.scale.set(sc, sc, 1);
-        r.mat.opacity = r.baseOp * (1 - u);
-      }
-    }
-
-    // Splash droplets
-    for (let i = 0; i < drops.length; i++) {
-      const d = drops[i];
-      if (!d.active) continue;
-      d.vy -= 12.5 * dt;
-      d.x += d.vx * dt;
-      d.y += d.vy * dt;
-      d.z += d.vz * dt;
-      d.mesh.position.set(d.x, d.y, d.z);
-      if (d.y < -0.05) {
-        d.active = false;
-        d.mesh.visible = false;
-      }
-    }
-
-    // Feathers
-    for (let i = 0; i < feathers.length; i++) {
-      const f = feathers[i];
-      if (!f.active) continue;
-      f.life += dt;
-      const u = f.life / f.maxLife;
-      if (u >= 1 || f.y < 0.05) {
-        f.active = false;
-        f.mesh.visible = false;
-        continue;
-      }
-      if (f.mode === 1) {
-        f.ang += dt * 9.5;
-        f.rad += dt * 0.65;
-        f.x = f.cx + Math.cos(f.ang) * f.rad;
-        f.z = f.cz + Math.sin(f.ang) * f.rad;
-        f.y += dt * 1.45;
-        if (f.life > 1.05) {
-          f.mode = 0;
-          f.vx = -Math.sin(f.ang) * 1.1;
-          f.vy = 0.3;
-          f.vz = Math.cos(f.ang) * 1.1;
-        }
-      } else {
-        f.vx *= (1 - dt * 2.4);
-        f.vz *= (1 - dt * 2.4);
-        f.vy = Math.max(-0.95, f.vy - 3.6 * dt);
-        f.x += (f.vx + Math.sin(elapsed * 6.5 + f.phase) * 0.55) * dt;
-        f.y += f.vy * dt;
-        f.z += (f.vz + Math.cos(elapsed * 5.2 + f.phase) * 0.35) * dt;
-      }
-      f.mesh.position.set(f.x, f.y, f.z);
-      f.mesh.rotation.set(
-        elapsed * 4.2 + f.phase,
-        elapsed * 3.1 + f.phase,
-        Math.sin(elapsed * 5.5 + f.phase) * 1.1
-      );
-      const sc = u > 0.72 ? Math.max(0.01, (1 - u) / 0.28) : 1;
-      f.mesh.scale.set(sc, sc, sc);
-    }
-
-    // Crowd, palms, pennants
-    cheerR = Math.max(0, cheerR - dt * 1.2);
-    cheerB = Math.max(0, cheerB - dt * 1.2);
-    for (let i = 0; i < crowd.length; i++) {
-      const c = crowd[i];
-      const boost = c.side === 'red' ? cheerR : cheerB;
-      const spd = 4.2 + boost * 6.5;
-      const amp = 0.055 + boost * 0.14;
-      c.g.position.y = c.baseY + Math.abs(Math.sin(elapsed * spd + c.phase)) * amp;
-    }
-    for (let i = 0; i < palms.length; i++) {
-      const pm = palms[i];
-      pm.crown.rotation.z = Math.sin(elapsed * 1.6 + pm.phase) * 0.06;
-      pm.crown.rotation.x = Math.cos(elapsed * 1.3 + pm.phase) * 0.04;
-    }
-    for (let i = 0; i < pennants.length; i++) {
-      const pn = pennants[i];
-      pn.mesh.rotation.x = Math.PI + Math.sin(elapsed * 4.5 + pn.phase) * 0.26;
-    }
-  },
-  onJoin: function(team) {
-    if (team === 'blue') cheerB = Math.max(cheerB, 0.7);
-    else cheerR = Math.max(cheerR, 0.7);
-  },
-  onGift: function(team, tier) {
-    const f = getFighter(team);
-    const t = Math.max(1, Math.min(4, tier || 1));
-    if (team === 'blue') cheerB = Math.max(cheerB, 0.6 + t * 0.2);
-    else cheerR = Math.max(cheerR, 0.6 + t * 0.2);
-    if (f.state !== 'log') return;
-    if (f.actTier === 0) {
-      startAction(f, t);
-    } else if (f.qLen < 4) {
-      f.queue[f.qLen++] = t;
-    }
-  },
-  onLike: function(team) {
-    const f = getFighter(team);
-    if (team === 'blue') cheerB = Math.max(cheerB, 0.5);
-    else cheerR = Math.max(cheerR, 0.5);
-    if (f.state === 'log' && f.actTier === 0) {
-      f.tauntTimer = 0.65;
-    }
-  },
-  reset: reset
-};
-
 } };
 
 </script>
