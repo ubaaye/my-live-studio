@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="my"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ဘုရားရှိခိုး ပူဇော်ပွဲ — NLO Live Studio</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; background:#06080f; overflow:hidden; font-family:"Segoe UI",system-ui,sans-serif; }
+  #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  #stage { position:relative; width:min(100vw, 56.25vh); height:min(177.78vw, 100vh); overflow:hidden; background:#1a2436; }
+  canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .panel { position:absolute; z-index:5; background:rgba(10,14,24,.78); border:1px solid rgba(255,215,130,.45);
+    border-radius:11px; color:#f7efdb; padding:8px 10px; font-size:11.5px; line-height:1.6; font-weight:600;
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); box-shadow:0 4px 14px rgba(0,0,0,.4); text-shadow:0 1px 2px #000; }
+  .panel b { color:#ffd97a; font-size:12.5px; }
+  .panel .row { white-space:nowrap; }
+  #guideL { top:60px; left:8px; }
+  #guideR { top:60px; right:8px; text-align:left; }
+  #banner { position:absolute; z-index:5; top:10px; left:50%; transform:translateX(-50%); width:92%;
+    background:rgba(10,14,24,.78); border:1px solid rgba(255,215,130,.5); border-radius:12px;
+    color:#ffd97a; text-align:center; font-weight:800; font-size:16.5px; padding:8px 10px;
+    text-shadow:0 1px 3px #000; box-shadow:0 4px 16px rgba(0,0,0,.4); white-space:nowrap; overflow:hidden; }
+  #feed { position:absolute; z-index:5; left:8px; bottom:104px; display:flex; flex-direction:column; gap:3px; pointer-events:none; }
+  #feed div { background:rgba(10,14,24,.62); color:#fff; font-size:11px; padding:3px 9px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.22); width:max-content; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    text-shadow:0 1px 2px #000; animation:fin .25s ease-out; }
+  @keyframes fin { from { opacity:0; transform:translateY(4px);} to { opacity:1; } }
+  #giftPop { position:absolute; z-index:8; left:50%; bottom:158px; transform:translateX(-50%) scale(.92);
+    background:rgba(16,12,4,.9); border:1.5px solid #ffd97a; border-radius:14px; color:#fff;
+    padding:10px 18px; text-align:center; opacity:0; transition:all .25s; pointer-events:none;
+    box-shadow:0 8px 28px rgba(0,0,0,.55); max-width:88%; }
+  #giftPop.show { opacity:1; transform:translateX(-50%) scale(1); }
+  #giftPop .g1 { font-size:16.5px; font-weight:800; color:#ffe9b0; text-shadow:0 1px 3px #000; white-space:nowrap; }
+  #giftPop .g2 { font-size:13px; font-weight:700; color:#fff; margin-top:2px; white-space:nowrap; }
+  #toast { position:absolute; z-index:6; left:50%; bottom:52px; transform:translateX(-50%) translateY(8px);
+    background:rgba(24,18,8,.9); color:#ffe9b0; border:1px solid rgba(255,215,130,.65); border-radius:999px;
+    font-size:14.5px; font-weight:700; padding:8px 18px; opacity:0; transition:all .3s; pointer-events:none;
+    max-width:92%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 5px 18px rgba(0,0,0,.5); }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #counts { position:absolute; z-index:5; right:8px; bottom:10px; background:rgba(10,14,24,.72);
+    border:1px solid rgba(255,215,130,.35); border-radius:10px; color:#fff; font-size:12px; padding:5px 10px;
+    display:flex; gap:9px; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  /* ----- controls (hidden in LIVE mode) ----- */
+  #ctrl { position:absolute; z-index:9; left:8px; right:8px; bottom:96px; background:rgba(8,10,18,.88);
+    border:1px solid rgba(255,255,255,.25); border-radius:12px; padding:8px; color:#fff; font-size:12px; }
+  #ctrl .row { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; align-items:center; }
+  #ctrl input { flex:1; min-width:110px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.35);
+    border-radius:8px; color:#fff; padding:6px 8px; font-size:12.5px; outline:none; -webkit-user-select:text; user-select:text; }
+  #ctrl button, .demo button { background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.4); color:#fff;
+    border-radius:999px; padding:5px 11px; font-size:11.5px; font-weight:700; cursor:pointer; }
+  #ctrl button.on { background:#b8860b; border-color:#ffd97a; }
+  #dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#e5484d; margin-right:5px; }
+  #dot.on { background:#3fb950; }
+  .demo { position:absolute; z-index:9; left:8px; bottom:10px; display:flex; gap:5px; flex-wrap:wrap; max-width:250px; }
+  .demo button { background:rgba(24,20,12,.66); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); font-size:10.5px; padding:4px 9px; }
+  #cleanBtn { position:absolute; z-index:30; right:10px; top:252px; background:rgba(24,20,12,.8); color:#fff;
+    border:1px solid rgba(255,255,255,.55); border-radius:999px; padding:7px 13px; font-size:12.5px; font-weight:800; cursor:pointer; }
+  #cleanExit { position:absolute; z-index:30; right:8px; bottom:8px; width:26px; height:26px; border-radius:50%;
+    background:rgba(0,0,0,.35); color:#fff; border:1px solid rgba(255,255,255,.4); font-size:13px; display:none;
+    align-items:center; justify-content:center; opacity:.45; cursor:pointer; }
+  body.clean #ctrl, body.clean .demo, body.clean #cleanBtn { display:none !important; }
+  body.clean #cleanExit { display:flex; }
+</style></head>
+<body>
+<div id="wrap"><div id="stage">
+  <canvas id="cv" width="900" height="1600"></canvas>
+  <div id="banner">စုပေါင်း ဘုရားရှိခိုး ပူဇော်ကြပါ 🙏</div>
+  <div class="panel" id="guideL">
+    <div class="row"><b>🎁 Send Gift Guide</b></div>
+    <div class="row">⭐ Follow → 🌹 ပန်း</div>
+    <div class="row">↗️ Share → 💧 ရေချမ်း</div>
+    <div class="row">🌹 1–99 → ပန်း</div>
+    <div class="row">💧 100–499 → ရေချမ်း</div>
+    <div class="row">🍇 500+ → သစ်သီး</div>
+    <div class="row">👑 1000+ → အထူး ပူဇော်</div>
+  </div>
+  <div class="panel" id="guideR">
+    <div class="row"><b>👤 Join – Pay Homage</b></div>
+    <div class="row"><b>💬 Comment Guide</b></div>
+    <div class="row">"Follow" – 🌹 ပန်း</div>
+    <div class="row">"Share" – 💧 ရေချမ်း</div>
+    <div class="row">"🙏" – ရှိခိုး</div>
+    <div class="row">"ပန်း" – 🌹 ပန်း</div>
+    <div class="row">"ရေချမ်း" – 💧 ရေချမ်း</div>
+    <div class="row">"သစ်သီး" – 🍇 သစ်သီး</div>
+  </div>
+  <div id="giftPop"><div class="g1" id="giftPop1"></div><div class="g2" id="giftPop2"></div></div>
+  <div id="feed"></div>
+  <div id="counts"><span>🌹 <b id="cF">0</b></span><span>💧 <b id="cW">0</b></span><span>🍇 <b id="cFr">0</b></span><span>👥 <b id="cP">0</b></span></div>
+  <div id="toast"></div>
+  <div class="demo" id="demoBar">
+    <button data-demo="join">👤 Join</button>
+    <button data-demo="homage">🙏 ရှိခိုး</button>
+    <button data-demo="flower">🌹 ပန်း</button>
+    <button data-demo="water">💧 ရေချမ်း</button>
+    <button data-demo="fruit">🍇 သစ်သီး</button>
+    <button data-demo="gift">👑 Gift 1000+</button>
+  </div>
+  <div id="ctrl">
+    <div><span id="dot"></span><span id="liveText">LIVE မချိတ်ရသေးပါ</span></div>
+    <div class="row">
+      <input id="inpUser" placeholder="TikTok username (ဥပမာ old.burma.com)">
+      <button id="btnRelay">🛟 Server နဲ့ ချိတ်မယ် (Key မလို)</button>
+    </div>
+    <div class="row">
+      <input id="inpKey" placeholder="Euler API key (ရှိရင်)">
+      <button id="btnEuler">Euler နဲ့ ချိတ်မယ်</button>
+      <button id="btnBridge">PC bridge</button>
+    </div>
+    <div class="row">
+      <input id="inpTitle" placeholder="Banner စာသား ပြင်ရန်">
+      <button id="btnTitle">ခေါင်းစဉ် ပြင်</button>
+    </div>
+  </div>
+  <button id="cleanBtn">📺 LIVE mode</button>
+  <button id="cleanExit">✕</button>
+</div></div>
+<script>
+'use strict';
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const W = 450, H = 800, SC = 2; // canvas is 900x1600 backing, draw in 450x800 units
+ctx.scale(SC, SC);
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => v<a?a:(v>b?b:v);
+const lerp = (a,b,k) => a+(b-a)*k;
+
+/* ================= state ================= */
+const S = {
+  t: 0, people: 0,
+  offer: { flower: 0, water: 0, fruit: 0 },
+  glow: 0,          // Buddha glow after grand offerings
+  waveT: -9,        // group-bow wave timer
+  likeAcc: 0,
+};
+const feedEl = $('feed'), toastEl = $('toast');
+let toastTimer = 0;
+function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>toastEl.classList.remove('show'), 3400); }
+function feed(msg){ const d = document.createElement('div'); d.textContent = msg; feedEl.appendChild(d);
+  while (feedEl.children.length > 5) feedEl.removeChild(feedEl.firstChild);
+  setTimeout(()=>{ if (d.parentNode) d.parentNode.removeChild(d); }, 9000); }
+function syncCounts(){ $('cF').textContent = S.offer.flower; $('cW').textContent = S.offer.water;
+  $('cFr').textContent = S.offer.fruit; $('cP').textContent = S.people; }
+
+/* ================= devotees ================= */
+const SHIRTS = ['#f5f2ea','#f5f2ea','#7a2e2e','#8c3a34','#f5f2ea','#6d2f3a'];
+const LONGYI = ['#27436e','#5d2331','#27436e','#3c5a3f','#5d2331','#2c3e70'];
+function makeFigure(seed){
+  return { shirt: SHIRTS[seed % SHIRTS.length], longyi: LONGYI[(seed*3+1) % LONGYI.length],
+    female: seed % 3 === 1, bowPh: Math.random()*6.28, bowAmp: 0.25+Math.random()*0.3, name: '' };
+}
+// carpet slots: two carpets, 4 cols x 5 rows each
+const slots = [];
+(function buildSlots(){
+  const rows = 5, cols = 4;
+  for (const side of [-1, 1]) {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const fr = r / (rows - 1);                    // 0 back → 1 front
+        const y = 468 + fr * 268;
+        const spread = lerp(52, 74, fr);              // carpet widens toward viewer
+        const cx = 225 + side * lerp(96, 118, fr);
+        const x = cx + (c - (cols-1)/2) * spread * 0.62;
+        slots.push({ x, y, s: lerp(0.72, 1.12, fr), fig: makeFigure(slots.length*2 + (side>0?1:0)), taken: false, bowBoost: 0 });
+      }
+    }
+  }
+  // ambient devotees pre-seated (back rows), front rows free for joiners
+  let n = 0;
+  for (const sl of slots) { if ((n++ % 5) !== 4 && sl.y < 640) { sl.taken = true; sl.ambient = true; S.people++; } }
+  syncCounts();
+})();
+const byName = new Map();   // viewer name -> slot
+function freeSlot(){ // prefer front rows
+  const cand = slots.filter(sl => !sl.taken);
+  cand.sort((a,b) => b.y - a.y);
+  return cand[0] || null;
+}
+
+/* ================= walkers (join animation) ================= */
+const walkers = [], joinQueue = [];
+function joinUser(name){
+  name = String(name || 'Viewer').slice(0, 40);
+  if (byName.has(name)) { bowSlot(byName.get(name), 3); return; }
+  if (walkers.length + joinQueue.length > 3) { placeInstant(name); return; }
+  joinQueue.push(name);
+}
+function placeInstant(name){
+  const sl = freeSlot(); if (!sl) return;
+  sl.taken = true; sl.ambient = false; sl.fig.name = name; byName.set(name, sl); S.people++;
+  bowSlot(sl, 3); syncCounts();
+}
+function startWalker(name){
+  walkers.push({ name, x: 225, y: 806, phase: 'walk', k: 0, bowT: 0, slot: null,
+    fig: makeFigure(name.length * 7 + name.charCodeAt(0)) });
+  feed('👤 ' + name + ' ဝင်လာပါတယ်'); toast('🙏 ' + name + ' — Entered to pay homage');
+}
+function bowSlot(sl, times){ if (sl) { sl.bowBoost = Math.max(sl.bowBoost, times || 1); sl.bowT = 0; } }
+
+/* ================= particles ================= */
+const parts = [];
+function burst(x, y, kind, n){
+  for (let i = 0; i < (n||10); i++) parts.push({ x, y, vx: (Math.random()-0.5)*36, vy: -18-Math.random()*36,
+    life: 0, max: 1.1+Math.random()*0.9, kind, rot: Math.random()*6.28, vr: (Math.random()-0.5)*2.4, sz: 3+Math.random()*3.4 });
+}
+function flyIcon(x, y, kind){ parts.push({ x, y, vx: 0, vy: 0, life: 0, max: 1.15, kind: 'fly_'+kind, rot: 0, vr: 0, sz: 15, tx: 225, ty: 424 }); }
+
+/* ================= actions ================= */
+function actorSlot(name){ return byName.get(String(name||'').slice(0,40)) || null; }
+function doHomage(name){
+  const sl = actorSlot(name);
+  if (sl) { bowSlot(sl, 3); burst(sl.x, sl.y - 44*sl.s, 'petal', 5); }
+  else { S.waveT = S.t; }
+  toast('🙏 ' + name + ' ရှိခိုးပါတယ်');
+}
+function doOffer(kind, name, via){
+  S.offer[kind]++;
+  const sl = actorSlot(name);
+  if (sl) { bowSlot(sl, 1); flyIcon(sl.x, sl.y - 52*sl.s, kind); }
+  else flyIcon(225, 700, kind);
+  burst(225, 424, kind === 'flower' ? 'petal' : 'spark', 8);
+  const lbl = kind === 'flower' ? '🌹 ပန်း' : kind === 'water' ? '💧 ရေချမ်း' : '🍇 သစ်သီး';
+  toast(lbl + ' ပူဇော်ပါတယ် — ' + name);
+  feed(lbl + ' ' + name + (via ? ' (' + via + ')' : ''));
+  syncCounts();
+}
+let giftPopTimer = 0;
+function showGiftPop(name, giftName, action){
+  $('giftPop1').textContent = '🎁 ' + name + ' — ' + giftName;
+  $('giftPop2').textContent = action;
+  $('giftPop').classList.add('show');
+  clearTimeout(giftPopTimer); giftPopTimer = setTimeout(() => $('giftPop').classList.remove('show'), 3200);
+}
+function doGift(name, giftName, coins, count){
+  coins = Math.max(1, (coins||1) * (count||1));
+  feed('🎁 ' + name + ' — ' + giftName);
+  showGiftPop(name, giftName, coins >= 1000 ? '👑 အထူး ပူဇော်ပါတယ်' : coins >= 500 ? '🍇 သစ်သီး ပူဇော်ပါတယ်' : coins >= 100 ? '💧 ရေချမ်း ပူဇော်ပါတယ်' : '🌹 ပန်း ပူဇော်ပါတယ်');
+  if (coins >= 1000) {
+    if (!actorSlot(name)) joinUser(name);
+    doOffer('flower', name); doOffer('water', name); doOffer('fruit', name);
+    S.glow = 1; S.waveT = S.t; burst(225, 336, 'spark', 26); burst(225, 424, 'petal', 18);
+    toast('👑 အထူး ပူဇော် — ' + name + ' (' + giftName + ')');
+  } else if (coins >= 500) doOffer('fruit', name, giftName);
+  else if (coins >= 100) doOffer('water', name, giftName);
+  else doOffer('flower', name, giftName);
+}
+function doLike(name, count){
+  S.likeAcc += count || 1;
+  if (S.likeAcc >= 25) { S.likeAcc = 0; S.waveT = S.t; burst(225, 330, 'spark', 10); }
+}
+/* ================= drawing ================= */
+function rr(x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+function circle(x, y, r){ ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); }
+function drawScene(){
+  // sky
+  let g = ctx.createLinearGradient(0, 0, 0, 340);
+  g.addColorStop(0, '#8ec9e8'); g.addColorStop(0.55, '#cfe8f2'); g.addColorStop(1, '#fdeedd');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, 340);
+  // sun glow (left)
+  g = ctx.createRadialGradient(58, 262, 4, 58, 262, 90);
+  g.addColorStop(0, 'rgba(255,190,90,0.85)'); g.addColorStop(1, 'rgba(255,190,90,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 160, 200, 190);
+  ctx.fillStyle = '#ffb347'; circle(58, 262, 15);
+  // clouds
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  for (const c of [[120,60,44],[330,44,52],[250,96,34],[60,130,28]]) { circle(c[0], c[1], c[2]*0.42); circle(c[0]-c[2]*0.5, c[1]+4, c[2]*0.3); circle(c[0]+c[2]*0.5, c[1]+4, c[2]*0.32); }
+  // sea (right horizon) + distant shore (left)
+  g = ctx.createLinearGradient(0, 252, 0, 338); g.addColorStop(0, '#7db8d9'); g.addColorStop(1, '#a8cfe4');
+  ctx.fillStyle = g; ctx.fillRect(0, 252, W, 86);
+  ctx.fillStyle = '#5d8a6a'; ctx.beginPath(); ctx.moveTo(0, 300); ctx.quadraticCurveTo(50, 262, 118, 292); ctx.lineTo(118, 338); ctx.lineTo(0, 338); ctx.closePath(); ctx.fill();
+  // terrace floor
+  g = ctx.createLinearGradient(0, 336, 0, 800); g.addColorStop(0, '#d9c6a5'); g.addColorStop(1, '#b09468');
+  ctx.fillStyle = g; ctx.fillRect(0, 336, W, 464);
+  ctx.strokeStyle = 'rgba(120,95,60,0.25)'; ctx.lineWidth = 1;
+  for (let i = 1; i < 7; i++) { const y = 336 + i*i*9.5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  // balustrade behind pedestal sides
+  ctx.fillStyle = '#efe7d6';
+  for (const bx of [2, 364]) { ctx.fillRect(bx, 396, 78, 6); for (let i = 0; i < 5; i++) ctx.fillRect(bx + 4 + i*17, 402, 5, 14);
+    ctx.beginPath(); ctx.moveTo(bx+2, 396); ctx.lineTo(bx+8, 382); ctx.lineTo(bx+14, 396); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(bx+62, 396); ctx.lineTo(bx+68, 382); ctx.lineTo(bx+74, 396); ctx.closePath(); ctx.fill(); }
+  // carpets
+  for (const side of [-1, 1]) {
+    const x0 = side < 0 ? 26 : 238, x1 = side < 0 ? 200 : 424, bx0 = side < 0 ? 6 : 258, bx1 = side < 0 ? 192 : 444;
+    ctx.fillStyle = '#7c3f3a'; ctx.beginPath(); ctx.moveTo(x0, 452); ctx.lineTo(x1, 452); ctx.lineTo(bx1, 756); ctx.lineTo(bx0, 756); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#c9a35f'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.strokeStyle = 'rgba(230,200,140,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0+10, 470); ctx.lineTo(x1-10, 470); ctx.lineTo((bx1+ (side<0?-14:14)), 736); ctx.lineTo(bx0 + (side<0?14:-14), 736); ctx.closePath(); ctx.stroke();
+  }
+  // walkway
+  ctx.fillStyle = '#e9e0cd'; ctx.beginPath(); ctx.moveTo(202, 448); ctx.lineTo(248, 448); ctx.lineTo(272, 800); ctx.lineTo(178, 800); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.moveTo(221, 448); ctx.lineTo(229, 448); ctx.lineTo(238, 800); ctx.lineTo(212, 800); ctx.closePath(); ctx.fill();
+  drawOfferings();
+  drawBuddha();
+}
+function drawOfferings(){
+  const fy = 436;
+  // stands
+  ctx.fillStyle = '#8a6b42';
+  for (const x of [186, 225, 264]) { ctx.fillRect(x-13, fy+8, 26, 5); ctx.fillRect(x-2, fy+13, 4, 10); }
+  // flowers (tier by count)
+  const ft = clamp(0.5 + S.offer.flower * 0.09, 0.5, 1.5);
+  ctx.fillStyle = '#3f6212'; rr(186-6, fy-2, 12, 12, 3); ctx.fill();
+  const fc = ['#e75480','#e33e5f','#f2f2f2','#f5b942'];
+  for (let i = 0; i < 7; i++) { ctx.fillStyle = fc[i % 4]; circle(186 + Math.cos(i*2.4)*8*ft, fy - 6 - Math.abs(Math.sin(i*2.4))*7*ft, 3.6*ft); }
+  // water bowls
+  const wt = clamp(Math.ceil(S.offer.water / 3), 0, 3);
+  for (let i = 0; i < Math.max(1, wt); i++) { ctx.fillStyle = '#7fb2d9'; ctx.beginPath(); ctx.ellipse(225, fy + 4 - i*6, 11, 4.6, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#4a7ba6'; ctx.beginPath(); ctx.ellipse(225, fy + 4 - i*6, 11, 2, 0, 3.1416, 6.2832); ctx.fill(); }
+  // fruit pile
+  const fr = clamp(S.offer.fruit, 0, 12);
+  const fru = ['#f59e0b','#84cc16','#a855f7','#ef4444'];
+  for (let i = 0; i < Math.max(2, Math.min(9, 2 + fr)); i++) { ctx.fillStyle = fru[i % 4];
+    circle(264 + (i % 3 - 1) * 8, fy + 5 - Math.floor(i / 3) * 7, 4.6); }
+}
+function drawBuddha(){
+  const cx = 225;
+  ctx.save(); ctx.translate(225, 418); ctx.scale(1.32, 1.32); ctx.translate(-225, -352);
+  // halo
+  const hr = 62 + S.glow * 16 + Math.sin(S.t * 1.4) * 2;
+  let g = ctx.createRadialGradient(cx, 158, 6, cx, 158, hr);
+  g.addColorStop(0, 'rgba(255,224,140,' + (0.75 + S.glow * 0.25) + ')'); g.addColorStop(1, 'rgba(255,224,140,0)');
+  ctx.fillStyle = g; ctx.fillRect(cx - hr, 158 - hr, hr*2, hr*2);
+  ctx.strokeStyle = 'rgba(230,180,80,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, 158, 47, 0, 6.2832); ctx.stroke();
+  // pedestal tiers
+  ctx.fillStyle = '#e8dfca'; rr(118, 322, 214, 30, 4); ctx.fill();
+  ctx.fillStyle = '#ddd2b8'; rr(134, 306, 182, 18, 4); ctx.fill();
+  ctx.fillStyle = '#e8dfca'; rr(150, 292, 150, 16, 4); ctx.fill();
+  // garland swags
+  for (let sIdx = 0; sIdx < 3; sIdx++) {
+    const gx = 148 + sIdx * 62;
+    for (let i = 0; i <= 8; i++) { const k = i / 8, px = gx + k * 54, py = 330 + Math.sin(k * 3.1416) * 7;
+      ctx.fillStyle = ['#e75480','#f2f2f2','#f5b942'][i % 3]; circle(px, py, 2.6); }
+  }
+  // side vases with bouquets
+  for (const vx of [140, 310]) { ctx.fillStyle = '#b08d4f'; rr(vx - 6, 296, 12, 16, 3); ctx.fill();
+    const fc = ['#e75480','#e33e5f','#f2f2f2'];
+    for (let i = 0; i < 5; i++) { ctx.fillStyle = fc[i % 3]; circle(vx + Math.cos(i * 2.2) * 7, 290 - Math.abs(Math.sin(i * 2.2)) * 6, 3.4); } }
+  const marble = '#f4efe4', marbleSh = '#ddd5c2', gold = '#d9a441', goldD = '#b8860b';
+  // crossed-leg base
+  ctx.fillStyle = marble; ctx.beginPath(); ctx.ellipse(cx, 288, 56, 15, 0, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = gold; ctx.beginPath(); ctx.ellipse(cx, 290, 30, 10, 0, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = goldD; ctx.beginPath(); ctx.ellipse(cx, 288, 30, 8, 0, 0, 6.2832); ctx.fill();
+  // torso
+  ctx.fillStyle = marble; ctx.beginPath();
+  ctx.moveTo(cx - 30, 278); ctx.quadraticCurveTo(cx - 34, 214, cx - 20, 196);
+  ctx.lineTo(cx + 20, 196); ctx.quadraticCurveTo(cx + 34, 214, cx + 30, 278); ctx.closePath(); ctx.fill();
+  // gold robe: sash + left shoulder drape
+  ctx.fillStyle = gold; ctx.beginPath();
+  ctx.moveTo(cx - 21, 198); ctx.lineTo(cx + 2, 198); ctx.lineTo(cx + 30, 262); ctx.lineTo(cx + 30, 278); ctx.lineTo(cx + 12, 278); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = goldD; ctx.fillRect(cx - 22, 196, 26, 7);
+  // raised right arm (viewer left) — abhaya
+  ctx.strokeStyle = marble; ctx.lineWidth = 11; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(cx - 24, 208); ctx.quadraticCurveTo(cx - 44, 204, cx - 46, 188); ctx.stroke();
+  ctx.fillStyle = marble; circle(cx - 47, 178, 10.5);
+  ctx.strokeStyle = marbleSh; ctx.lineWidth = 1.4;
+  for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(cx - 47 + i * 5, 172); ctx.lineTo(cx - 47 + i * 5, 166); ctx.stroke(); }
+  // lap hand
+  ctx.fillStyle = marbleSh; ctx.beginPath(); ctx.ellipse(cx - 2, 272, 11, 5.5, 0, 0, 6.2832); ctx.fill();
+  // head
+  ctx.fillStyle = marble; circle(cx, 158, 21);
+  ctx.fillStyle = marble; ctx.beginPath(); ctx.ellipse(cx - 22, 162, 4, 8, 0, 0, 6.2832); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 22, 162, 4, 8, 0, 0, 6.2832); ctx.fill();
+  // hair + ushnisha
+  ctx.fillStyle = '#4a3b2c'; ctx.beginPath(); ctx.arc(cx, 154, 21, 3.35, 6.0); ctx.quadraticCurveTo(cx, 128, cx - 21, 154); ctx.closePath(); ctx.fill();
+  circle(cx, 133, 8.5);
+  ctx.fillStyle = gold; circle(cx, 130, 3.2);
+  // serene face
+  ctx.strokeStyle = '#8a7a5f'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(cx - 8, 158, 4.4, 0.15 * 3.14, 0.85 * 3.14); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + 8, 158, 4.4, 0.15 * 3.14, 0.85 * 3.14); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, 168, 5, 0.15 * 3.14, 0.85 * 3.14); ctx.stroke();
+  ctx.fillStyle = '#b08d4f'; circle(cx, 152, 1.6);
+  ctx.restore();
+}
+function drawFigure(x, y, s, fig, bow, tag){
+  ctx.fillStyle = 'rgba(60,40,20,0.25)'; ctx.beginPath(); ctx.ellipse(x, y + 2, 17*s, 4.5*s, 0, 0, 6.2832); ctx.fill();
+  const drop = bow * 9 * s;
+  // kneeling longyi base
+  ctx.fillStyle = fig.longyi; rr(x - 17*s, y - 13*s, 34*s, 13*s, 5*s); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(x - 17*s, y - 13*s, 34*s, 3*s);
+  // torso (leans down when bowing)
+  const th = 25 * s * (1 - 0.3 * bow);
+  ctx.fillStyle = fig.shirt; rr(x - 11.5*s, y - 13*s - th + drop * 0.4, 23*s, th, 7*s); ctx.fill();
+  // arms: sides → together at front when bowing
+  ctx.strokeStyle = fig.shirt; ctx.lineWidth = 5.4 * s; ctx.lineCap = 'round';
+  const shY = y - 13*s - th + drop * 0.4 + 5*s;
+  ctx.beginPath(); ctx.moveTo(x - 10*s, shY); ctx.lineTo(x - 13*s + bow * 9*s, shY + 13*s + bow * 3*s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 10*s, shY); ctx.lineTo(x + 13*s - bow * 9*s, shY + 13*s + bow * 3*s); ctx.stroke();
+  if (bow > 0.55) { ctx.fillStyle = '#e8b98d'; circle(x, shY + 15*s, 3.4 * s); }
+  // head + hair
+  const hy = y - 13*s - th + drop * 0.4 - 7.5*s + drop;
+  ctx.fillStyle = '#e8b98d'; circle(x, hy, 8.6 * s);
+  ctx.fillStyle = '#2b2320'; ctx.beginPath(); ctx.arc(x, hy - 1.5*s, 8.6*s, 3.14, 6.2832); ctx.closePath(); ctx.fill();
+  if (fig.female) { circle(x, hy - 9.5*s, 3 * s); ctx.fillRect(x - 8.6*s, hy - 1.5*s, 17.2*s, 5*s); }
+  if (tag) {
+    ctx.font = '700 ' + Math.round(10.5 * s + 2) + 'px sans-serif'; ctx.textAlign = 'center';
+    const tw = ctx.measureText(tag).width + 12;
+    const tx = clamp(x, tw/2 + 3, W - tw/2 - 3);
+    ctx.fillStyle = 'rgba(10,12,20,0.78)'; rr(tx - tw/2, hy - 30*s, tw, 15, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,130,0.7)'; ctx.lineWidth = 1; rr(tx - tw/2, hy - 30*s, tw, 15, 7); ctx.stroke();
+    ctx.fillStyle = '#ffe9b0'; ctx.fillText(tag, tx, hy - 30*s + 11.5);
+  }
+}
+function drawWalker(w){
+  const s = lerp(0.8, 1.14, clamp((w.y - 448) / 352, 0, 1));
+  let bow = 0;
+  if (w.phase === 'bow') bow = Math.abs(Math.sin(w.bowT * 3.4));
+  const step = w.phase === 'walk' ? Math.sin(S.t * 9) * 5 * s : 0;
+  ctx.fillStyle = 'rgba(60,40,20,0.25)'; ctx.beginPath(); ctx.ellipse(w.x, w.y + 2, 15*s, 4*s, 0, 0, 6.2832); ctx.fill();
+  // legs (walking) or kneel base (bowing)
+  if (w.phase === 'walk') {
+    ctx.fillStyle = w.fig.longyi;
+    rr(w.x - 10*s + step * 0.4, w.y - 15*s, 8*s, 15*s, 3*s); ctx.fill();
+    rr(w.x + 2*s - step * 0.4, w.y - 15*s, 8*s, 15*s, 3*s); ctx.fill();
+    const th = 26 * s;
+    ctx.fillStyle = w.fig.shirt; rr(w.x - 11.5*s, w.y - 15*s - th, 23*s, th, 7*s); ctx.fill();
+    ctx.fillStyle = '#e8b98d'; circle(w.x, w.y - 15*s - th - 8*s, 8.6*s);
+    ctx.fillStyle = '#2b2320'; ctx.beginPath(); ctx.arc(w.x, w.y - 15*s - th - 9.5*s, 8.6*s, 3.14, 6.2832); ctx.closePath(); ctx.fill();
+    if (w.fig.female) circle(w.x, w.y - 15*s - th - 17*s, 3*s);
+  } else {
+    drawFigure(w.x, w.y, s, w.fig, bow, null);
+  }
+  // name tag always while walking/bowing at front
+  ctx.font = '700 12px sans-serif'; ctx.textAlign = 'center';
+  const tw = ctx.measureText(w.name).width + 14;
+  const ty = w.y - 62 * s;
+  ctx.fillStyle = 'rgba(10,12,20,0.8)'; rr(w.x - tw/2, ty, tw, 16, 8); ctx.fill();
+  ctx.strokeStyle = '#ffd97a'; ctx.lineWidth = 1; rr(w.x - tw/2, ty, tw, 16, 8); ctx.stroke();
+  ctx.fillStyle = '#ffe9b0'; ctx.fillText(w.name, w.x, ty + 12);
+}
+function updateWalkers(dt){
+  if (!walkers.length && joinQueue.length) startWalker(joinQueue.shift());
+  for (let i = walkers.length - 1; i >= 0; i--) {
+    const w = walkers[i];
+    if (w.phase === 'walk') { w.y -= dt * 66; if (w.y <= 452) { w.y = 452; w.phase = 'bow'; w.bowT = 0; } }
+    else if (w.phase === 'bow') { w.bowT += dt; if (w.bowT >= 3 * 0.92) {
+        const sl = freeSlot();
+        if (!sl) { walkers.splice(i, 1); continue; }
+        w.slot = sl; sl.taken = true; w.phase = 'toseat'; w.k = 0; w.fx = w.x; w.fy = w.y;
+      } }
+    else if (w.phase === 'toseat') { w.k += dt / 1.05; const e = w.k >= 1 ? 1 : (1 - Math.pow(1 - w.k, 2));
+        w.x = lerp(w.fx, w.slot.x, e); w.y = lerp(w.fy, w.slot.y + 4, e);
+        if (w.k >= 1) { const sl = w.slot; sl.ambient = false; sl.fig = w.fig; sl.fig.name = w.name; sl.tagUntil = S.t + 4.5;
+          byName.set(w.name, sl); S.people++; bowSlot(sl, 1); syncCounts(); walkers.splice(i, 1); } }
+  }
+}
+function updateParts(dt){
+  for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life += dt;
+    if (p.kind.indexOf('fly_') === 0) { const k = clamp(p.life / p.max, 0, 1), e = 1 - Math.pow(1 - k, 2);
+      p.x = lerp(p.x0 != null ? p.x0 : (p.x0 = p.x), p.tx, e); p.y = lerp(p.y0 != null ? p.y0 : (p.y0 = p.y), p.ty, e) - Math.sin(k * 3.14) * 30; }
+    else { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 26 * dt; p.rot += p.vr * dt; }
+    if (p.life >= p.max) parts.splice(i, 1); }
+}
+function drawParts(){
+  for (const p of parts) { const a = 1 - p.life / p.max;
+    if (p.kind === 'petal') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.globalAlpha = a;
+      ctx.fillStyle = '#f2a7c3'; ctx.beginPath(); ctx.ellipse(0, 0, p.sz, p.sz * 0.55, 0, 0, 6.2832); ctx.fill(); ctx.restore(); }
+    else if (p.kind === 'spark') { ctx.globalAlpha = a; ctx.fillStyle = '#ffd94d'; circle(p.x, p.y, p.sz * 0.5); ctx.globalAlpha = 1; }
+    else if (p.kind.indexOf('fly_') === 0) { ctx.font = Math.round(p.sz + 6) + 'px sans-serif'; ctx.textAlign = 'center';
+      ctx.globalAlpha = a; ctx.fillText(p.kind === 'fly_flower' ? '🌹' : p.kind === 'fly_water' ? '💧' : '🍇', p.x, p.y); ctx.globalAlpha = 1; } }
+}
+let lastTs = 0;
+function frame(ts){
+  const dt = Math.min(0.05, (ts - lastTs) / 1000 || 0.016); lastTs = ts; S.t += dt;
+  if (S.glow > 0) S.glow = Math.max(0, S.glow - dt * 0.22);
+  updateWalkers(dt); updateParts(dt);
+  if (Math.random() < dt * 0.7) burst(60 + Math.random() * 330, 380 + Math.random() * 60, 'petal', 1);
+  drawScene();
+  const sorted = slots.slice().sort((a, b) => a.y - b.y);
+  for (const sl of sorted) {
+    let bow = Math.max(0, Math.sin(S.t * 0.65 + sl.fig.bowPh)) * sl.fig.bowAmp * 0.55;
+    if (sl.bowBoost > 0) { sl.bowT = (sl.bowT || 0) + dt; const cyc = sl.bowT % 0.92;
+      bow = Math.max(bow, Math.sin(cyc / 0.92 * 3.1416)); if (sl.bowT >= sl.bowBoost * 0.92) { sl.bowBoost = 0; sl.bowT = 0; } }
+    const wv = S.t - S.waveT;
+    if (wv >= 0 && wv < 2.6) { const d = (sl.y - 468) / 268 * 0.7; const ph = wv - d;
+      if (ph > 0) bow = Math.max(bow, Math.sin(clamp(ph / 0.92, 0, 1) * 3.1416)); }
+    drawFigure(sl.x, sl.y, sl.s, sl.fig, bow, (sl.fig.name && S.t < (sl.tagUntil || 0)) ? sl.fig.name : null);
+  }
+  for (const w of walkers) drawWalker(w);
+  drawParts();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+function doComment(name, text){
+  const t = String(text || '');
+  if (t.includes('🙏') || t.includes('ရှိခိုး') || t.toLowerCase().includes('homage')) doHomage(name);
+  else if (t.includes('သစ်သီး') || t.toLowerCase().includes('fruit')) doOffer('fruit', name);
+  else if (t.includes('ရေချမ်း') || t.includes('ရေ') || t.toLowerCase().includes('water')) doOffer('water', name);
+  else if (t.includes('ပန်း') || t.toLowerCase().includes('flower')) doOffer('flower', name);
+  else { const sl = actorSlot(name); if (sl) bowSlot(sl, 1); }
+}
+
+/* ================= LIVE connections ================= */
+let sock = null, liveWanted = false, retryT = 0;
+const giftComboSeen = new Map();
+function setLive(on, msg){ $('dot').className = on ? 'on' : ''; $('dot').id = 'dot'; $('liveText').textContent = msg; }
+function userName(u){ if (!u) return 'Viewer'; return String(u.nickname || u.displayId || u.uniqueId || 'Viewer').slice(0, 40); }
+function handleLiveEvent(m){
+  if (!m || !m.type) return;
+  const d = m.data || {};
+  switch (m.type) {
+    case 'roomInfo': setLive(true, 'LIVE ချိတ်ပြီးပြီ — စောင့်နေပါတယ် 🎉'); feed('🟢 LIVE အခန်းနဲ့ ချိတ်မိပါပြီ'); break;
+    case 'WebcastChatMessage': doComment(userName(d.user), d.comment || ''); break;
+    case 'WebcastGiftMessage': {
+      const g = d.gift || {};
+      const giftName = g.name || d.giftName || 'Gift';
+      const coins = (g.diamondCount != null ? g.diamondCount : d.diamondCount) || 0;
+      const count = d.repeatCount || 1, name = userName(d.user);
+      if ('repeatEnd' in d && d.repeatEnd === false) break;
+      const ck = name + '|' + giftName;
+      if (giftComboSeen.get(ck) === count) break;
+      giftComboSeen.set(ck, count);
+      doGift(name, giftName, coins, count);
+      break; }
+    case 'WebcastLikeMessage': doLike(userName(d.user), d.likeCount || 1); break;
+    case 'WebcastMemberMessage': joinUser(userName(d.user)); break;
+    default:
+      if (m.type.indexOf('Follow') >= 0) doOffer('flower', userName(d.user), 'Follow');
+      if (m.type.indexOf('Share') >= 0) doOffer('water', userName(d.user), 'Share');
+      if (m.type === 'room.status' && d.state === 'ended') setLive(false, 'LIVE ပြီးသွားပါပြီ');
+  }
+}
+function handleLiveFrame(raw){
+  let obj; try { obj = JSON.parse(raw); } catch(e){ return; }
+  if (obj && Array.isArray(obj.messages)) obj.messages.forEach(handleLiveEvent); else handleLiveEvent(obj);
+}
+function connect(url, label){
+  try { if (sock) { sock.onclose = null; sock.close(); } } catch(e){}
+  clearTimeout(retryT); liveWanted = true; setLive(false, 'ချိတ်နေပါတယ်…');
+  let s; try { s = new WebSocket(url); } catch(e){ setLive(false, 'ချိတ်မရပါ'); return; }
+  sock = s;
+  s.onopen = () => setLive(true, label + ' ချိတ်ထားတယ် — LIVE အစစ်တွေ ဝင်လာပါမယ်');
+  s.onmessage = e => { if (typeof e.data === 'string') handleLiveFrame(e.data); };
+  s.onclose = () => { if (liveWanted) { setLive(false, 'ပြတ် — ပြန်ချိတ်နေပါတယ်…'); retryT = setTimeout(() => connect(url, label), 6000); } };
+  s.onerror = () => { try { s.close(); } catch(e){} };
+}
+function bridgeFrame(e){
+  let m; try { m = JSON.parse(e.data); } catch(err){ return; }
+  const name = String(m.name || 'Viewer').slice(0, 40);
+  if (m.type === 'join') joinUser(name);
+  if (m.type === 'comment') doComment(name, m.text || '');
+  if (m.type === 'like') doLike(name, m.count || 1);
+  if (m.type === 'gift') doGift(name, String(m.gift || m.giftName || 'Gift'), m.coins || 0, m.count || 1);
+  if (m.type === 'follow') doOffer('flower', name, 'Follow');
+  if (m.type === 'share') doOffer('water', name, 'Share');
+}
+$('btnRelay').addEventListener('click', () => {
+  const u = $('inpUser').value.trim(); if (!u) { setLive(false, 'Username အရင် ရိုက်ပါ'); return; }
+  try { localStorage.setItem('nlo_pg_user', u); } catch(e){}
+  connect('wss://burmese-voice-tts.onrender.com/api/live/ws?username=' + encodeURIComponent(u), '🛟 Server');
+});
+$('btnEuler').addEventListener('click', () => {
+  const u = $('inpUser').value.trim(), k = $('inpKey').value.trim();
+  if (!u || !k) { setLive(false, 'Username + Euler key လိုပါတယ်'); return; }
+  try { localStorage.setItem('nlo_pg_user', u); localStorage.setItem('nlo_pg_key', k); } catch(e){}
+  connect('wss://ws.eulerstream.com?uniqueId=' + encodeURIComponent(u) + '&apiKey=' + encodeURIComponent(k), 'Euler');
+});
+$('btnBridge').addEventListener('click', () => {
+  try { if (sock) { sock.onclose = null; sock.close(); } } catch(e){}
+  liveWanted = false; setLive(false, 'PC bridge ချိတ်နေပါတယ်…');
+  let s; try { s = new WebSocket('ws://localhost:21213'); } catch(e){ setLive(false, 'Bridge ချိတ်မရပါ'); return; }
+  sock = s;
+  s.onopen = () => setLive(true, 'PC bridge ချိတ်ထားတယ်');
+  s.onmessage = bridgeFrame;
+  s.onclose = () => setLive(false, 'PC bridge ပြတ်သွားပါပြီ');
+});
+try { $('inpUser').value = localStorage.getItem('nlo_pg_user') || ''; $('inpKey').value = localStorage.getItem('nlo_pg_key') || '';
+  const bt = localStorage.getItem('nlo_pg_title'); if (bt) $('banner').textContent = bt; } catch(e){}
+$('btnTitle').addEventListener('click', () => {
+  const v = $('inpTitle').value.trim(); if (!v) return;
+  $('banner').textContent = v; try { localStorage.setItem('nlo_pg_title', v); } catch(e){}
+});
+
+/* ================= demo + LIVE mode ================= */
+const DEMO_NAMES = ['Aung Aung', 'May May', 'Ko Ko', 'Thiri', 'Zaw Zaw', 'Nilar', 'Min Thu', 'Su Su'];
+let demoIdx = 0;
+document.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', () => {
+  const kind = b.getAttribute('data-demo');
+  const nm = DEMO_NAMES[demoIdx++ % DEMO_NAMES.length];
+  if (kind === 'join') joinUser(nm);
+  else if (kind === 'homage') { if (!actorSlot(nm)) joinUser(nm); doHomage(nm); }
+  else if (kind === 'flower') doOffer('flower', nm);
+  else if (kind === 'water') doOffer('water', nm);
+  else if (kind === 'fruit') doOffer('fruit', nm);
+  else if (kind === 'gift') doGift(nm, 'Lion', 1299, 1);
+}));
+function setClean(on){ document.body.classList.toggle('clean', on);
+  if (on) { try { const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(() => {}); } catch(e){} }
+  else { try { if (document.exitFullscreen) document.exitFullscreen(); } catch(e){} } }
+$('cleanBtn').addEventListener('click', () => setClean(true));
+$('cleanExit').addEventListener('click', () => setClean(false));
+if (/[?&](clean|live)(=|&|$)/.test(location.search)) document.body.classList.add('clean');
+window.PAGODA = { join: joinUser, comment: doComment, gift: doGift, like: doLike, homage: doHomage, offer: doOffer,
+  follow: n => doOffer('flower', n, 'Follow'), share: n => doOffer('water', n, 'Share') };
+</script>
+</body></html>
