@@ -10,7 +10,8 @@
 <style>
 *{box-sizing:border-box} html{-webkit-text-size-adjust:100%;text-size-adjust:100%} html,body{margin:0;height:100%;background:#070a18;overflow:hidden;
  font-family:"Optimistic AI VF",system-ui,sans-serif;color:#eef1ff;-webkit-user-select:none;user-select:none}
-#stage{position:fixed;inset:0} #stage canvas{display:block}
+#stage{position:fixed;inset:0;transition:transform .5s cubic-bezier(.2,.7,.3,1)} #stage canvas{display:block}
+body.cine #stage{transform:scale(1.55);transform-origin:50% 55%}
 .hud{position:fixed;top:25px;left:5px;right:5px;display:flex;gap:5px;z-index:5;pointer-events:none}
 .team{flex:1;background:rgba(8,10,26,.38);border:1.5px solid #ffffff2a;border-radius:10px;padding:2px 6px;
  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -89,7 +90,7 @@ body.clean #cleanExit{display:flex}
 <div id="flash"></div><div id="fx"></div>
 <div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
 <div class="gpanel" id="guideL"><div class="hd"><span>🎁 Send Gift Guide</span></div><div class="ctlrow"><span id="gEdit">✎ အသင်းပြင်</span><button id="cleanBtn">📺 LIVE mode</button></div><div class="rows" id="gRowsL"></div></div>
-<div class="gpanel" id="guideR"><div class="hd"><span>👤 အသင်းဝင်</span></div><div class="r" style="color:#ffd97a;font-weight:800">"၁" → 🔴 · "၂" → 🔵</div><div class="r" style="opacity:.85">🎁 Gift · 👍 Like = အားပေး</div><div class="rows" id="roster"></div></div>
+<div class="gpanel" id="guideR"><div class="hd"><span>👤 အသင်းဝင်</span></div><div class="r" style="color:#ffd97a;font-weight:800">"၁" → 🔴 · "၂" → 🔵</div><div class="r" style="opacity:.85">🎁 · 👍 = အားပေး</div><div class="rows" id="roster"></div></div>
 <div id="tedit"><div class="card"><h3>✎ အသင်းနာမည်များ ပြင်ရန်</h3>
 <label>🔴 အသင်း ၁ (မန့် ၁)</label><input id="tnR" maxlength="24">
 <label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
@@ -141,7 +142,7 @@ GAME3D['cart'] = { create: function(THREE) {
 
   function makeCart(team) {
     return { team: team, dispH: 0, speed: 0, wheelRot: 0, trot: Math.random()*6,
-      flyT: 0, rollT: 0, pulse: 0, tagName: '', tagUntil: 0, won: false, sad: false };
+      flyT: 0, rollT: 0, pulse: 0, cineSadUntil: 0, tagName: '', tagUntil: 0, won: false, sad: false };
   }
   var RED = makeCart('red'), BLUE = makeCart('blue');
   function cartOf(t) { return t === 'red' ? RED : BLUE; }
@@ -182,6 +183,7 @@ GAME3D['cart'] = { create: function(THREE) {
     c.trot += dt * (3 + c.speed * 26 + (c.flyT > 0 ? 9 : 0));
     if (c.flyT > 0) c.flyT = Math.max(0, c.flyT - dt);
     if (c.rollT > 0) c.rollT = Math.max(0, c.rollT - dt);
+    if (c.cineSadUntil) { c.sad = G.time < c.cineSadUntil; if (!c.sad) c.cineSadUntil = 0; }
     if (c.pulse > 0) c.pulse = Math.max(0, c.pulse - dt * 1.6);
     // dust while running
     if (c.speed > 0.05 && Math.random() < dt * 22) {
@@ -330,6 +332,7 @@ GAME3D['cart'] = { create: function(THREE) {
       ctx.rotate(rollK * Math.PI * 2);
       ctx.translate(62, 44 + hop);
     }
+    if (c.cineSadUntil && G.time < c.cineSadUntil) ctx.rotate(Math.sin(G.time * 17) * 0.045);
     var bob = Math.sin(c.trot * 2) * (c.speed > 0.03 ? 1.6 : 0.7);
     ctx.translate(0, bob - (flying ? Math.sin(G.time * 3.1) * 2.5 : 0));
     var gold = flying;
@@ -558,8 +561,11 @@ GAME3D['cart'] = { create: function(THREE) {
       G.joins[team] = Math.min(9, G.joins[team] + 1);
       G.crowdExcitement = Math.min(1, G.crowdExcitement + 0.4);
     },
-    onGift: function(team, tier, name) {
+    onGift: function(team, tier, name, sp) {
       var c = cartOf(team), m = metrics();
+      if (sp) { var fc = cartOf(team === 'red' ? 'blue' : 'red'); var fgy = team === 'red' ? m.blueY : m.redY; var fk = team === 'red' ? 0.84 : 1;
+        fc.cineSadUntil = G.time + 2.6; spawnPopup(frontX(fc) - 60 * m.s * fk, fgy - 120 * m.s * fk, '💫 မူးဝေ!', '#e0f2fe', '#0c4a6e');
+        c.flyT = Math.max(c.flyT, 1.3); spawnPopup(frontX(c) - 60 * m.s * (team === 'red' ? 1 : 0.84), (team === 'red' ? m.redY : m.blueY) - 130 * m.s, '⭐ အထူး Gift!', '#fde047', '#92400e'); }
       var gy = team === 'red' ? m.redY : m.blueY;
       var k = team === 'red' ? 1 : 0.84;
       c.tagName = name || ''; c.tagUntil = G.time + 1.9;
@@ -675,11 +681,18 @@ function burst(team, tier){
 function tick(txt){ var d=document.createElement('div'); d.textContent=txt; var box=$('ticker'); box.appendChild(d); while(box.children.length>4) box.removeChild(box.firstChild); setTimeout(function(){ d.style.opacity='0.35'; }, 6000); setTimeout(function(){ d.remove(); }, 9000); }
 function num(n){ return String(n).replace(/\d/g, function(c){ return '၀၁၂၃၄၅၆၇၈၉'[+c]; }); }
 // ---------- game numbers ----------
+function specialOf(giftName){ var s=(giftName||'').toLowerCase();
+  if (s.indexOf('lion')>=0) return 'lion'; if (s.indexOf('crown')>=0) return 'crown';
+  if (s.indexOf('rose')>=0) return 'rose'; if (s.indexOf('whale')>=0) return 'whale';
+  if (s.indexOf('rocket')>=0) return 'rocket'; if (s.indexOf('falcon')>=0) return 'falcon'; return null; }
+var cineTimer = 0;
+function startCine(){ document.body.classList.add('cine'); clearTimeout(cineTimer); cineTimer = setTimeout(function(){ document.body.classList.remove('cine'); }, 2600); }
 function applyGift(team, tier, name, giftName){
   var foe = team==='red' ? 'blue' : 'red';
   M[team].gifts++; M[team].power += tier;
   GC[team][giftName] = (GC[team][giftName]||0) + 1; renderGifts(team);
-  if (game) game.onGift(team, tier, name);
+  var sp = specialOf(giftName);
+  if (game) game.onGift(team, tier, name, sp);
   var feat = CFG.guide[tier-1][1];
   if (CFG.metric==='p'){ S.p += (team==='red'?1:-1) * [0,.10,.22,.40,.70][tier]; }
   else if (CFG.metric==='h'){ if(team==='red') S.hR=Math.min(1,S.hR+[0,.03,.07,.13,.22][tier]); else S.hB=Math.min(1,S.hB+[0,.03,.07,.13,.22][tier]);
@@ -688,6 +701,7 @@ function applyGift(team, tier, name, giftName){
   else if (CFG.metric==='bal'){ var bd=[0,6,13,22,40][tier]; if(foe==='red') S.balR=Math.max(0,S.balR-bd); else S.balB=Math.max(0,S.balB-bd); lastHit[foe]=S.t; }
   else if (CFG.metric==='goal'){ S.p += (team==='red'?1:-1) * [0,.12,.26,.45,.85][tier]; if(tier===3) goldUntil[team]=S.t+5; if(tier===4 && Math.abs(S.p)>0.55){ goal(team); } }
   showPop('🎁 '+name+' — '+giftName, tn(team)+' · '+feat, tier>=4 ? 2600 : tier>=3 ? 2100 : 1500);
+  if (sp){ showPop('⭐ အထူး Gift — '+giftName+'!', name+' · '+tn(team), 2600); startCine(); }
   burst(team, tier);
   tick('🎁 '+name+' → '+tn(team)+' · '+feat);
   syncHud();

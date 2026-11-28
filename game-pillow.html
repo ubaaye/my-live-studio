@@ -10,7 +10,8 @@
 <style>
 *{box-sizing:border-box} html{-webkit-text-size-adjust:100%;text-size-adjust:100%} html,body{margin:0;height:100%;background:#070a18;overflow:hidden;
  font-family:"Optimistic AI VF",system-ui,sans-serif;color:#eef1ff;-webkit-user-select:none;user-select:none}
-#stage{position:fixed;inset:0} #stage canvas{display:block}
+#stage{position:fixed;inset:0;transition:transform .5s cubic-bezier(.2,.7,.3,1)} #stage canvas{display:block}
+body.cine #stage{transform:scale(1.55);transform-origin:50% 55%}
 .hud{position:fixed;top:25px;left:5px;right:5px;display:flex;gap:5px;z-index:5;pointer-events:none}
 .team{flex:1;background:rgba(8,10,26,.38);border:1.5px solid #ffffff2a;border-radius:10px;padding:2px 6px;
  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
@@ -89,7 +90,7 @@ body.clean #cleanExit{display:flex}
 <div id="flash"></div><div id="fx"></div>
 <div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
 <div class="gpanel" id="guideL"><div class="hd"><span>🎁 Send Gift Guide</span></div><div class="ctlrow"><span id="gEdit">✎ အသင်းပြင်</span><button id="cleanBtn">📺 LIVE mode</button></div><div class="rows" id="gRowsL"></div></div>
-<div class="gpanel" id="guideR"><div class="hd"><span>👤 အသင်းဝင်</span></div><div class="r" style="color:#ffd97a;font-weight:800">"၁" → 🔴 · "၂" → 🔵</div><div class="r" style="opacity:.85">🎁 Gift · 👍 Like = အားပေး</div><div class="rows" id="roster"></div></div>
+<div class="gpanel" id="guideR"><div class="hd"><span>👤 အသင်းဝင်</span></div><div class="r" style="color:#ffd97a;font-weight:800">"၁" → 🔴 · "၂" → 🔵</div><div class="r" style="opacity:.85">🎁 · 👍 = အားပေး</div><div class="rows" id="roster"></div></div>
 <div id="tedit"><div class="card"><h3>✎ အသင်းနာမည်များ ပြင်ရန်</h3>
 <label>🔴 အသင်း ၁ (မန့် ၁)</label><input id="tnR" maxlength="24">
 <label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
@@ -940,8 +941,12 @@ GAME3D['pillow'] = { create: function(THREE) {
       var f = fighter(team);
       if (f.state === 'idle') { f.state = 'victory'; f.stateTimer = 0.7; }
     },
-    onGift: function(team, tier, name) {
+    onGift: function(team, tier, name, sp) {
       var f = fighter(team);
+      if (sp) { var foe3 = fighter(team === 'red' ? 'blue' : 'red');
+        if (foe3.state !== 'falling' && foe3.state !== 'fallen') { foe3.state = 'hitstun'; foe3.stateTimer = 2.2; }
+        if (f.state !== 'falling' && f.state !== 'fallen') { f.state = 'victory'; f.stateTimer = 2.6; }
+        G.crowdExcitement = 1; }
       f.tagName = name || '';
       f.tagUntil = G.time + 1.6;
       if (tier === 1) queueStrikes(f, 1, false);
@@ -1048,11 +1053,18 @@ function burst(team, tier){
 function tick(txt){ var d=document.createElement('div'); d.textContent=txt; var box=$('ticker'); box.appendChild(d); while(box.children.length>4) box.removeChild(box.firstChild); setTimeout(function(){ d.style.opacity='0.35'; }, 6000); setTimeout(function(){ d.remove(); }, 9000); }
 function num(n){ return String(n).replace(/\d/g, function(c){ return '၀၁၂၃၄၅၆၇၈၉'[+c]; }); }
 // ---------- game numbers ----------
+function specialOf(giftName){ var s=(giftName||'').toLowerCase();
+  if (s.indexOf('lion')>=0) return 'lion'; if (s.indexOf('crown')>=0) return 'crown';
+  if (s.indexOf('rose')>=0) return 'rose'; if (s.indexOf('whale')>=0) return 'whale';
+  if (s.indexOf('rocket')>=0) return 'rocket'; if (s.indexOf('falcon')>=0) return 'falcon'; return null; }
+var cineTimer = 0;
+function startCine(){ document.body.classList.add('cine'); clearTimeout(cineTimer); cineTimer = setTimeout(function(){ document.body.classList.remove('cine'); }, 2600); }
 function applyGift(team, tier, name, giftName){
   var foe = team==='red' ? 'blue' : 'red';
   M[team].gifts++; M[team].power += tier;
   GC[team][giftName] = (GC[team][giftName]||0) + 1; renderGifts(team);
-  if (game) game.onGift(team, tier, name);
+  var sp = specialOf(giftName);
+  if (game) game.onGift(team, tier, name, sp);
   var feat = CFG.guide[tier-1][1];
   if (CFG.metric==='p'){ S.p += (team==='red'?1:-1) * [0,.10,.22,.40,.70][tier]; }
   else if (CFG.metric==='h'){ if(team==='red') S.hR=Math.min(1,S.hR+[0,.03,.07,.13,.22][tier]); else S.hB=Math.min(1,S.hB+[0,.03,.07,.13,.22][tier]);
@@ -1061,6 +1073,7 @@ function applyGift(team, tier, name, giftName){
   else if (CFG.metric==='bal'){ var bd=[0,6,13,22,40][tier]; if(foe==='red') S.balR=Math.max(0,S.balR-bd); else S.balB=Math.max(0,S.balB-bd); lastHit[foe]=S.t; }
   else if (CFG.metric==='goal'){ S.p += (team==='red'?1:-1) * [0,.12,.26,.45,.85][tier]; if(tier===3) goldUntil[team]=S.t+5; if(tier===4 && Math.abs(S.p)>0.55){ goal(team); } }
   showPop('🎁 '+name+' — '+giftName, tn(team)+' · '+feat, tier>=4 ? 2600 : tier>=3 ? 2100 : 1500);
+  if (sp){ showPop('⭐ အထူး Gift — '+giftName+'!', name+' · '+tn(team), 2600); startCine(); }
   burst(team, tier);
   tick('🎁 '+name+' → '+tn(team)+' · '+feat);
   syncHud();
