@@ -95,1494 +95,656 @@ body.standalone #sideR,body.standalone #sideB{top:252px}
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
 <script>
-GAME3D['pole'] = { create: function(THREE) { const T = THREE; const scene = new T.Scene(); const SKY_COL = 0xffcb8c; scene.background = new T.Color(SKY_COL); scene.fog = new T.Fog(SKY_COL, 22, 46);
+/* Greased pole climb — 2D side view (user-supplied design, 2026-11-28).
+   Drawn on an offscreen 2D canvas (450x800 logical, 2x backing) shown via a
+   CanvasTexture quad, so the standard NLO wrapper works unchanged.
+   Heights live in the wrapper state S (hR/hB, 0..1 of a 30ft pole); this
+   module eases a display height toward them and plays the scenes:
+   T1 climb, T2 grease (foe slips), T3 HUMAN LADDER (members stack at the
+   base, the giver climbs the tower onto the pole), T4 lightning climb.
+   Camera follows the leader up the pole, like the source game. */
+GAME3D['pole'] = { create: function(THREE) {
+  var T = THREE;
+  var LW = 450, LH = 800, DPR = 2;
+  var cv = document.createElement('canvas');
+  cv.width = LW * DPR; cv.height = LH * DPR;
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  var viewW = LW, viewH = LH;
 
+  var tex = new T.CanvasTexture(cv);
+  if ('colorSpace' in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+  tex.generateMipmaps = false;
+  tex.minFilter = T.LinearFilter;
+  var scene = new T.Scene();
+  var camera = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  scene.add(new T.Mesh(new T.PlaneGeometry(2, 2), new T.MeshBasicMaterial({ map: tex })));
 
+  var POLE_FT = 30;
+  var OIL_ZONES = [ {start:6.0,end:9.2}, {start:13.0,end:16.5}, {start:20.0,end:23.2}, {start:25.5,end:28.2} ];
+  var MYA = ['၀','၁','၂','၃','၄','၅','၆','၇','၈','၉'];
+  function myaNum(n) { return String(n).replace(/\d/g, function(c){ return MYA[+c]; }); }
+  function inOil(ft) { for (var i=0;i<OIL_ZONES.length;i++) if (ft>=OIL_ZONES[i].start && ft<=OIL_ZONES[i].end) return true; return false; }
 
-const camera = new T.PerspectiveCamera(55, 0.5625, 0.2, 80);
-camera.position.set(0, 6.5, 17);
-camera.lookAt(0, 4.6, 0);
-const camPosT = new T.Vector3(0, 6.5, 17);
-const camLookT = new T.Vector3(0, 4.6, 0);
-const camLook = new T.Vector3(0, 4.6, 0);
-
-const hemi = new T.HemisphereLight(0xffe9c4, 0x996238, 0.95);
-scene.add(hemi);
-
-const sun = new T.DirectionalLight(0xfff1d0, 1.45);
-sun.position.set(7.5, 15.5, 10.5);
-sun.castShadow = true;
-sun.shadow.mapSize.width = 1024;
-sun.shadow.mapSize.height = 1024;
-sun.shadow.camera.left = -5.5;
-sun.shadow.camera.right = 5.5;
-sun.shadow.camera.top = 12.2;
-sun.shadow.camera.bottom = -1.5;
-sun.shadow.camera.near = 2;
-sun.shadow.camera.far = 32;
-sun.shadow.bias = -0.0012;
-sun.target.position.set(0, 4.5, 0);
-scene.add(sun);
-scene.add(sun.target);
-
-const matCache = {};
-function stdMat(key, color, rough, metal, dbl) {
-  if (!matCache[key]) {
-    matCache[key] = new T.MeshStandardMaterial({
-      color: color,
-      roughness: rough !== undefined ? rough : 0.82,
-      metalness: metal || 0,
-      side: dbl ? T.DoubleSide : T.FrontSide
-    });
-  }
-  return matCache[key];
-}
-
-const MAT = {
-  ground: stdMat('ground', 0xdba86c, 0.9),
-  dirt: stdMat('dirt', 0xc2894c, 0.9),
-  wood: stdMat('wood', 0x8b5630, 0.86),
-  bambooDry: stdMat('bambooDry', 0xbca258, 0.82),
-  skin: stdMat('skin', 0xe2a878, 0.8),
-  thanaka: stdMat('thanaka', 0xf9ebb0, 0.85),
-  eye: stdMat('eye', 0x241914, 0.6),
-  redTop: stdMat('redTop', 0xe53434, 0.8),
-  redLongyi: stdMat('redLongyi', 0x911820, 0.85, 0, true),
-  blueTop: stdMat('blueTop', 0x2472e8, 0.8),
-  blueLongyi: stdMat('blueLongyi', 0x153e8c, 0.85, 0, true),
-  gold: new T.MeshPhongMaterial({ color: 0xffc628, specular: 0xfff5c0, shininess: 90 }),
-  goldTrim: stdMat('goldTrim', 0xf5b822, 0.76),
-  tentRed: stdMat('tentRed', 0xd4312c, 0.82, 0, true),
-  tentGold: stdMat('tentGold', 0xe89f24, 0.82, 0, true),
-  poleGrease: new T.MeshPhongMaterial({ color: 0xb7c954, specular: 0xffffff, shininess: 120 }),
-  poleRing: new T.MeshPhongMaterial({ color: 0x899a36, specular: 0xf4ffd4, shininess: 80 }),
-  palmTrunk: stdMat('palmTrunk', 0x7a5638, 0.88),
-  palmLeaf: stdMat('palmLeaf', 0x42913e, 0.82, 0, true),
-  rope: stdMat('rope', 0x5c3e26, 0.9),
-  whiteInst: new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82, side: T.DoubleSide }),
-  partMat: new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide }),
-  flashRed: new T.MeshBasicMaterial({ color: 0xffd84a, transparent: true, opacity: 0, side: T.DoubleSide }),
-  flashBlue: new T.MeshBasicMaterial({ color: 0xffd84a, transparent: true, opacity: 0, side: T.DoubleSide }),
-  boltRed: new T.MeshBasicMaterial({ color: 0xfff07a, transparent: true, opacity: 0, side: T.DoubleSide }),
-  boltBlue: new T.MeshBasicMaterial({ color: 0x8ae8ff, transparent: true, opacity: 0, side: T.DoubleSide })
-};
-
-const GEO = {
-  head: new T.SphereGeometry(0.185, 10, 8),
-  eye: new T.SphereGeometry(0.024, 6, 5),
-  thanaka: new T.CylinderGeometry(0.056, 0.056, 0.016, 8),
-  gaung: new T.TorusGeometry(0.172, 0.044, 7, 14),
-  torso: new T.CylinderGeometry(0.20, 0.175, 0.54, 10),
-  longyi: new T.CylinderGeometry(0.195, 0.255, 0.52, 10, 1, true),
-  armSeg: new T.CylinderGeometry(0.054, 0.048, 0.30, 7),
-  armFull: new T.CylinderGeometry(0.054, 0.045, 0.54, 7),
-  legSeg: new T.CylinderGeometry(0.072, 0.058, 0.37, 7),
-  legFull: new T.CylinderGeometry(0.072, 0.052, 0.70, 7),
-  pole: new T.CylinderGeometry(0.16, 0.175, 10, 14),
-  poleRing: new T.TorusGeometry(0.168, 0.022, 6, 14),
-  collar: new T.CylinderGeometry(0.28, 0.42, 0.24, 10),
-  crossbar: new T.CylinderGeometry(0.032, 0.032, 0.92, 8),
-  flagStick: new T.CylinderGeometry(0.022, 0.022, 0.95, 6),
-  bill: new T.BoxGeometry(0.15, 0.34, 0.015),
-  flashRing: new T.TorusGeometry(0.6, 0.08, 8, 20),
-  boltSpiral: new T.CylinderGeometry(0.36, 0.24, 2.2, 8, 1, true),
-  crowdBody: new T.CylinderGeometry(0.175, 0.195, 0.66, 7),
-  crowdHead: new T.SphereGeometry(0.15, 8, 6),
-  crowdArm: new T.CylinderGeometry(0.038, 0.045, 0.46, 5).translate(0, 0.23, 0),
-  trunkSeg: new T.CylinderGeometry(0.14, 0.22, 1.0, 7),
-  frond: new T.ConeGeometry(0.28, 2.3, 4),
-  fencePost: new T.CylinderGeometry(0.055, 0.06, 1.0, 6),
-  partBox: new T.BoxGeometry(0.14, 0.14, 0.14)
-};
-
-const bagPts = [
-  new T.Vector2(0.01, -0.26),
-  new T.Vector2(0.20, -0.22),
-  new T.Vector2(0.25, -0.05),
-  new T.Vector2(0.17, 0.10),
-  new T.Vector2(0.08, 0.16),
-  new T.Vector2(0.15, 0.25),
-  new T.Vector2(0.04, 0.26)
-];
-GEO.bag = new T.LatheGeometry(bagPts, 10);
-
-const triGeo = new T.BufferGeometry();
-triGeo.setAttribute('position', new T.BufferAttribute(new Float32Array([
-  -0.21, 0, 0,
-   0.21, 0, 0,
-   0, -0.46, 0
-]), 3));
-triGeo.computeVertexNormals();
-GEO.pennant = triGeo;
-
-const flagGeo = new T.BufferGeometry();
-flagGeo.setAttribute('position', new T.BufferAttribute(new Float32Array([
-  0, 0.22, 0,
-  0.62, 0.04, 0,
-  0, -0.18, 0
-]), 3));
-flagGeo.computeVertexNormals();
-GEO.flag = flagGeo;
-
-const dummy = new T.Object3D();
-const tmpCol = new T.Color();
-
-// Ground & arena
-const ground = new T.Mesh(new T.PlaneGeometry(46, 46), MAT.ground);
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
-
-const arena = new T.Mesh(new T.CircleGeometry(4.3, 28), MAT.dirt);
-arena.rotation.x = -Math.PI / 2;
-arena.position.set(0, 0.01, 0.2);
-arena.receiveShadow = true;
-scene.add(arena);
-
-function makePerson(team, articulatedLimbs) {
-  const topMat = team === 'red' ? MAT.redTop : MAT.blueTop;
-  const longyiMat = team === 'red' ? MAT.redLongyi : MAT.blueLongyi;
-  const root = new T.Group();
-  const hips = new T.Group();
-  hips.position.y = 0.72;
-  root.add(hips);
-
-  const torso = new T.Group();
-  hips.add(torso);
-  const torsoMesh = new T.Mesh(GEO.torso, topMat);
-  torsoMesh.position.y = 0.27;
-  torsoMesh.castShadow = true;
-  torso.add(torsoMesh);
-
-  const longyiMesh = new T.Mesh(GEO.longyi, longyiMat);
-  longyiMesh.position.y = -0.18;
-  longyiMesh.castShadow = true;
-  hips.add(longyiMesh);
-
-  const head = new T.Group();
-  head.position.y = 0.56;
-  torso.add(head);
-  const headMesh = new T.Mesh(GEO.head, MAT.skin);
-  headMesh.position.y = 0.185;
-  headMesh.castShadow = true;
-  head.add(headMesh);
-
-  const eyeL = new T.Mesh(GEO.eye, MAT.eye);
-  eyeL.position.set(-0.068, 0.205, 0.165);
-  head.add(eyeL);
-  const eyeR = new T.Mesh(GEO.eye, MAT.eye);
-  eyeR.position.set(0.068, 0.205, 0.165);
-  head.add(eyeR);
-
-  const thL = new T.Mesh(GEO.thanaka, MAT.thanaka);
-  thL.position.set(-0.115, 0.15, 0.135);
-  thL.rotation.set(Math.PI / 2, 0, 0.58);
-  head.add(thL);
-  const thR = new T.Mesh(GEO.thanaka, MAT.thanaka);
-  thR.position.set(0.115, 0.15, 0.135);
-  thR.rotation.set(Math.PI / 2, 0, -0.58);
-  head.add(thR);
-
-  const gb = new T.Mesh(GEO.gaung, topMat);
-  gb.position.set(0, 0.275, -0.01);
-  gb.rotation.set(Math.PI / 2 - 0.18, 0, 0.08);
-  head.add(gb);
-
-  const armL = new T.Group();
-  armL.position.set(-0.24, 0.48, 0);
-  torso.add(armL);
-  const armR = new T.Group();
-  armR.position.set(0.24, 0.48, 0);
-  torso.add(armR);
-
-  let handL = armL;
-  let handR = armR;
-
-  if (articulatedLimbs) {
-    const uL = new T.Mesh(GEO.armSeg, MAT.skin);
-    uL.position.set(0, -0.14, 0.03);
-    uL.rotation.x = -0.2;
-    uL.castShadow = true;
-    armL.add(uL);
-    const fL = new T.Mesh(GEO.armSeg, MAT.skin);
-    fL.position.set(0.08, -0.34, 0.15);
-    fL.rotation.set(-0.75, 0, 0.45);
-    fL.castShadow = true;
-    armL.add(fL);
-    handL = new T.Group();
-    handL.position.set(0.12, -0.44, 0.24);
-    armL.add(handL);
-
-    const uR = new T.Mesh(GEO.armSeg, MAT.skin);
-    uR.position.set(0, -0.14, 0.03);
-    uR.rotation.x = -0.2;
-    uR.castShadow = true;
-    armR.add(uR);
-    const fR = new T.Mesh(GEO.armSeg, MAT.skin);
-    fR.position.set(-0.08, -0.34, 0.15);
-    fR.rotation.set(-0.75, 0, -0.45);
-    fR.castShadow = true;
-    armR.add(fR);
-    handR = new T.Group();
-    handR.position.set(-0.12, -0.44, 0.24);
-    armR.add(handR);
-  } else {
-    const mAL = new T.Mesh(GEO.armFull, MAT.skin);
-    mAL.position.y = -0.26;
-    mAL.castShadow = true;
-    armL.add(mAL);
-    const mAR = new T.Mesh(GEO.armFull, MAT.skin);
-    mAR.position.y = -0.26;
-    mAR.castShadow = true;
-    armR.add(mAR);
-  }
-
-  const legL = new T.Group();
-  legL.position.set(-0.12, 0, 0);
-  hips.add(legL);
-  const legR = new T.Group();
-  legR.position.set(0.12, 0, 0);
-  hips.add(legR);
-
-  if (articulatedLimbs) {
-    const tL = new T.Mesh(GEO.legSeg, MAT.skin);
-    tL.position.set(-0.03, -0.17, 0.05);
-    tL.rotation.set(-0.35, 0, -0.15);
-    tL.castShadow = true;
-    legL.add(tL);
-    const sL = new T.Mesh(GEO.legSeg, MAT.skin);
-    sL.position.set(0.02, -0.48, 0.04);
-    sL.rotation.set(0.32, 0, 0.22);
-    sL.castShadow = true;
-    legL.add(sL);
-
-    const tR = new T.Mesh(GEO.legSeg, MAT.skin);
-    tR.position.set(0.03, -0.17, 0.05);
-    tR.rotation.set(-0.35, 0, 0.15);
-    tR.castShadow = true;
-    legR.add(tR);
-    const sR = new T.Mesh(GEO.legSeg, MAT.skin);
-    sR.position.set(-0.02, -0.48, 0.04);
-    sR.rotation.set(0.32, 0, -0.22);
-    sR.castShadow = true;
-    legR.add(sR);
-  } else {
-    const mLL = new T.Mesh(GEO.legFull, MAT.skin);
-    mLL.position.y = -0.35;
-    mLL.castShadow = true;
-    legL.add(mLL);
-    const mLR = new T.Mesh(GEO.legFull, MAT.skin);
-    mLR.position.y = -0.35;
-    mLR.castShadow = true;
-    legR.add(mLR);
-  }
-
-  return { root: root, hips: hips, torso: torso, head: head, armL: armL, armR: armR, legL: legL, legR: legR, handL: handL, handR: handR };
-}
-
-// Two greased bamboo poles & prizes
-const POLE_H = 10.0;
-const POLE_X = { red: -1.6, blue: 1.6 };
-const sides = {};
-const billInst = new T.InstancedMesh(GEO.bill, MAT.whiteInst, 10);
-const billBase = [];
-const ringInst = new T.InstancedMesh(GEO.poleRing, MAT.poleRing, 18);
-let ringIdx = 0;
-let billIdx = 0;
-const billColors = [0x4cc462, 0xf27ea9, 0x52b6e8, 0xf2c94c, 0x62d478];
-
-['red', 'blue'].forEach(function(team) {
-  const sign = team === 'red' ? -1 : 1;
-  const px = POLE_X[team];
-  const poleGroup = new T.Group();
-  poleGroup.position.set(px, 0, 0);
-  scene.add(poleGroup);
-
-  const shaft = new T.Mesh(GEO.pole, MAT.poleGrease);
-  shaft.position.y = POLE_H * 0.5;
-  shaft.castShadow = true;
-  shaft.receiveShadow = true;
-  poleGroup.add(shaft);
-
-  const collar = new T.Mesh(GEO.collar, MAT.wood);
-  collar.position.y = 0.12;
-  collar.receiveShadow = true;
-  poleGroup.add(collar);
-
-  for (let r = 1; r <= 9; r++) {
-    dummy.position.set(px, r, 0);
-    dummy.rotation.set(Math.PI / 2, 0, 0);
-    dummy.scale.set(1, 1, 1);
-    dummy.updateMatrix();
-    ringInst.setMatrixAt(ringIdx++, dummy.matrix);
-  }
-
-  // Prize top at y=10
-  const bar = new T.Mesh(GEO.crossbar, MAT.bambooDry);
-  bar.position.y = 9.96;
-  bar.rotation.z = Math.PI / 2;
-  poleGroup.add(bar);
-
-  const fStick = new T.Mesh(GEO.flagStick, MAT.bambooDry);
-  fStick.position.y = 10.45;
-  poleGroup.add(fStick);
-
-  const flag = new T.Mesh(GEO.flag, team === 'red' ? MAT.redTop : MAT.blueTop);
-  flag.material = new T.MeshStandardMaterial({
-    color: team === 'red' ? 0xe53434 : 0x2472e8,
-    roughness: 0.78,
-    side: T.DoubleSide
-  });
-  flag.position.set(0, 10.72, 0);
-  poleGroup.add(flag);
-
-  const bag = new T.Mesh(GEO.bag, MAT.gold);
-  const bagHomeX = sign * 0.30;
-  bag.position.set(bagHomeX, 9.72, 0.04);
-  bag.castShadow = true;
-  poleGroup.add(bag);
-
-  // Banknote fan on inner side
-  for (let b = 0; b < 5; b++) {
-    const ang = (b - 2) * 0.24;
-    const bx = px - sign * 0.30 + Math.sin(ang) * 0.12;
-    const by = 9.72 - Math.cos(ang) * 0.08;
-    billBase.push({ idx: billIdx, x: bx, y: by, z: 0.03 + b * 0.008, ang: ang, phase: b * 0.8 + (team === 'red' ? 0 : 2) });
-    dummy.position.set(bx, by, 0.03 + b * 0.008);
-    dummy.rotation.set(0, 0, ang);
-    dummy.scale.set(1, 1, 1);
-    dummy.updateMatrix();
-    billInst.setMatrixAt(billIdx, dummy.matrix);
-    tmpCol.setHex(billColors[b]);
-    billInst.setColorAt(billIdx, tmpCol);
-    billIdx++;
-  }
-
-  // Flash ring & lightning aura
-  const flashRing = new T.Mesh(GEO.flashRing, team === 'red' ? MAT.flashRed : MAT.flashBlue);
-  flashRing.position.set(0, 9.9, 0);
-  flashRing.rotation.x = Math.PI / 2;
-  flashRing.visible = false;
-  poleGroup.add(flashRing);
-
-  const boltGlow = new T.Mesh(GEO.boltSpiral, team === 'red' ? MAT.boltRed : MAT.boltBlue);
-  boltGlow.visible = false;
-  poleGroup.add(boltGlow);
-
-  // Climber
-  const climberPivot = new T.Group();
-  poleGroup.add(climberPivot);
-  const climber = makePerson(team, true);
-  climber.root.position.set(0, 0, 0.38);
-  climber.root.rotation.y = Math.PI;
-  climberPivot.add(climber.root);
-  const baseYaw = sign * 1.15;
-  climberPivot.rotation.y = baseYaw;
-
-  // Gift-giver name label — floats over the climber (the giver IS the climber)
-  const nameCanvas = document.createElement('canvas');
-  nameCanvas.width = 512; nameCanvas.height = 128;
-  const nameCtx = nameCanvas.getContext('2d');
-  const nameTex = new T.CanvasTexture(nameCanvas);
-  const nameSpr = new T.Sprite(new T.SpriteMaterial({ map: nameTex, transparent: true, depthWrite: false }));
-  nameSpr.scale.set(1.9, 0.48, 1);
-  nameSpr.position.set(0, -10, 0.45);
-  nameSpr.visible = false;
-  poleGroup.add(nameSpr);
-
-  // Dizzy stars that orbit the fallen climber's head
-  const starCanvas = document.createElement('canvas');
-  starCanvas.width = 128; starCanvas.height = 128;
-  const sctx = starCanvas.getContext('2d');
-  sctx.translate(64, 64);
-  sctx.beginPath();
-  for (let si = 0; si < 10; si++) {
-    const sr = si % 2 === 0 ? 46 : 19, sa = si * Math.PI / 5 - Math.PI / 2;
-    if (si === 0) sctx.moveTo(Math.cos(sa) * sr, Math.sin(sa) * sr); else sctx.lineTo(Math.cos(sa) * sr, Math.sin(sa) * sr);
-  }
-  sctx.closePath();
-  sctx.fillStyle = '#ffd83d';
-  sctx.fill();
-  sctx.lineWidth = 6; sctx.strokeStyle = '#e8930c'; sctx.stroke();
-  const starTex = new T.CanvasTexture(starCanvas);
-  const starGrp = new T.Group();
-  const stars = [];
-  for (let si = 0; si < 3; si++) {
-    const sp = new T.Sprite(new T.SpriteMaterial({ map: starTex, transparent: true, depthWrite: false }));
-    sp.scale.set(0.34, 0.34, 1);
-    starGrp.add(sp); stars.push(sp);
-  }
-  starGrp.visible = false;
-  poleGroup.add(starGrp);
-
-  // Two cheering/boost-ready supporters at base
-  const supA = makePerson(team, false);
-  supA.root.position.set(px + sign * 0.88, 0, 0.55);
-  supA.root.rotation.y = -sign * 0.35;
-  supA.root.scale.setScalar(0.92);
-  scene.add(supA.root);
-
-  const supB = makePerson(team, false);
-  supB.root.position.set(px - sign * 0.72, 0, 0.72);
-  supB.root.rotation.y = sign * 0.45;
-  supB.root.scale.setScalar(0.88);
-  scene.add(supB.root);
-
-  sides[team] = {
-    team: team,
-    sign: sign,
-    px: px,
-    poleGroup: poleGroup,
-    flag: flag,
-    bag: bag,
-    bagHomeX: bagHomeX,
-    bagHeld: false,
-    flashRing: flashRing,
-    boltGlow: boltGlow,
-    climberPivot: climberPivot,
-    climber: climber,
-    baseYaw: baseYaw,
-    supA: supA,
-    supB: supB,
-    hSmooth: 0,
-    prevH: 0,
-    climbVel: 0,
-    climbPhase: team === 'red' ? 0 : 1.7,
-    scrambleT: 0,
-    greaseT: 0,
-    greaseDip: 0,
-    windT: 0,
-    lightningT: 0,
-    flashT: 0,
-    cheerT: 0,
-    tugT: 0,
-    fallT: 0,
-    fallFrom: 0,
-    ladderT: 0,
-    ladderFromY: 0,
-    ladderTopY: 2.28,
-    ladderLpNow: -1,
-    downedNow: false,
-    supAH: { x: px + sign * 0.88, z: 0.55 },
-    supBH: { x: px - sign * 0.72, z: 0.72 },
-    extras: [],
-    nameSpr: nameSpr,
-    nameCtx: nameCtx,
-    nameTex: nameTex,
-    starGrp: starGrp,
-    stars: stars,
-    labelT: 0,
-    slideToBase: false
+  var G = {
+    time: 0, cameraFt: 0, crowdExcitement: 0,
+    oilDrops: [], sparks: [], popups: [], confetti: [],
+    crowd: [], birds: [],
+    flagColors: ['#ef4444','#facc15','#3b82f6','#22c55e','#ffffff','#f97316'],
+    joins: { red: 0, blue: 0 }, overPlayed: false
   };
-});
+  (function initScenery() {
+    var shirts = ['#ffffff','#fef08a','#bae6fd','#fbcfe8','#bbf7d0','#fed7aa','#e2e8f0'];
+    var longyis = ['#1e3a5f','#7c2d12','#14532d','#581c87','#881337','#334155','#0f766e'];
+    for (var i = 0; i < 24; i++) G.crowd.push({ xNorm: (i+0.5)/24 + (Math.random()-0.5)*0.02, scale: 0.8+Math.random()*0.28, phase: Math.random()*Math.PI*2, shirt: shirts[i%shirts.length], longyi: longyis[(i*3)%longyis.length], cheering: Math.random() > 0.45 });
+    for (var j = 0; j < 6; j++) G.birds.push({ xNorm: Math.random(), ft: 14+Math.random()*17, speed: 0.025+Math.random()*0.025, dir: j%2===0?1:-1, wingPhase: Math.random()*Math.PI*2, size: 0.75+Math.random()*0.45 });
+  })();
 
-ringInst.instanceMatrix.needsUpdate = true;
-scene.add(ringInst);
-billInst.instanceMatrix.needsUpdate = true;
-billInst.instanceColor.needsUpdate = true;
-scene.add(billInst);
-
-// Fair stands, bamboo fence & tents
-const bench1 = new T.Mesh(new T.BoxGeometry(10.8, 0.55, 0.9), MAT.wood);
-bench1.position.set(0, 0.275, -5.0);
-scene.add(bench1);
-const bench2 = new T.Mesh(new T.BoxGeometry(10.8, 1.25, 0.95), MAT.wood);
-bench2.position.set(0, 0.625, -6.05);
-scene.add(bench2);
-
-// Bamboo fence + tent poles (InstancedMesh)
-const bambooCount = 17;
-const bambooInst = new T.InstancedMesh(GEO.fencePost, MAT.bambooDry, bambooCount);
-let bIdx = 0;
-for (let i = 0; i < 11; i++) {
-  const fx = -5.0 + i * 1.0;
-  dummy.position.set(fx, 0.65, -3.9);
-  dummy.rotation.set(0, 0, 0);
-  dummy.scale.set(1, 1.3, 1);
-  dummy.updateMatrix();
-  bambooInst.setMatrixAt(bIdx++, dummy.matrix);
-}
-// 2 horizontal fence rails
-for (let r = 0; r < 2; r++) {
-  dummy.position.set(0, 0.45 + r * 0.55, -3.86);
-  dummy.rotation.set(0, 0, Math.PI / 2);
-  dummy.scale.set(0.85, 10.4, 0.85);
-  dummy.updateMatrix();
-  bambooInst.setMatrixAt(bIdx++, dummy.matrix);
-}
-// 4 tent posts
-const tentPosts = [[-4.7, -4.6], [-2.5, -4.6], [2.5, -4.6], [4.7, -4.6]];
-for (let i = 0; i < 4; i++) {
-  dummy.position.set(tentPosts[i][0], 1.65, tentPosts[i][1]);
-  dummy.rotation.set(0, 0, 0);
-  dummy.scale.set(1.25, 3.3, 1.25);
-  dummy.updateMatrix();
-  bambooInst.setMatrixAt(bIdx++, dummy.matrix);
-}
-bambooInst.instanceMatrix.needsUpdate = true;
-scene.add(bambooInst);
-
-// Festival side tents & red/gold banner accents
-const roofGeo = new T.ConeGeometry(1.75, 1.15, 4);
-const trimGeo = new T.BoxGeometry(2.5, 0.22, 2.5);
-[-3.6, 3.6].forEach(function(tx, idx) {
-  const roof = new T.Mesh(roofGeo, idx === 0 ? MAT.tentRed : MAT.tentGold);
-  roof.position.set(tx, 3.75, -5.6);
-  roof.rotation.y = Math.PI / 4;
-  scene.add(roof);
-
-  const trim = new T.Mesh(trimGeo, idx === 0 ? MAT.goldTrim : MAT.tentRed);
-  trim.position.set(tx, 3.15, -5.6);
-  scene.add(trim);
-});
-
-const bannerMain = new T.Mesh(new T.BoxGeometry(5.2, 0.48, 0.08), MAT.tentRed);
-bannerMain.position.set(0, 2.85, -6.5);
-scene.add(bannerMain);
-const bannerTrim = new T.Mesh(new T.BoxGeometry(5.36, 0.12, 0.1), MAT.goldTrim);
-bannerTrim.position.set(0, 2.6, -6.48);
-scene.add(bannerTrim);
-
-// Crowd on stands
-const CROWD_N = 42;
-const crowdBody = new T.InstancedMesh(GEO.crowdBody, MAT.whiteInst, CROWD_N);
-const crowdHead = new T.InstancedMesh(GEO.crowdHead, MAT.skin, CROWD_N);
-const crowdArmL = new T.InstancedMesh(GEO.crowdArm, MAT.skin, CROWD_N);
-const crowdArmR = new T.InstancedMesh(GEO.crowdArm, MAT.skin, CROWD_N);
-const crowdData = [];
-const crowdPalette = [0xe83b3b, 0xf2b729, 0x2e86de, 0x29a86b, 0xd6459a, 0xf26f29, 0x8a4be0, 0xf0e6c8];
-for (let i = 0; i < CROWD_N; i++) {
-  const row = i < 21 ? 0 : 1;
-  const col = i % 21;
-  const cx = -4.6 + col * 0.46 + ((i * 37) % 10 - 5) * 0.015;
-  const cz = row === 0 ? -4.95 : -5.98;
-  const cy = row === 0 ? 0.86 : 1.56;
-  const csc = 0.92 + ((i * 29) % 10) * 0.018;
-  crowdData.push({ x: cx, y: cy, z: cz, ph: i * 1.37, sp: 3.6 + (i % 5) * 0.45, sc: csc });
-  tmpCol.setHex(crowdPalette[i % crowdPalette.length]);
-  crowdBody.setColorAt(i, tmpCol);
-  dummy.position.set(cx, cy, cz);
-  dummy.rotation.set(0, 0, 0);
-  dummy.scale.set(csc, csc, csc);
-  dummy.updateMatrix();
-  crowdBody.setMatrixAt(i, dummy.matrix);
-  dummy.position.set(cx, cy + 0.44 * csc, cz);
-  dummy.updateMatrix();
-  crowdHead.setMatrixAt(i, dummy.matrix);
-  dummy.position.set(cx - 0.20 * csc, cy + 0.26 * csc, cz);
-  dummy.rotation.set(0, 0, 0.6);
-  dummy.updateMatrix();
-  crowdArmL.setMatrixAt(i, dummy.matrix);
-  dummy.position.set(cx + 0.20 * csc, cy + 0.26 * csc, cz);
-  dummy.rotation.set(0, 0, -0.6);
-  dummy.updateMatrix();
-  crowdArmR.setMatrixAt(i, dummy.matrix);
-}
-crowdBody.instanceMatrix.needsUpdate = true;
-crowdBody.instanceColor.needsUpdate = true;
-crowdHead.instanceMatrix.needsUpdate = true;
-crowdArmL.instanceMatrix.needsUpdate = true;
-crowdArmR.instanceMatrix.needsUpdate = true;
-scene.add(crowdBody);
-scene.add(crowdHead);
-scene.add(crowdArmL);
-scene.add(crowdArmR);
-
-// Palm trees
-const palms = [
-  { x: -4.6, z: -7.5, h: 7.4, lean: -0.18 },
-  { x: -2.8, z: -8.6, h: 8.6, lean: 0.12 },
-  { x: 2.9, z: -8.5, h: 8.2, lean: -0.14 },
-  { x: 4.7, z: -7.4, h: 7.2, lean: 0.18 }
-];
-const trunkInst = new T.InstancedMesh(GEO.trunkSeg, MAT.palmTrunk, palms.length * 4);
-const frondInst = new T.InstancedMesh(GEO.frond, MAT.palmLeaf, palms.length * 6);
-const frondData = [];
-let tIdx = 0;
-let fIdx = 0;
-for (let p = 0; p < palms.length; p++) {
-  const pm = palms[p];
-  let tx = pm.x;
-  let ty = 0;
-  const segH = pm.h / 4;
-  for (let s = 0; s < 4; s++) {
-    const tilt = pm.lean * (s + 0.5);
-    dummy.position.set(tx + Math.sin(tilt) * segH * 0.5, ty + segH * 0.5, pm.z);
-    dummy.rotation.set(0, 0, -tilt);
-    dummy.scale.set(1 - s * 0.14, segH * 1.05, 1 - s * 0.14);
-    dummy.updateMatrix();
-    trunkInst.setMatrixAt(tIdx++, dummy.matrix);
-    tx += Math.sin(tilt) * segH;
-    ty += Math.cos(tilt) * segH;
+  function createClimber(team, facing) {
+    return {
+      team: team, facing: facing,
+      dispFt: 0, climbPose: -0.7, targetPose: -0.7, strokePulse: 0,
+      slipStretch: 0, slipping: false, strokeT: 0,
+      tagName: '', tagUntil: 0,
+      ladder: null,        // active human-ladder sequence state
+      boltT: 0,            // lightning climb timer
+      won: false, lostSlide: false
+    };
   }
-  for (let f = 0; f < 6; f++) {
-    const yaw = (f / 6) * Math.PI * 2 + p * 0.4;
-    frondData.push({ idx: fIdx, x: tx, y: ty, z: pm.z, yaw: yaw, ph: p * 1.2 + f * 0.6 });
-    fIdx++;
+  var L = createClimber('red', 1);    // left pole, climber on its left side
+  var R = createClimber('blue', -1);  // right pole, climber on its right side
+  function climber(team) { return team === 'red' ? L : R; }
+  function foeOf(c) { return c === L ? R : L; }
+
+  function metrics() {
+    var s = Math.max(0.7, Math.min(viewW / 410, 1.32));
+    var pxPerFt = 62;
+    var centerX = viewW * 0.5;
+    var spread = Math.min(viewW * 0.2, 82 * s);
+    return { s: s, pxPerFt: pxPerFt, centerX: centerX, p1X: centerX - spread, p2X: centerX + spread, baseY: viewH * 0.77 };
   }
-}
-trunkInst.instanceMatrix.needsUpdate = true;
-scene.add(trunkInst);
-scene.add(frondInst);
+  function poleXOf(c, m) { return c === L ? m.p1X : m.p2X; }
+  function ftY(ft, m) { return m.baseY - (ft - G.cameraFt) * m.pxPerFt; }
 
-// Overhead pennant strings
-const stringDefs = [
-  { y: 12.1, z: -1.8, sag: 0.85, count: 16, span: 9.6 },
-  { y: 12.9, z: -3.6, sag: 0.95, count: 18, span: 11.4 }
-];
-const totalPennants = 34;
-const penInst = new T.InstancedMesh(GEO.pennant, MAT.whiteInst, totalPennants);
-const penData = [];
-const penCols = [0xe83434, 0xf7c52b, 0x267be6, 0xffffff, 0x35b558];
-let pIdx = 0;
-stringDefs.forEach(function(sd, sIdx) {
-  const pts = [];
-  for (let k = 0; k <= 12; k++) {
-    const u = k / 12;
-    const x = (u - 0.5) * sd.span;
-    const y = sd.y - Math.sin(u * Math.PI) * sd.sag;
-    pts.push(new T.Vector3(x, y, sd.z));
+  /* ---------------- particles & popups ---------------- */
+  function spawnOil(x, ft, facing, n) {
+    for (var i = 0; i < (n||4); i++) G.oilDrops.push({ x: x - facing*(6+Math.random()*14), ft: ft + (Math.random()-0.3)*0.5, vx: -facing*(25+Math.random()*55), vFt: 1.2+Math.random()*2.4, size: 2.8+Math.random()*3.4, life: 0.55+Math.random()*0.4 });
   }
-  const curve = new T.CatmullRomCurve3(pts);
-  const rope = new T.Mesh(new T.TubeGeometry(curve, 16, 0.025, 4, false), MAT.rope);
-  scene.add(rope);
-
-  for (let i = 0; i < sd.count; i++) {
-    const u = (i + 0.5) / sd.count;
-    const x = (u - 0.5) * sd.span;
-    const y = sd.y - Math.sin(u * Math.PI) * sd.sag;
-    penData.push({ idx: pIdx, x: x, y: y, z: sd.z, ph: i * 0.55 + sIdx * 2.1 });
-    tmpCol.setHex(penCols[(i + sIdx) % penCols.length]);
-    penInst.setColorAt(pIdx, tmpCol);
-    pIdx++;
+  function spawnSparks(x, ft, n) {
+    for (var i = 0; i < (n||6); i++) G.sparks.push({ x: x + (Math.random()-0.5)*36, ft: ft + (Math.random()-0.5)*1.6, vx: (Math.random()-0.5)*90, vFt: (Math.random()-0.5)*3, life: 0.3+Math.random()*0.3, maxLife: 0.6 });
   }
-});
-penInst.instanceColor.needsUpdate = true;
-scene.add(penInst);
-
-// Particle pool
-const MAX_P = 110;
-const partInst = new T.InstancedMesh(GEO.partBox, MAT.partMat, MAX_P);
-const pAct = new Uint8Array(MAX_P);
-const pX = new Float32Array(MAX_P);
-const pY = new Float32Array(MAX_P);
-const pZ = new Float32Array(MAX_P);
-const pVx = new Float32Array(MAX_P);
-const pVy = new Float32Array(MAX_P);
-const pVz = new Float32Array(MAX_P);
-const pLife = new Float32Array(MAX_P);
-const pMax = new Float32Array(MAX_P);
-const pGrav = new Float32Array(MAX_P);
-const pSpin = new Float32Array(MAX_P);
-const pSx = new Float32Array(MAX_P);
-const pSy = new Float32Array(MAX_P);
-const pSz = new Float32Array(MAX_P);
-let pCursor = 0;
-for (let i = 0; i < MAX_P; i++) {
-  dummy.position.set(0, -50, 0);
-  dummy.scale.set(0.001, 0.001, 0.001);
-  dummy.updateMatrix();
-  partInst.setMatrixAt(i, dummy.matrix);
-  tmpCol.setHex(0xffffff);
-  partInst.setColorAt(i, tmpCol);
-}
-partInst.instanceMatrix.needsUpdate = true;
-partInst.instanceColor.needsUpdate = true;
-partInst.frustumCulled = false;
-scene.add(partInst);
-
-function spawnP(x, y, z, vx, vy, vz, life, hex, sx, sy, sz, grav, spin) {
-  const i = pCursor;
-  pCursor = (pCursor + 1) % MAX_P;
-  pAct[i] = 1;
-  pX[i] = x; pY[i] = y; pZ[i] = z;
-  pVx[i] = vx; pVy[i] = vy; pVz[i] = vz;
-  pLife[i] = life; pMax[i] = life;
-  pGrav[i] = grav; pSpin[i] = spin;
-  pSx[i] = sx; pSy[i] = sy; pSz[i] = sz;
-  tmpCol.setHex(hex);
-  partInst.setColorAt(i, tmpCol);
-  partInst.instanceColor.needsUpdate = true;
-}
-
-const confettiCols = [0xff3b3b, 0xffd22b, 0x2e86ff, 0x3ad46a, 0xff6ec7, 0xffffff];
-function burstConfetti(px, py, count) {
-  for (let i = 0; i < count; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const spd = 1.2 + Math.random() * 2.6;
-    spawnP(
-      px + (Math.random() - 0.5) * 0.4,
-      py + (Math.random() - 0.5) * 0.3,
-      (Math.random() - 0.5) * 0.4,
-      Math.cos(a) * spd,
-      2.2 + Math.random() * 3.0,
-      Math.sin(a) * spd,
-      1.4 + Math.random() * 1.1,
-      confettiCols[i % confettiCols.length],
-      1.5, 0.9, 0.15,
-      3.2,
-      7 + Math.random() * 6
-    );
+  function spawnPopup(x, ft, text, color, stroke) {
+    G.popups.push({ x: x, ft: ft, text: text, color: color||'#fef08a', stroke: stroke||'#78350f', life: 0.95, maxLife: 0.95 });
+    if (G.popups.length > 6) G.popups.shift();
   }
-}
-
-let timeAcc = 0;
-let winDone = false;
-let winConfettiCD = 0;
-
-function setNameLabel(st, name) {
-  const ctx = st.nameCtx;
-  ctx.clearRect(0, 0, 512, 128);
-  const label = '🎁 ' + String(name || '').slice(0, 16);
-  ctx.font = '800 52px sans-serif';
-  const w = Math.min(492, ctx.measureText(label).width + 56);
-  const x0 = (512 - w) / 2;
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(x0, 16, w, 96, 48); else ctx.rect(x0, 16, w, 96);
-  ctx.fillStyle = 'rgba(8,10,24,0.78)';
-  ctx.fill();
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = st.team === 'red' ? '#ff5a5a' : '#5aa0ff';
-  ctx.stroke();
-  ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(label, 256, 66);
-  st.nameTex.needsUpdate = true;
-}
-
-function resetBag(st) {
-  if (st.bagHeld) {
-    st.poleGroup.add(st.bag);
-    st.bag.position.set(st.bagHomeX, 9.72, 0.04);
-    st.bag.rotation.set(0, 0, 0);
-    st.bagHeld = false;
-  }
-}
-
-function updateSide(st, targetH, dt, running, over, winner) {
-  const isWin = over && winner === st.team;
-  const isLose = over && winner && winner !== st.team;
-
-  if (st.slideToBase) {
-    st.hSmooth = Math.max(0, st.hSmooth - dt * 1.9);
-    if (st.hSmooth <= 0.002) {
-      st.hSmooth = 0;
-      st.slideToBase = false;
-    }
-  } else {
-    const desired = isWin ? 1.0 : Math.min(1, Math.max(0, targetH));
-    const rate = st.lightningT > 0 ? 12 : 7;
-    st.hSmooth += (desired - st.hSmooth) * Math.min(1, dt * rate);
+  function spawnConfetti() {
+    var colors = ['#ef4444','#facc15','#3b82f6','#22c55e','#f97316','#ec4899','#ffffff'];
+    for (var i = 0; i < 95; i++) G.confetti.push({ x: Math.random()*viewW, y: -20 - Math.random()*viewH*0.4, vx: (Math.random()-0.5)*36, vy: 55+Math.random()*85, size: 5+Math.random()*6, rot: Math.random()*Math.PI*2, rotVel: (Math.random()-0.5)*7, color: colors[i%colors.length], life: 3.4+Math.random()*1.6 });
   }
 
-  const rawVel = dt > 0.0001 ? (targetH - st.prevH) / dt : 0;
-  st.prevH = targetH;
-  st.climbVel += (rawVel - st.climbVel) * Math.min(1, dt * 8);
-
-  if (st.scrambleT > 0) st.scrambleT = Math.max(0, st.scrambleT - dt);
-  if (st.greaseT > 0) st.greaseT = Math.max(0, st.greaseT - dt);
-  if (st.windT > 0) st.windT = Math.max(0, st.windT - dt);
-  if (st.lightningT > 0) st.lightningT = Math.max(0, st.lightningT - dt);
-  if (st.flashT > 0) st.flashT = Math.max(0, st.flashT - dt);
-  if (st.cheerT > 0) st.cheerT = Math.max(0, st.cheerT - dt);
-  if (st.tugT > 0) st.tugT = Math.max(0, st.tugT - dt);
-  if (st.ladderT > 0) st.ladderT = Math.max(0, st.ladderT - dt);
-  if (st.fallT > 0) { st.fallT = Math.max(0, st.fallT - dt); if (st.fallT <= 0) st.scrambleT = Math.max(st.scrambleT, 0.9); }
-
-  // Human-tower sequence (T3): the climber on the pole comes DOWN, the
-  // gift giver takes over, the team stacks a human ladder and boosts
-  // him all the way to the TOP of the pole
-  const lad = { a: 0, moveB: 0, up: 0, form: 0, lp: -1 };
-  if (st.ladderT > 0) {
-    const lp2 = 1 - st.ladderT / 7.0;
-    lad.lp = lp2;
-    const sg2 = function(a, b, x) { return Math.max(0, Math.min(1, (x - a) / (b - a))); };
-    lad.a = sg2(0, 0.14, lp2) * (1 - sg2(0.86, 1, lp2));
-    lad.moveB = sg2(0.10, 0.24, lp2) * (1 - sg2(0.86, 0.97, lp2));
-    lad.up = sg2(0.16, 0.30, lp2) * (1 - sg2(0.86, 0.97, lp2));
-    lad.form = sg2(0.28, 0.40, lp2) * (1 - sg2(0.86, 0.97, lp2));
+  /* ---------------- human ladder (T3) ---------------- */
+  // Tower levels (figure counts) by joined members: base row, then up.
+  function ladderLevels(team) {
+    var n = Math.max(3, Math.min(9, G.joins[team] + 3)); // giver + members, at least a small tower
+    if (n >= 8) return [4, 3, 2];
+    if (n >= 6) return [3, 2, 1];
+    return [3, 2];
   }
-
-  // Visual grease dip
-  if (st.greaseT > 0) {
-    const gProg = 1 - st.greaseT / 0.8;
-    st.greaseDip = Math.sin(Math.min(1, gProg) * Math.PI) * 0.85;
-    if (Math.random() < dt * 24) {
-      const cy = Math.max(0.4, st.hSmooth * 8.4 - st.greaseDip + 0.9);
-      spawnP(
-        st.px + (Math.random() - 0.5) * 0.45,
-        cy,
-        (Math.random() - 0.5) * 0.45,
-        (Math.random() - 0.5) * 1.4,
-        0.5 + Math.random() * 1.2,
-        (Math.random() - 0.5) * 1.4,
-        0.55,
-        0xf6f7b0,
-        0.65, 0.9, 0.65,
-        6.5, 4
-      );
-    }
-  } else {
-    st.greaseDip *= Math.max(0, 1 - dt * 10);
+  function startLadder(c, name) {
+    var levels = ladderLevels(c.team);
+    var rows = levels.length;
+    c.ladder = { t: 0, levels: levels, rows: rows, fromFt: c.dispFt, targetFt: 0, giver: name || '' };
+    G.crowdExcitement = 1.0;
   }
+  // Tower top height in ft for a ladder with `rows` rows (one row ≈ one
+  // figure standing on the shoulders below ≈ 1.03 ft at stage scale)
+  var ROW_FT = 1.03;
+  function towerFt(rows) { return rows * ROW_FT; }
 
-  // Wind leaf/sparkle particles
-  if (st.windT > 0 && Math.random() < dt * 32) {
-    const a = timeAcc * 8 + Math.random() * 6.28;
-    const cy = st.hSmooth * 8.4 + 0.5;
-    const isLeaf = Math.random() < 0.55;
-    spawnP(
-      st.px + Math.cos(a) * 0.55,
-      cy + (Math.random() - 0.5) * 0.8,
-      Math.sin(a) * 0.55,
-      -Math.sin(a) * 1.4,
-      2.4 + Math.random() * 1.6,
-      Math.cos(a) * 1.4,
-      0.75,
-      isLeaf ? 0x52c44e : 0xfff5b8,
-      isLeaf ? 1.2 : 0.7, isLeaf ? 0.65 : 0.7, 0.2,
-      -0.6, 8
-    );
-  }
+  function updateClimber(c, dt, S) {
+    var target = (c.team === 'red' ? S.hR : S.hB) * POLE_FT;
+    if (c.strokePulse > 0) c.strokePulse = Math.max(0, c.strokePulse - dt * 5.5);
+    c.climbPose += (c.targetPose - c.climbPose) * Math.min(1, dt * 16);
+    if (c.boltT > 0) c.boltT = Math.max(0, c.boltT - dt);
 
-  // Lightning spiral particles & aura
-  if (st.lightningT > 0) {
-    st.climberPivot.rotation.y += dt * 13.5 * st.sign;
-    st.boltGlow.visible = true;
-    st.boltGlow.position.y = Math.min(9.2, Math.max(1.2, st.hSmooth * 8.4 + 0.9));
-    st.boltGlow.rotation.y += dt * 14;
-    st.boltGlow.material.opacity = 0.55 * Math.min(1, st.lightningT * 2);
-    if (Math.random() < dt * 42) {
-      const a = timeAcc * 14 + Math.random() * 6.28;
-      spawnP(
-        st.px + Math.cos(a) * 0.45,
-        st.hSmooth * 8.4 + 0.6 + Math.random() * 0.9,
-        Math.sin(a) * 0.45,
-        Math.cos(a) * 1.5,
-        1.6 + Math.random() * 2.2,
-        Math.sin(a) * 1.5,
-        0.55,
-        Math.random() < 0.6 ? 0xffdf38 : 0xffffff,
-        0.85, 0.85, 0.85,
-        1.5, 10
-      );
-    }
-  } else {
-    st.boltGlow.visible = false;
-    const targetYaw = isWin ? st.sign * 0.68 : st.baseYaw;
-    let diff = targetYaw - st.climberPivot.rotation.y;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    st.climberPivot.rotation.y += diff * Math.min(1, dt * 8);
-  }
-
-  // Top flash ring (T4)
-  if (st.flashT > 0) {
-    st.flashRing.visible = true;
-    const p = 1 - st.flashT / 0.7;
-    const sc = 0.5 + p * 2.4;
-    st.flashRing.scale.set(sc, sc, sc);
-    st.flashRing.material.opacity = (1 - p) * 0.9;
-  } else {
-    st.flashRing.visible = false;
-  }
-
-  // Position climber on 0..9 range (feet at 0..8.45, hands reach 10)
-  const c = st.climber;
-  let yPos = Math.max(0, st.hSmooth * 8.45 - st.greaseDip);
-  const fallP = st.fallT > 0 ? 1 - st.fallT / 2.6 : 1;
-  const falling = st.fallT > 0 && fallP < 0.25;
-  const downed = st.fallT > 0 && fallP >= 0.25;
-  st.downedNow = downed;
-  if (st.fallT > 0) {
-    if (falling) { const fk = fallP / 0.25; yPos = st.fallFrom * (1 - fk * fk); }
-    else yPos = 0;
-  }
-  // Ladder height path: down → base → onto the tower → TOP (8.45) → back
-  let ladPhase = '';
-  st.ladderLpNow = st.ladderT > 0 ? lad.lp : -1;
-  if (st.ladderT > 0 && st.fallT <= 0 && lad.lp >= 0) {
-    const lp = lad.lp;
-    ladPhase = lp < 0.16 ? 'down' : lp < 0.30 ? 'base' : lp < 0.46 ? 'tower' : lp < 0.66 ? 'climb' : lp < 0.84 ? 'top' : 'return';
-    const keys = [[0, st.ladderFromY], [0.16, 0], [0.30, 0], [0.46, st.ladderTopY], [0.66, 8.45], [0.84, 8.45], [1, yPos]];
-    for (let ki = 0; ki < keys.length - 1; ki++) {
-      if (lp >= keys[ki][0] && lp <= keys[ki + 1][0]) {
-        const kk = (lp - keys[ki][0]) / Math.max(0.0001, keys[ki + 1][0] - keys[ki][0]);
-        const ee = kk * kk * (3 - 2 * kk);
-        yPos = keys[ki][1] + (keys[ki + 1][1] - keys[ki][1]) * ee;
-        break;
+    if (c.ladder) {
+      var ld = c.ladder;
+      ld.t += dt;
+      ld.targetFt = target;
+      var twFt = Math.min(target, towerFt(ld.rows)); // tower top (giver steps to pole there)
+      function ease(k) { return k * k * (3 - 2 * k); }
+      // phases: 0-0.7 slide down to base · 0.7-1.6 tower forms · 1.6-3.0 climb tower ·
+      //         3.0-3.8 step onto pole + fast climb to target · scatter 3.4-4.2
+      if (ld.t < 0.7) {
+        c.dispFt = ld.fromFt * Math.max(0, 1 - ld.t / 0.7);
+        c.slipping = c.dispFt > 0.2;
+      } else if (ld.t < 1.6) {
+        c.dispFt = 0;
+        c.slipping = false;
+      } else if (ld.t < 3.0) {
+        c.dispFt = twFt * ease((ld.t - 1.6) / 1.4);
+        c.slipping = false;
+        c.strokeT -= dt;
+        if (c.strokeT <= 0) { c.targetPose = c.targetPose > 0 ? -0.85 : 0.85; c.strokePulse = 1; c.strokeT = 0.22; }
+      } else if (ld.t < 3.8) {
+        c.dispFt = twFt + (target - twFt) * ease((ld.t - 3.0) / 0.8);
+        c.strokeT -= dt;
+        if (c.strokeT <= 0) { c.targetPose = c.targetPose > 0 ? -0.85 : 0.85; c.strokePulse = 1; c.strokeT = 0.16; }
+      } else if (ld.t >= 4.2) {
+        c.ladder = null;
+        c.dispFt = target;
       }
+      var st2 = c.slipping ? 1 : 0;
+      c.slipStretch += (st2 - c.slipStretch) * Math.min(1, dt * 10);
+      return;
     }
-  }
-  const isClimbing = st.fallT <= 0 && (st.scrambleT > 0 || st.windT > 0 || st.lightningT > 0 || st.tugT > 0 || st.climbVel > 0.015 || ladPhase === 'down' || ladPhase === 'climb' || ladPhase === 'return');
 
-  if (isWin) {
-    yPos = 8.45;
-    if (!st.bagHeld) {
-      const grabHand = st.team === 'red' ? c.handL : c.handR;
-      grabHand.add(st.bag);
-      st.bag.position.set(0, -0.05, 0.08);
-      st.bag.rotation.set(0.3, 0, 0);
-      st.bagHeld = true;
-    }
-    const wave = Math.sin(timeAcc * 9);
-    c.hips.position.y = 0.72 + Math.abs(wave) * 0.06;
-    c.torso.rotation.set(0.08, st.sign * 0.35, wave * 0.08);
-    c.head.rotation.set(-0.1, st.sign * 0.4, wave * 0.1);
-    if (st.team === 'red') {
-      c.armR.rotation.set(-1.65, 0, 0.15);
-      c.armL.rotation.set(-2.65 + wave * 0.35, 0, -0.55 + wave * 0.25);
+    var diff = target - c.dispFt;
+    if (diff > 0.02) {
+      // climbing up: speed by mode (lightning = very fast)
+      var speed = c.boltT > 0 ? 16 : 5.2;
+      c.dispFt = Math.min(target, c.dispFt + speed * dt);
+      c.strokeT -= dt;
+      if (c.strokeT <= 0) { c.targetPose = c.targetPose > 0 ? -0.85 : 0.85; c.strokePulse = 1; c.strokeT = c.boltT > 0 ? 0.09 : 0.19; }
+      c.slipping = false;
+      if (c.boltT > 0 && Math.random() < dt * 30) { var mm = metrics(); spawnSparks(poleXOf(c, mm), c.dispFt + 1, 3); }
+    } else if (diff < -0.02) {
+      // grease slip down
+      c.dispFt = Math.max(target, c.dispFt - 7.5 * dt);
+      c.slipping = true;
+      if (Math.random() < dt * 10) { var m2 = metrics(); spawnOil(poleXOf(c, m2), c.dispFt + 0.3, c.facing, 1); }
     } else {
-      c.armL.rotation.set(-1.65, 0, -0.15);
-      c.armR.rotation.set(-2.65 + wave * 0.35, 0, 0.55 - wave * 0.25);
+      c.slipping = false;
+      // idle life: tiny sway; in an oil zone a slow nervous slide-wobble
+      if (inOil(c.dispFt) && c.dispFt > 0.4) c.dispFt += Math.sin(G.time * 2.2 + (c === L ? 0 : 2)) * 0.12 * dt;
     }
-    c.legL.rotation.set(-0.95, 0, -0.25);
-    c.legR.rotation.set(-0.95, 0, 0.25);
-  } else if (downed) {
-    // Flat on the ground, DIZZY — head rolling in a circle, stars orbit
-    const dz = timeAcc * 2.6;
-    c.hips.position.y = 0.62;
-    c.torso.rotation.set(0.38, Math.sin(dz) * 0.14, Math.cos(dz) * 0.10);
-    c.head.rotation.set(0.42, Math.sin(dz) * 0.55, Math.cos(dz) * 0.40);
-    c.armL.rotation.set(-0.7, 0, -0.9);
-    c.armR.rotation.set(-0.7, 0, 0.9);
-    c.legL.rotation.set(-0.35, 0, -0.55);
-    c.legR.rotation.set(-0.35, 0, 0.55);
-  } else if (falling || st.greaseT > 0) {
-    // Squeak-flail wobble
-    const fl = Math.sin(timeAcc * 32);
-    c.hips.position.y = 0.72;
-    c.torso.rotation.set(0.18, fl * 0.18, fl * 0.26);
-    c.head.rotation.set(0.25, -fl * 0.35, fl * 0.2);
-    c.armL.rotation.set(-1.35 + fl * 0.75, 0, -0.55 - Math.abs(fl) * 0.45);
-    c.armR.rotation.set(-1.35 - fl * 0.75, 0, 0.55 + Math.abs(fl) * 0.45);
-    c.legL.rotation.set(-0.6 - fl * 0.65, 0, -0.5);
-    c.legR.rotation.set(-0.6 + fl * 0.65, 0, 0.5);
-  } else if (ladPhase === 'base') {
-    // At the base, crouched ready while the tower forms under him
-    c.hips.position.y = 0.52;
-    c.torso.rotation.set(0.16, st.sign * 0.2, 0);
-    c.head.rotation.set(-0.4, st.sign * 0.3, 0);
-    c.armL.rotation.set(-2.2, 0, -0.5);
-    c.armR.rotation.set(-2.2, 0, 0.5);
-    c.legL.rotation.set(-1.15, 0, -0.3);
-    c.legR.rotation.set(-1.15, 0, 0.3);
-  } else if (ladPhase === 'tower' || ladPhase === 'top') {
-    // Standing on top of the human tower / at the pole top, reaching for the prize
-    const wv2 = Math.sin(timeAcc * 6);
-    c.hips.position.y = 0.72;
-    c.torso.rotation.set(-0.04, st.sign * 0.2, wv2 * 0.05);
-    c.head.rotation.set(-0.42, st.sign * 0.3, 0);
-    c.armL.rotation.set(-1.5, 0, -0.3);
-    c.armR.rotation.set(-2.95 + Math.sin(timeAcc * 5) * 0.12, 0, 0.25);
-    c.legL.rotation.set(-0.07, 0, -0.09);
-    c.legR.rotation.set(-0.07, 0, 0.09);
-  } else if (isClimbing) {
-    const speed = st.lightningT > 0 ? 22 : (st.scrambleT > 0 || st.windT > 0 ? 18 : 11);
-    st.climbPhase += dt * speed;
-    const ph = st.climbPhase;
-    const s1 = Math.sin(ph);
-    const c1 = Math.cos(ph);
-    c.hips.position.y = 0.72 + Math.abs(s1) * 0.08;
-    c.torso.rotation.set(0.08, s1 * 0.14, s1 * 0.11);
-    c.head.rotation.set(-0.32, st.sign * 0.35, -s1 * 0.08);
-    c.armL.rotation.set(-1.65 + s1 * 0.55, 0, -0.1 + c1 * 0.12);
-    c.armR.rotation.set(-1.65 - s1 * 0.55, 0, 0.1 - c1 * 0.12);
-    c.legL.rotation.set(-0.95 - s1 * 0.42, 0, -0.28);
-    c.legR.rotation.set(-0.95 + s1 * 0.42, 0, 0.28);
-  } else if (isLose) {
-    const sl = Math.sin(timeAcc * 2.5);
-    c.hips.position.y = 0.68;
-    c.torso.rotation.set(0.22, 0, sl * 0.05);
-    c.head.rotation.set(0.32, sl * 0.35, 0);
-    c.armL.rotation.set(-1.35, 0, -0.12);
-    c.armR.rotation.set(-1.35, 0, 0.12);
-    c.legL.rotation.set(-0.78, 0, -0.22);
-    c.legR.rotation.set(-0.78, 0, 0.22);
-  } else {
-    // Grease sliding shiver or breathing idle
-    const shiv = running && st.hSmooth > 0.02 ? Math.sin(timeAcc * 28) * 0.035 : 0;
-    const br = Math.sin(timeAcc * 3.4 + (st.team === 'red' ? 0 : 1.5));
-    c.hips.position.y = 0.72 + br * 0.025;
-    c.torso.rotation.set(0.06, shiv, shiv * 1.4);
-    c.head.rotation.set(-0.22 + br * 0.04, st.sign * 0.38, 0);
-    c.armL.rotation.set(-1.62 + br * 0.05 + shiv, 0, -0.14);
-    c.armR.rotation.set(-1.62 - br * 0.05 - shiv, 0, 0.14);
-    c.legL.rotation.set(-0.92 + shiv, 0, -0.25);
-    c.legR.rotation.set(-0.92 - shiv, 0, 0.25);
+    var targetStretch = c.slipping ? 1 : 0;
+    c.slipStretch += (targetStretch - c.slipStretch) * Math.min(1, dt * 10);
   }
 
-  st.climberPivot.position.y = yPos;
+  function updateParticles(dt) {
+    var i;
+    for (i = G.oilDrops.length - 1; i >= 0; i--) { var d = G.oilDrops[i]; d.life -= dt; if (d.life <= 0) { G.oilDrops.splice(i, 1); continue; } d.vFt -= 11 * dt; d.x += d.vx * dt; d.ft += d.vFt * dt; }
+    for (i = G.sparks.length - 1; i >= 0; i--) { var sp = G.sparks[i]; sp.life -= dt; if (sp.life <= 0) { G.sparks.splice(i, 1); continue; } sp.x += sp.vx * dt; sp.ft += sp.vFt * dt; }
+    for (i = G.popups.length - 1; i >= 0; i--) { var p = G.popups[i]; p.life -= dt; if (p.life <= 0) { G.popups.splice(i, 1); continue; } p.ft += 1.6 * dt; }
+    for (i = G.confetti.length - 1; i >= 0; i--) { var cf = G.confetti[i]; cf.life -= dt; if (cf.life <= 0 || cf.y > viewH + 30) { G.confetti.splice(i, 1); continue; } cf.x += cf.vx * dt + Math.sin(G.time * 5 + i) * 30 * dt; cf.y += cf.vy * dt; cf.rot += cf.rotVel * dt; }
+    G.birds.forEach(function(b) { b.xNorm += b.dir * b.speed * dt; if (b.xNorm > 1.12) b.xNorm = -0.12; if (b.xNorm < -0.12) b.xNorm = 1.12; });
+  }
 
-  // Gift-giver name rides above the climber's head (hidden while the
-  // previous climber slides down — the giver takes over at the base)
-  if (st.labelT > 0) st.labelT = Math.max(0, st.labelT - dt);
-  st.nameSpr.visible = st.labelT > 0 && ladPhase !== 'down';
-  if (st.nameSpr.visible) st.nameSpr.position.y = yPos + 2.15;
-
-  // Dizzy stars orbit the fallen climber's head
-  st.starGrp.visible = downed;
-  if (downed) {
-    st.starGrp.position.set(0, yPos + 1.62, 0.45);
-    for (let si = 0; si < st.stars.length; si++) {
-      const an = timeAcc * 3.4 + si * 2.094;
-      st.stars[si].position.set(Math.cos(an) * 0.38, Math.sin(an * 1.3) * 0.12, Math.sin(an) * 0.2);
+  /* ---------------- drawing ---------------- */
+  function drawSky(m) {
+    var g = ctx.createLinearGradient(0, 0, 0, viewH);
+    g.addColorStop(0, '#38bdf8'); g.addColorStop(0.5, '#bae6fd'); g.addColorStop(0.8, '#fef3c7'); g.addColorStop(1, '#fde68a');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, viewW, viewH);
+    var sunX = viewW * 0.84, sunY = viewH * 0.13;
+    var glow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 120);
+    glow.addColorStop(0, 'rgba(255,251,210,0.95)'); glow.addColorStop(0.35, 'rgba(253,224,71,0.4)'); glow.addColorStop(1, 'rgba(253,224,71,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sunX, sunY, 120, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    for (var i = 0; i < 3; i++) {
+      var cx = ((G.time * (8 + i * 3) + i * 330) % (viewW + 200)) - 100, cy = viewH * (0.1 + i * 0.06);
+      ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI * 2); ctx.arc(cx + 19, cy - 7, 24, 0, Math.PI * 2); ctx.arc(cx + 40, cy, 18, 0, Math.PI * 2); ctx.fill();
     }
-  }
-
-  // Pole top flag & hanging bag sway
-  st.flag.rotation.y = Math.sin(timeAcc * 4.5 + st.px) * 0.32;
-  if (!st.bagHeld) {
-    st.bag.rotation.z = Math.sin(timeAcc * 2.6 + st.px) * 0.12;
-  }
-
-  // Supporters cheering & boost-ready bounce
-  const boost = isWin ? 1.8 : (st.cheerT > 0 ? 1.6 : 1.0);
-  const bA = Math.abs(Math.sin(timeAcc * (4.8 * boost) + (st.team === 'red' ? 0 : 1.1)));
-  const bB = Math.abs(Math.sin(timeAcc * (5.3 * boost) + (st.team === 'red' ? 1.4 : 2.5)));
-
-  // Supporter A: shoulders-ready boost stance with arms up bounce
-  const sA = st.supA;
-  sA.root.position.y = bA * (isWin || st.cheerT > 0 ? 0.26 : 0.09);
-  sA.hips.position.y = 0.66 + bA * 0.06;
-  sA.torso.rotation.set(0.14, 0, Math.sin(timeAcc * 5) * 0.07);
-  sA.head.rotation.set(-0.28, 0, 0);
-  sA.armL.rotation.set(-0.4, 0, -2.35 - bA * 0.35);
-  sA.armR.rotation.set(-0.4, 0, 2.35 + bA * 0.35);
-  sA.legL.rotation.set(-0.22, 0, -0.16);
-  sA.legR.rotation.set(-0.22, 0, 0.16);
-
-  // Supporter B: energetic cheering bounce
-  const sB = st.supB;
-  sB.root.position.y = bB * (isWin || st.cheerT > 0 ? 0.32 : 0.12);
-  sB.hips.position.y = 0.72;
-  sB.torso.rotation.set(-0.06, Math.sin(timeAcc * 4) * 0.12, Math.sin(timeAcc * 6) * 0.08);
-  sB.head.rotation.set(-0.32, 0, 0);
-  sB.armL.rotation.set(0, 0, -2.55 - bB * 0.35);
-  sB.armR.rotation.set(0, 0, 2.55 + bB * 0.35);
-  sB.legL.rotation.set(bB * 0.18, 0, -0.08);
-  sB.legR.rotation.set(-bB * 0.18, 0, 0.08);
-
-  // Human tower ON the pole (T3): A sits at the base hugging the pole,
-  // B stands on A's shoulders hugging the pole, climber stands on B
-  if (st.ladderT > 0) {
-    const lerp = function(a, b, k) { return a + (b - a) * k; };
-    const ez = function(k) { return k * k * (3 - 2 * k); };
-    const aK = ez(lad.a), bM = ez(lad.moveB), bU = ez(lad.up);
-    // A — base anchor: seated at the pole, legs folded, arms hugging the pole
-    sA.root.position.set(lerp(st.supAH.x, st.px + st.sign * 0.05, aK), 0, lerp(st.supAH.z, 0.37, aK));
-    sA.root.rotation.y = lerp(-st.sign * 0.35, Math.PI, aK);
-    sA.hips.position.y = lerp(0.66, 0.40, aK);
-    sA.torso.rotation.set(lerp(0.14, 0.10, aK), 0, 0);
-    sA.head.rotation.set(lerp(-0.28, -0.30, aK), 0, 0);
-    sA.armL.rotation.set(lerp(-0.4, -1.45, aK), 0, lerp(-2.35, -0.38, aK));
-    sA.armR.rotation.set(lerp(-0.4, -1.45, aK), 0, lerp(2.35, 0.38, aK));
-    sA.legL.rotation.set(lerp(-0.22, -1.85, aK), 0, lerp(-0.16, -0.55, aK));
-    sA.legR.rotation.set(lerp(-0.22, -1.85, aK), 0, lerp(0.16, 0.55, aK));
-    // B — stands on A's shoulders, hugging the pole
-    sB.root.position.set(lerp(st.supBH.x, st.px + st.sign * 0.05, bM), 1.04 * bU, lerp(st.supBH.z, 0.37, bM));
-    sB.root.rotation.y = lerp(st.sign * 0.45, Math.PI, bM);
-    sB.hips.position.y = 0.72;
-    sB.torso.rotation.set(lerp(-0.06, 0.06, bU), 0, Math.sin(timeAcc * 7) * 0.04 * bU);
-    sB.head.rotation.set(-0.38, 0, 0);
-    sB.armL.rotation.set(lerp(0, -1.5, bM), 0, lerp(-2.55, -0.32, bM));
-    sB.armR.rotation.set(lerp(0, -1.5, bM), 0, lerp(2.55, 0.32, bM));
-    const midB = bU > 0.05 && bU < 0.95 ? 1 : 0;
-    sB.legL.rotation.set(midB ? -0.55 : -0.05, 0, -0.09);
-    sB.legR.rotation.set(midB ? 0.35 : 0.05, 0, 0.09);
-  }
-
-  // Joined viewers' helper figures: cheer at the base; during the ladder
-  // they ALL stack into the human tower itself (levels by join order)
-  const STACK = [
-    { dx: -0.78, y: 0, z: 0.60, lv: 0 }, { dx: -0.26, y: 0, z: 0.66, lv: 0 }, { dx: 0.26, y: 0, z: 0.66, lv: 0 }, { dx: 0.78, y: 0, z: 0.60, lv: 0 },
-    { dx: -0.52, y: 1.04, z: 0.55, lv: 1 }, { dx: 0.0, y: 1.04, z: 0.68, lv: 1 }, { dx: 0.52, y: 1.04, z: 0.55, lv: 1 },
-    { dx: -0.27, y: 2.35, z: 0.48, lv: 2 }, { dx: 0.27, y: 2.35, z: 0.48, lv: 2 },
-    { dx: 0.0, y: 3.65, z: 0.44, lv: 3 }
-  ];
-  for (let ei = 0; ei < st.extras.length; ei++) {
-    const ex = st.extras[ei], ep = ex.p;
-    const bb2 = Math.abs(Math.sin(timeAcc * 5 + ex.ph));
-    if (st.ladderT > 0 && lad.lp >= 0) {
-      const sgK = function(a, b, x) { return Math.max(0, Math.min(1, (x - a) / (b - a))); };
-      let k2 = sgK(0.10, 0.34, lad.lp) * (1 - sgK(0.86, 0.97, lad.lp));
-      k2 = k2 * k2 * (3 - 2 * k2);
-      const slot = STACK[Math.min(ei, STACK.length - 1)];
-      const sx = st.px + slot.dx, sy = slot.y, sz = slot.z;
-      ep.root.position.set(ex.hx + (sx - ex.hx) * k2, sy * k2, ex.hz + (sz - ex.hz) * k2);
-      ep.root.rotation.y = Math.atan2(st.px - ep.root.position.x, -ep.root.position.z);
-      if (slot.lv === 0) {
-        // Ground level: crouched solid, arms up holding the level above
-        ep.hips.position.y = 0.72 - 0.27 * k2;
-        ep.torso.rotation.set(0.14 * k2, 0, 0);
-        ep.head.rotation.set(-0.35, 0, 0);
-        ep.armL.rotation.set(-0.3, 0, -2.3 - 0.4 * k2);
-        ep.armR.rotation.set(-0.3, 0, 2.3 + 0.4 * k2);
-        ep.legL.rotation.set(-1.80 * k2, 0, -0.45 * k2);
-        ep.legR.rotation.set(-1.80 * k2, 0, 0.45 * k2);
-      } else {
-        // Upper levels: standing on shoulders, arms up supporting
-        ep.hips.position.y = 0.72;
-        ep.torso.rotation.set(0.05 * k2, 0, Math.sin(timeAcc * 7 + ex.ph) * 0.04 * k2);
-        ep.head.rotation.set(-0.38, 0, 0);
-        ep.armL.rotation.set(-0.3, 0, -2.35 - 0.35 * k2);
-        ep.armR.rotation.set(-0.3, 0, 2.35 + 0.35 * k2);
-        ep.legL.rotation.set(-0.14, 0, -0.10);
-        ep.legR.rotation.set(0.10, 0, 0.10);
-      }
-    } else {
-      ep.root.position.set(ex.hx, bb2 * 0.12, ex.hz);
-      ep.root.rotation.y = st.sign * 0.3;
-      ep.hips.position.y = 0.72;
-      ep.torso.rotation.set(-0.05, Math.sin(timeAcc * 4 + ex.ph) * 0.1, 0);
-      ep.head.rotation.set(-0.3, 0, 0);
-      ep.armL.rotation.set(0, 0, -2.5 - bb2 * 0.35);
-      ep.armR.rotation.set(0, 0, 2.5 + bb2 * 0.35);
-      ep.legL.rotation.set(bb2 * 0.15, 0, -0.08);
-      ep.legR.rotation.set(-bb2 * 0.15, 0, 0.08);
-    }
-  }
-}
-
-const game = {
-  scene: scene,
-  camera: camera,
-
-  update: function(dt, S) {
-    dt = Math.min(Math.max(dt || 0, 0), 0.05);
-    timeAcc += dt;
-
-    const hR = S && typeof S.hR === 'number' ? S.hR : 0;
-    const hB = S && typeof S.hB === 'number' ? S.hB : 0;
-    const running = !!(S && S.running);
-    const over = !!(S && S.over);
-    const winner = S && S.winner ? S.winner : null;
-
-    updateSide(sides.red, hR, dt, running, over, winner);
-    updateSide(sides.blue, hB, dt, running, over, winner);
-
-    // Camera: pull in CLOSE on a fallen, dizzy climber — or on the gift
-    // giver at the base just before he climbs the human ladder
-    let focus = null;
-    ['red', 'blue'].forEach(function(tk) {
-      const s2 = sides[tk];
-      if (s2.downedNow && (!focus || s2.fallT > focus.fallT)) focus = s2;
+    // birds at altitude (world space, scroll with camera)
+    ctx.strokeStyle = 'rgba(30,41,59,0.75)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    G.birds.forEach(function(b) {
+      var bx = b.xNorm * viewW, by = ftY(b.ft, m);
+      if (by < -20 || by > viewH + 20) return;
+      var w = Math.sin(G.time * 9 + b.wingPhase) * 5 * b.size;
+      ctx.beginPath();
+      ctx.moveTo(bx - 8 * b.size, by - w); ctx.quadraticCurveTo(bx - 2 * b.size, by + 3 * b.size, bx, by);
+      ctx.quadraticCurveTo(bx + 2 * b.size, by + 3 * b.size, bx + 8 * b.size, by - w);
+      ctx.stroke();
     });
-    if (!focus) {
-      ['red', 'blue'].forEach(function(tk) {
-        const s2 = sides[tk];
-        if (s2.ladderLpNow >= 0.06 && s2.ladderLpNow <= 0.42) focus = s2;
-      });
-    }
-    if (focus) {
-      camPosT.set(focus.px * 0.60, 2.7, 8.8);
-      camLookT.set(focus.px, 1.15, 0);
-    } else {
-      camPosT.set(0, 6.5, 17);
-      camLookT.set(0, 4.6, 0);
-    }
-    const ck = 1 - Math.exp(-dt * 3.0);
-    camera.position.lerp(camPosT, ck);
-    camLook.lerp(camLookT, ck);
-    camera.lookAt(camLook);
-
-    // Win confetti burst
-    if (over && winner && (winner === 'red' || winner === 'blue')) {
-      const wpx = POLE_X[winner];
-      if (!winDone) {
-        winDone = true;
-        burstConfetti(wpx, 10.1, 46);
-        winConfettiCD = 0.65;
-      } else {
-        winConfettiCD -= dt;
-        if (winConfettiCD <= 0) {
-          winConfettiCD = 0.85;
-          burstConfetti(wpx, 10.1, 14);
-        }
-      }
-    } else if (!over) {
-      winDone = false;
-    }
-
-    // Banknote fan flutter
-    for (let i = 0; i < billBase.length; i++) {
-      const b = billBase[i];
-      dummy.position.set(b.x, b.y, b.z);
-      dummy.rotation.set(Math.sin(timeAcc * 3.8 + b.phase) * 0.18, 0, b.ang + Math.sin(timeAcc * 2.5 + b.phase) * 0.05);
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      billInst.setMatrixAt(b.idx, dummy.matrix);
-    }
-    billInst.instanceMatrix.needsUpdate = true;
-
-    // Crowd gentle bounce
-    const crowdMult = over ? 1.8 : 1.0;
-    for (let i = 0; i < CROWD_N; i++) {
-      const cd = crowdData[i];
-      const hop = Math.abs(Math.sin(timeAcc * cd.sp * crowdMult + cd.ph)) * (over ? 0.16 : 0.07);
-      dummy.position.set(cd.x, cd.y + hop, cd.z);
-      dummy.rotation.set(0, 0, Math.sin(timeAcc * 2.4 + cd.ph) * 0.06);
-      dummy.scale.set(cd.sc, cd.sc, cd.sc);
-      dummy.updateMatrix();
-      crowdBody.setMatrixAt(i, dummy.matrix);
-      dummy.position.set(cd.x, cd.y + 0.44 * cd.sc + hop, cd.z);
-      dummy.rotation.set(0, 0, 0);
-      dummy.updateMatrix();
-      crowdHead.setMatrixAt(i, dummy.matrix);
-      const wv = Math.sin(timeAcc * cd.sp * crowdMult + cd.ph) * 0.28;
-      dummy.position.set(cd.x - 0.20 * cd.sc, cd.y + 0.26 * cd.sc + hop, cd.z);
-      dummy.rotation.set(0, 0, 0.6 + wv);
-      dummy.updateMatrix();
-      crowdArmL.setMatrixAt(i, dummy.matrix);
-      dummy.position.set(cd.x + 0.20 * cd.sc, cd.y + 0.26 * cd.sc + hop, cd.z);
-      dummy.rotation.set(0, 0, -0.6 + wv);
-      dummy.updateMatrix();
-      crowdArmR.setMatrixAt(i, dummy.matrix);
-    }
-    crowdBody.instanceMatrix.needsUpdate = true;
-    crowdHead.instanceMatrix.needsUpdate = true;
-    crowdArmL.instanceMatrix.needsUpdate = true;
-    crowdArmR.instanceMatrix.needsUpdate = true;
-
-    // Palm fronds breeze
-    for (let i = 0; i < frondData.length; i++) {
-      const fd = frondData[i];
-      const sw = Math.sin(timeAcc * 1.9 + fd.ph) * 0.1;
-      dummy.position.set(fd.x + Math.cos(fd.yaw) * 0.85, fd.y + 0.15, fd.z + Math.sin(fd.yaw) * 0.85);
-      dummy.rotation.set(0, -fd.yaw, -1.25 + sw);
-      dummy.scale.set(1, 1, 0.15);
-      dummy.updateMatrix();
-      frondInst.setMatrixAt(fd.idx, dummy.matrix);
-    }
-    frondInst.instanceMatrix.needsUpdate = true;
-
-    // Pennants waving
-    for (let i = 0; i < penData.length; i++) {
-      const pd = penData[i];
-      dummy.position.set(pd.x, pd.y, pd.z);
-      dummy.rotation.set(Math.sin(timeAcc * 3.8 + pd.ph) * 0.34, Math.cos(timeAcc * 2.2 + pd.ph) * 0.16, 0);
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      penInst.setMatrixAt(pd.idx, dummy.matrix);
-    }
-    penInst.instanceMatrix.needsUpdate = true;
-
-    // Update particles
-    let pDirty = false;
-    for (let i = 0; i < MAX_P; i++) {
-      if (!pAct[i]) continue;
-      pDirty = true;
-      pLife[i] -= dt;
-      if (pLife[i] <= 0) {
-        pAct[i] = 0;
-        dummy.position.set(0, -50, 0);
-        dummy.scale.set(0.001, 0.001, 0.001);
-        dummy.updateMatrix();
-        partInst.setMatrixAt(i, dummy.matrix);
-        continue;
-      }
-      pVy[i] -= pGrav[i] * dt;
-      pX[i] += pVx[i] * dt;
-      pY[i] += pVy[i] * dt;
-      pZ[i] += pVz[i] * dt;
-      const sc = Math.min(1, (pLife[i] / pMax[i]) * 2.2);
-      dummy.position.set(pX[i], pY[i], pZ[i]);
-      const sp = timeAcc * pSpin[i] + i;
-      dummy.rotation.set(sp, sp * 0.7, sp * 0.4);
-      dummy.scale.set(pSx[i] * sc, pSy[i] * sc, pSz[i] * sc);
-      dummy.updateMatrix();
-      partInst.setMatrixAt(i, dummy.matrix);
-    }
-    if (pDirty) partInst.instanceMatrix.needsUpdate = true;
-  },
-
-  onJoin: function(team) {
-    const st = sides[team === 'blue' ? 'blue' : 'red'];
-    st.cheerT = 0.7;
-    // Every joined viewer gets a helper figure at the pole base (max 10 shown)
-    if (st.extras.length < 10) {
-      const idx = st.extras.length;
-      const row = idx < 5 ? 0 : 1, colI = idx % 5;
-      const person = makePerson(st.team, false);
-      person.root.scale.setScalar(0.9);
-      const hx = st.px + (colI - 2) * 0.44 + (row ? 0.22 : 0);
-      const hz = row ? 1.52 : 1.06;
-      person.root.position.set(hx, 0, hz);
-      scene.add(person.root);
-      st.extras.push({ p: person, hx: hx, hz: hz, ph: idx * 1.93 });
-    }
-    const col = st.team === 'red' ? 0xff5a5a : 0x5aa0ff;
-    for (let i = 0; i < 6; i++) {
-      spawnP(
-        st.px + (Math.random() - 0.5) * 1.6,
-        0.3 + Math.random() * 0.5,
-        0.6 + (Math.random() - 0.5) * 0.5,
-        (Math.random() - 0.5) * 1.2,
-        1.4 + Math.random() * 1.2,
-        (Math.random() - 0.5) * 0.8,
-        0.55,
-        i % 2 === 0 ? col : 0xffe066,
-        0.75, 0.75, 0.75,
-        2.2, 6
-      );
-    }
-  },
-
-  onLike: function(team) {
-    const st = sides[team === 'blue' ? 'blue' : 'red'];
-    st.cheerT = Math.max(st.cheerT, 0.45);
-    st.tugT = Math.max(st.tugT, 0.25);
-    const col = st.team === 'red' ? 0xff4d6a : 0x4da6ff;
-    const cy = st.hSmooth * 8.45 + 1.2;
-    for (let i = 0; i < 4; i++) {
-      spawnP(
-        st.px + (Math.random() - 0.5) * 0.6,
-        cy,
-        0.3 + (Math.random() - 0.5) * 0.3,
-        (Math.random() - 0.5) * 1.1,
-        1.6 + Math.random() * 1.2,
-        (Math.random() - 0.5) * 0.6,
-        0.5,
-        col,
-        0.7, 0.7, 0.7,
-        1.8, 5
-      );
-    }
-  },
-
-  onGift: function(team, tier, name) {
-    const tk = team === 'blue' ? 'blue' : 'red';
-    const ok = tk === 'red' ? 'blue' : 'red';
-    const st = sides[tk];
-    const ost = sides[ok];
-    st.cheerT = Math.max(st.cheerT, 0.9);
-    if (name) { setNameLabel(st, name); st.labelT = Math.max(st.labelT, tier >= 3 ? 7.4 : 3.2); }
-
-    if (tier === 1) {
-      st.scrambleT = Math.max(st.scrambleT, 0.6);
-      const col = tk === 'red' ? 0xff6247 : 0x47a0ff;
-      for (let i = 0; i < 8; i++) {
-        spawnP(
-          st.px + (Math.random() - 0.5) * 0.6,
-          st.hSmooth * 8.45 + 0.8,
-          (Math.random() - 0.5) * 0.6,
-          (Math.random() - 0.5) * 1.8,
-          1.6 + Math.random() * 1.6,
-          (Math.random() - 0.5) * 1.4,
-          0.55,
-          i % 2 === 0 ? col : 0xffe266,
-          0.8, 0.8, 0.8,
-          2.5, 7
-        );
-      }
-    } else if (tier === 2) {
-      // Grease attack on OTHER pole — climber slips and FALLS
-      ost.greaseT = Math.max(ost.greaseT, 0.8);
-      ost.fallFrom = Math.max(0, ost.hSmooth * 8.45 - ost.greaseDip);
-      ost.fallT = 2.6;
-      for (let i = 0; i < 14; i++) {
-        spawnP(
-          ost.px + (Math.random() - 0.5) * 0.5,
-          ost.hSmooth * 8.45 + 1.0 + (Math.random() - 0.5) * 0.6,
-          (Math.random() - 0.5) * 0.5,
-          (Math.random() - 0.5) * 2.2,
-          0.8 + Math.random() * 1.8,
-          (Math.random() - 0.5) * 2.2,
-          0.65,
-          i % 2 === 0 ? 0xf5f59c : 0xffffff,
-          0.7, 1.05, 0.7,
-          7.0, 5
-        );
-      }
-    } else if (tier === 3) {
-      // Human ladder: current climber comes down, the GIVER climbs,
-      // ALL joined members stack up and boost him to the very top
-      st.ladderFromY = Math.max(0, st.hSmooth * 8.45 - st.greaseDip);
-      const nEx = st.extras.length;
-      st.ladderTopY = nEx >= 10 ? 5.0 : nEx >= 8 ? 3.7 : nEx >= 5 ? 2.39 : 2.28;
-      st.ladderT = 7.0;
-      for (let i = 0; i < 12; i++) {
-        const a = (i / 12) * Math.PI * 2;
-        spawnP(
-          st.px + Math.cos(a) * 0.6,
-          st.hSmooth * 8.45 + 0.5,
-          Math.sin(a) * 0.6,
-          -Math.sin(a) * 1.8,
-          2.6 + Math.random() * 1.8,
-          Math.cos(a) * 1.8,
-          0.85,
-          i % 2 === 0 ? 0x54cc50 : 0xfff5b0,
-          1.1, 0.65, 0.2,
-          -0.4, 9
-        );
-      }
-    } else {
-      // Tier 4 lightning spiral climb
-      st.lightningT = Math.max(st.lightningT, 1.4);
-      st.scrambleT = Math.max(st.scrambleT, 1.4);
-      st.flashT = 0.7;
-      for (let i = 0; i < 18; i++) {
-        const a = (i / 18) * Math.PI * 2;
-        spawnP(
-          st.px + Math.cos(a) * 0.4,
-          9.9,
-          Math.sin(a) * 0.4,
-          Math.cos(a) * 2.6,
-          0.8 + Math.random() * 2.0,
-          Math.sin(a) * 2.6,
-          0.75,
-          i % 2 === 0 ? 0xffd838 : 0xffffff,
-          0.95, 0.95, 0.95,
-          2.8, 10
-        );
-      }
-    }
-  },
-
-  reset: function() {
-    winDone = false;
-    winConfettiCD = 0;
-    ['red', 'blue'].forEach(function(tk) {
-      const st = sides[tk];
-      resetBag(st);
-      st.slideToBase = st.hSmooth > 0.01;
-      st.prevH = 0;
-      st.climbVel = 0;
-      st.scrambleT = 0;
-      st.greaseT = 0;
-      st.greaseDip = 0;
-      st.windT = 0;
-      st.lightningT = 0;
-      st.flashT = 0;
-      st.cheerT = 0;
-      st.tugT = 0;
-      st.fallT = 0;
-      st.ladderT = 0;
-      st.ladderFromY = 0;
-      st.ladderTopY = 2.28;
-      st.ladderLpNow = -1;
-      st.downedNow = false;
-      st.starGrp.visible = false;
-      st.supA.root.position.set(st.supAH.x, 0, st.supAH.z);
-      st.supB.root.position.set(st.supBH.x, 0, st.supBH.z);
-      st.flashRing.visible = false;
-      st.boltGlow.visible = false;
-      st.climberPivot.rotation.y = st.baseYaw;
-    });
-    for (let i = 0; i < MAX_P; i++) {
-      pAct[i] = 0;
-      dummy.position.set(0, -50, 0);
-      dummy.scale.set(0.001, 0.001, 0.001);
-      dummy.updateMatrix();
-      partInst.setMatrixAt(i, dummy.matrix);
-    }
-    partInst.instanceMatrix.needsUpdate = true;
   }
-};
 
-return game;
+  function drawPalm(baseX, baseY, scale, lean) {
+    ctx.save(); ctx.translate(baseX, baseY);
+    var sway = Math.sin(G.time * 1.4 + baseX * 0.01) * 7 * scale;
+    var topX = lean * 28 * scale + sway, topY = -185 * scale;
+    ctx.strokeStyle = '#78350f'; ctx.lineWidth = 12 * scale; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(lean * 12 * scale, -92 * scale, topX, topY); ctx.stroke();
+    var angs = [-2.6, -2.1, -1.5, -0.9, -0.4, 0.25];
+    angs.forEach(function(ang, idx) {
+      ctx.save(); ctx.translate(topX, topY); ctx.rotate(ang + Math.sin(G.time * 2.1 + idx) * 0.06);
+      ctx.fillStyle = idx % 2 === 0 ? '#15803d' : '#16a34a';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(34 * scale, -16 * scale, 70 * scale, 7 * scale); ctx.quadraticCurveTo(32 * scale, 3 * scale, 0, 5 * scale); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
 
+  function drawGroundAndCrowd(m) {
+    var groundY = ftY(0, m);
+    if (groundY < -80) return; // camera high: ground off-screen
+    ctx.fillStyle = '#86efac';
+    ctx.beginPath();
+    ctx.moveTo(0, viewH); ctx.lineTo(0, groundY - 20 * m.s);
+    ctx.quadraticCurveTo(viewW * 0.3, groundY - 44 * m.s, viewW * 0.55, groundY - 22 * m.s);
+    ctx.quadraticCurveTo(viewW * 0.8, groundY - 46 * m.s, viewW, groundY - 18 * m.s);
+    ctx.lineTo(viewW, viewH); ctx.closePath(); ctx.fill();
+    // village houses
+    ctx.fillStyle = '#92400e';
+    [[0.16, 1], [0.86, 0.85]].forEach(function(hh) {
+      var hx = viewW * hh[0], hy = groundY - 16 * m.s, hs = m.s * hh[1];
+      ctx.fillRect(hx - 20 * hs, hy - 14 * hs, 40 * hs, 16 * hs);
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath(); ctx.moveTo(hx - 26 * hs, hy - 14 * hs); ctx.lineTo(hx, hy - 30 * hs); ctx.lineTo(hx + 26 * hs, hy - 14 * hs); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#92400e';
+    });
+    drawPalm(viewW * 0.05, groundY + 8 * m.s, m.s * 0.85, 1);
+    drawPalm(viewW * 0.96, groundY + 8 * m.s, m.s * 0.88, -1);
+    // crowd
+    G.crowd.forEach(function(p) {
+      var px = p.xNorm * viewW, ps = p.scale * m.s;
+      var jump = (p.cheering || G.crowdExcitement > 0.25) ? Math.abs(Math.sin(G.time * (3 + G.crowdExcitement * 6) + p.phase)) * (3 + G.crowdExcitement * 13) * ps : 0;
+      var py = groundY + 26 * m.s - jump;
+      ctx.fillStyle = p.longyi;
+      ctx.beginPath(); ctx.roundRect(px - 8 * ps, py - 12 * ps, 16 * ps, 15 * ps, 4 * ps); ctx.fill();
+      ctx.fillStyle = p.shirt;
+      ctx.beginPath(); ctx.roundRect(px - 9 * ps, py - 28 * ps, 18 * ps, 17 * ps, 6 * ps); ctx.fill();
+      ctx.fillStyle = '#d99a6c';
+      ctx.beginPath(); ctx.arc(px, py - 34 * ps, 7 * ps, 0, Math.PI * 2); ctx.fill();
+      if (p.cheering || G.crowdExcitement > 0.25) {
+        ctx.strokeStyle = '#d99a6c'; ctx.lineWidth = 3.4 * ps; ctx.lineCap = 'round';
+        var wv = Math.sin(G.time * 9 + p.phase) * 4 * ps;
+        ctx.beginPath();
+        ctx.moveTo(px - 8 * ps, py - 24 * ps); ctx.lineTo(px - 14 * ps, py - 38 * ps + wv);
+        ctx.moveTo(px + 8 * ps, py - 24 * ps); ctx.lineTo(px + 14 * ps, py - 38 * ps - wv);
+        ctx.stroke();
+      }
+    });
+    // dirt ground
+    var gg = ctx.createLinearGradient(0, groundY + 30 * m.s, 0, viewH);
+    gg.addColorStop(0, '#d97706'); gg.addColorStop(0.3, '#b45309'); gg.addColorStop(1, '#78350f');
+    ctx.fillStyle = gg; ctx.fillRect(0, groundY + 30 * m.s, viewW, viewH - groundY);
+  }
+
+  function drawBunting(m) {
+    function string(x1, y1, x2, y2, sag, n) {
+      var wind = Math.sin(G.time * 2.6 + y1 * 0.02) * 5;
+      ctx.strokeStyle = 'rgba(71,85,105,0.6)'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo((x1 + x2) / 2, (y1 + y2) / 2 + sag + wind, x2, y2); ctx.stroke();
+      for (var i = 1; i < n; i++) {
+        var t = i / n, o = 1 - t, cx = (x1 + x2) / 2, cy = (y1 + y2) / 2 + sag + wind;
+        var px = o * o * x1 + 2 * o * t * cx + t * t * x2, py = o * o * y1 + 2 * o * t * cy + t * t * y2;
+        ctx.fillStyle = G.flagColors[i % G.flagColors.length];
+        ctx.beginPath(); ctx.moveTo(px - 6 * m.s, py); ctx.lineTo(px + 6 * m.s, py); ctx.lineTo(px + Math.sin(G.time * 5 + i) * 3, py + 15 * m.s); ctx.closePath(); ctx.fill();
+      }
+    }
+    string(-10, viewH * 0.055, viewW * 0.55, viewH * 0.1, 30 * m.s, 13);
+    string(viewW * 0.45, viewH * 0.095, viewW + 10, viewW * 0 + viewH * 0.05, 28 * m.s, 13);
+  }
+
+  function drawPole(poleX, c, m, labelZones) {
+    var bottomY = ftY(0, m) + 12, topY = ftY(POLE_FT, m), poleW = 24 * m.s;
+    var grad = ctx.createLinearGradient(poleX - poleW * 0.5, 0, poleX + poleW * 0.5, 0);
+    grad.addColorStop(0, '#14532d'); grad.addColorStop(0.28, '#22c55e'); grad.addColorStop(0.48, '#86efac'); grad.addColorStop(0.72, '#16a34a'); grad.addColorStop(1, '#14532d');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.roundRect(poleX - poleW * 0.5, topY - 12 * m.s, poleW, bottomY - (topY - 12 * m.s), 8 * m.s); ctx.fill();
+    for (var ft = 2; ft < POLE_FT; ft += 2) {
+      var ny = ftY(ft, m);
+      if (ny < -20 || ny > viewH + 20) continue;
+      ctx.strokeStyle = '#14532d'; ctx.lineWidth = 2.4 * m.s;
+      ctx.beginPath(); ctx.moveTo(poleX - poleW * 0.52, ny); ctx.lineTo(poleX + poleW * 0.52, ny); ctx.stroke();
+      ctx.strokeStyle = 'rgba(220,252,231,0.55)'; ctx.lineWidth = 1.4 * m.s;
+      ctx.beginPath(); ctx.moveTo(poleX - poleW * 0.45, ny - 2.5 * m.s); ctx.lineTo(poleX + poleW * 0.45, ny - 2.5 * m.s); ctx.stroke();
+      if (ft % 5 === 0 && labelZones) {
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.font = '700 ' + Math.round(11 * m.s) + 'px "Noto Sans Myanmar", sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(myaNum(ft) + ' ပေ', m.centerX, ny);
+      }
+    }
+    OIL_ZONES.forEach(function(zone) {
+      var yBot = ftY(zone.start, m), yTop = ftY(zone.end, m);
+      if (yBot < -30 || yTop > viewH + 30) return;
+      var og = ctx.createLinearGradient(poleX - poleW * 0.5, 0, poleX + poleW * 0.5, 0);
+      og.addColorStop(0, 'rgba(180,83,9,0.72)'); og.addColorStop(0.35, 'rgba(250,204,21,0.8)'); og.addColorStop(0.55, 'rgba(254,249,195,0.95)'); og.addColorStop(1, 'rgba(146,64,14,0.72)');
+      ctx.fillStyle = og;
+      ctx.beginPath(); ctx.roundRect(poleX - poleW * 0.56, yTop, poleW * 1.12, yBot - yTop, 6 * m.s); ctx.fill();
+      var glint = ((G.time * 45) % Math.max(20, yBot - yTop));
+      ctx.strokeStyle = 'rgba(255,255,255,0.78)'; ctx.lineWidth = 3 * m.s;
+      ctx.beginPath(); ctx.moveTo(poleX - poleW * 0.3, yTop + glint); ctx.lineTo(poleX + poleW * 0.3, yTop + glint - 8 * m.s); ctx.stroke();
+      if (labelZones) {
+        ctx.fillStyle = 'rgba(120,53,15,0.92)';
+        ctx.font = '800 ' + Math.round(10 * m.s) + 'px "Noto Sans Myanmar", sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('💧 ဆီချောကွက်', m.centerX, (yTop + yBot) * 0.5);
+      }
+    });
+    if (bottomY < viewH + 80) {
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath(); ctx.roundRect(poleX - poleW * 0.85, bottomY - 14 * m.s, poleW * 1.7, 16 * m.s, 5 * m.s); ctx.fill();
+    }
+    // prize + flag at the top
+    if (topY > -140 && topY < viewH + 100) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.roundRect(poleX - 24 * m.s, topY - 14 * m.s, 48 * m.s, 8 * m.s, 4 * m.s); ctx.fill();
+      var bagX = poleX + c.facing * 18 * m.s;
+      ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 2 * m.s;
+      ctx.beginPath(); ctx.moveTo(bagX, topY - 6 * m.s); ctx.lineTo(bagX, topY + 12 * m.s); ctx.stroke();
+      ctx.fillStyle = '#facc15'; ctx.strokeStyle = '#b45309'; ctx.lineWidth = 2 * m.s;
+      ctx.beginPath(); ctx.arc(bagX, topY + 18 * m.s, 10 * m.s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      var flagBaseY = c.won ? topY - 40 * m.s : topY - 14 * m.s;
+      ctx.strokeStyle = '#fef3c7'; ctx.lineWidth = 3.5 * m.s;
+      ctx.beginPath(); ctx.moveTo(poleX, flagBaseY); ctx.lineTo(poleX, flagBaseY - 46 * m.s); ctx.stroke();
+      var dir = c.facing, w1 = Math.sin(G.time * 7) * 5 * m.s, w2 = Math.cos(G.time * 7) * 5 * m.s;
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(poleX, flagBaseY - 45 * m.s);
+      ctx.quadraticCurveTo(poleX + dir * 20 * m.s, flagBaseY - 49 * m.s + w1, poleX + dir * 42 * m.s, flagBaseY - 38 * m.s + w2);
+      ctx.lineTo(poleX + dir * 34 * m.s, flagBaseY - 30 * m.s + w2 * 0.7);
+      ctx.lineTo(poleX + dir * 42 * m.s, flagBaseY - 22 * m.s + w2);
+      ctx.quadraticCurveTo(poleX + dir * 20 * m.s, flagBaseY - 25 * m.s + w1, poleX, flagBaseY - 20 * m.s);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath(); ctx.arc(poleX + dir * 16 * m.s, flagBaseY - 33 * m.s + w1 * 0.4, 4.2 * m.s, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  /* small chibi figure (helpers / tower members) in team colours */
+  function drawFigure(x, y, s, team, pose, bounce) {
+    var shirt = team === 'red' ? '#dc2626' : '#2563eb';
+    var longyi = team === 'red' ? '#6b2737' : '#1e3a5f';
+    ctx.save(); ctx.translate(x, y - (bounce || 0));
+    // legs
+    ctx.strokeStyle = '#b87a4e'; ctx.lineWidth = 5.5 * s; ctx.lineCap = 'round';
+    if (pose === 'crouch') {
+      ctx.beginPath(); ctx.moveTo(-3 * s, -10 * s); ctx.lineTo(-9 * s, -2 * s); ctx.moveTo(3 * s, -10 * s); ctx.lineTo(9 * s, -2 * s); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(-3 * s, -10 * s); ctx.lineTo(-4 * s, 0); ctx.moveTo(3 * s, -10 * s); ctx.lineTo(4 * s, 0); ctx.stroke();
+    }
+    ctx.fillStyle = longyi;
+    ctx.beginPath(); ctx.roundRect(-8 * s, -20 * s, 16 * s, 11 * s, 3 * s); ctx.fill();
+    ctx.fillStyle = shirt;
+    ctx.beginPath(); ctx.roundRect(-8 * s, -36 * s, 16 * s, 17 * s, 5 * s); ctx.fill();
+    // arms
+    ctx.strokeStyle = '#d99a6c'; ctx.lineWidth = 4.5 * s;
+    ctx.beginPath();
+    if (pose === 'cheer') {
+      var wv = Math.sin(G.time * 9 + x) * 3 * s;
+      ctx.moveTo(-6 * s, -32 * s); ctx.lineTo(-12 * s, -44 * s + wv);
+      ctx.moveTo(6 * s, -32 * s); ctx.lineTo(12 * s, -44 * s - wv);
+    } else if (pose === 'hold') {
+      ctx.moveTo(-6 * s, -32 * s); ctx.lineTo(-10 * s, -22 * s);
+      ctx.moveTo(6 * s, -32 * s); ctx.lineTo(10 * s, -22 * s);
+    } else {
+      ctx.moveTo(-6 * s, -32 * s); ctx.lineTo(-11 * s, -24 * s);
+      ctx.moveTo(6 * s, -32 * s); ctx.lineTo(11 * s, -24 * s);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#d99a6c';
+    ctx.beginPath(); ctx.arc(0, -44 * s, 8 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1e1b18';
+    ctx.beginPath(); ctx.arc(0, -47 * s, 8.2 * s, Math.PI * 0.95, Math.PI * 2.05); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawHelpers(c, m) {
+    var n = Math.min(6, G.joins[c.team]);
+    if (!n) return;
+    var poleX = poleXOf(c, m), groundY = ftY(0, m);
+    if (groundY > viewH + 40) return;
+    for (var i = 0; i < n; i++) {
+      var side = i % 2 === 0 ? -1 : 1;
+      var rank = Math.floor(i / 2);
+      var x = poleX + c.facing * (34 + rank * 26) * m.s * (side === -1 ? 1 : 1) + (side < 0 ? -14 : 14) * m.s * rank * 0;
+      x = poleX + (i - (n - 1) / 2) * 24 * m.s;
+      var bounce = Math.abs(Math.sin(G.time * 5 + i * 1.3)) * (2 + G.crowdExcitement * 5) * m.s;
+      drawFigure(x, groundY + 34 * m.s, m.s * 0.92, c.team, 'cheer', bounce);
+    }
+  }
+
+  function drawTower(c, m) {
+    if (!c.ladder) return;
+    var ld = c.ladder, poleX = poleXOf(c, m), groundY = ftY(0, m);
+    var formK = ld.t < 0.7 ? 0 : Math.min(1, (ld.t - 0.7) / 0.9);   // stack forms after slide-down
+    var scatterK = ld.t > 3.4 ? Math.min(1, (ld.t - 3.4) / 0.8) : 0;
+    var rowH = ROW_FT * m.pxPerFt; // matches towerFt per row
+    ld.levels.forEach(function(count, row) {
+      for (var i = 0; i < count; i++) {
+        var fx = poleX - c.facing * (34 + (i - (count - 1) / 2) * 23) * m.s;
+        var fy = groundY - row * rowH * formK + 34 * m.s;
+        var alpha = 1 - scatterK;
+        ctx.save(); ctx.globalAlpha = alpha;
+        var hop = scatterK > 0 ? scatterK * 26 * m.s : 0;
+        drawFigure(fx - c.facing * hop, fy + hop * 0.4, m.s * 1.45, c.team, row === 0 ? 'crouch' : 'hold', 0);
+        ctx.restore();
+      }
+    });
+  }
+
+  /* side-profile climber, two passes (far limbs behind pole, rest in front) */
+  function poseOf(c, s) {
+    var pose = c.climbPose, stretch = c.slipStretch, pulse = c.strokePulse;
+    var kick = c.slipping ? Math.sin(G.time * 24) * 9 * s : 0;
+    return {
+      hipX: (-26 - stretch * 4) * s, hipY: (-24 + stretch * 14 - pulse * 3) * s,
+      shX: (-20 + stretch * 3) * s, shY: (-58 + stretch * 4 - pulse * 4) * s,
+      farHandY: c.won ? -82 * s : (-78 + pose * 16 - stretch * 16) * s,
+      nearHandY: c.won ? -106 * s : (-78 - pose * 16 - stretch * 14) * s,
+      farKneeX: (-14 - stretch * 8) * s, farKneeY: (-10 - pose * 11 + stretch * 16 - kick * 0.6) * s,
+      farFootX: (2 - stretch * 18) * s, farFootY: (6 - pose * 10 + stretch * 24 + kick * 0.7) * s,
+      nearKneeX: (-12 - stretch * 7) * s, nearKneeY: (-10 + pose * 11 + stretch * 16 + kick * 0.6) * s,
+      nearFootX: (-6 - stretch * 16) * s, nearFootY: (6 + pose * 10 + stretch * 24 - kick * 0.7) * s
+    };
+  }
+  function climberXY(c, m) {
+    var poleX = poleXOf(c, m);
+    var xOff = 0;
+    if (c.ladder) {
+      var t = c.ladder.t;
+      if (t >= 0.7 && t < 1.6) xOff = -c.facing * 17 * m.s * ((t - 0.7) / 0.9);
+      else if (t >= 1.6 && t < 3.0) xOff = -c.facing * 17 * m.s;
+      else if (t >= 3.0 && t < 3.8) xOff = -c.facing * 17 * m.s * (1 - (t - 3.0) / 0.8);
+    }
+    return { x: poleX + xOff, y: ftY(c.dispFt, m) };
+  }
+  function drawClimberBack(c, m) {
+    var p = climberXY(c, m);
+    if (p.y < -60 || p.y > viewH + 80) return;
+    var s = m.s, P = poseOf(c, s);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(c.facing, 1);
+    ctx.strokeStyle = '#b87a4e'; ctx.lineCap = 'round';
+    ctx.lineWidth = 8 * s;
+    ctx.beginPath(); ctx.moveTo(P.shX, P.shY); ctx.lineTo(-2 * s, P.farHandY); ctx.stroke();
+    ctx.lineWidth = 9 * s;
+    ctx.beginPath(); ctx.moveTo(P.hipX, P.hipY); ctx.lineTo(P.farKneeX, P.farKneeY); ctx.lineTo(P.farFootX, P.farFootY); ctx.stroke();
+    ctx.restore();
+  }
+  function drawClimberFront(c, m) {
+    var p = climberXY(c, m);
+    if (p.y < -60 || p.y > viewH + 80) return;
+    var s = m.s, P = poseOf(c, s);
+    var isRed = c.team === 'red';
+    var shirt = isRed ? '#dc2626' : '#2563eb', shirtD = isRed ? '#b91c1c' : '#1d4ed8';
+    var longyi = isRed ? '#6b2737' : '#1e3a5f', stripe = isRed ? '#f59e0b' : '#60a5fa';
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(c.facing, 1);
+    // near leg
+    ctx.strokeStyle = '#d99a6c'; ctx.lineWidth = 9.5 * s; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(P.hipX, P.hipY); ctx.lineTo(P.nearKneeX, P.nearKneeY); ctx.lineTo(P.nearFootX, P.nearFootY); ctx.stroke();
+    // longyi
+    ctx.fillStyle = longyi;
+    ctx.beginPath(); ctx.roundRect(P.hipX - 13 * s, P.hipY - 8 * s, 27 * s, 20 * s, 6 * s); ctx.fill();
+    ctx.strokeStyle = stripe; ctx.lineWidth = 1.8 * s; ctx.globalAlpha = 0.65;
+    ctx.beginPath(); ctx.moveTo(P.hipX - 10 * s, P.hipY); ctx.lineTo(P.hipX + 11 * s, P.hipY); ctx.moveTo(P.hipX - 10 * s, P.hipY + 6 * s); ctx.lineTo(P.hipX + 11 * s, P.hipY + 6 * s); ctx.stroke();
+    ctx.globalAlpha = 1;
+    // torso
+    ctx.fillStyle = shirt;
+    ctx.beginPath(); ctx.roundRect(P.shX - 12 * s, P.shY - 6 * s, 25 * s, 42 * s, 9 * s); ctx.fill();
+    ctx.fillStyle = shirtD;
+    ctx.beginPath(); ctx.roundRect(P.shX - 12 * s, P.shY - 6 * s, 8 * s, 42 * s, 6 * s); ctx.fill();
+    // head + face (profile, looking toward pole = +X local)
+    var hx = P.shX + 3 * s, hy = P.shY - 16 * s;
+    ctx.fillStyle = '#d99a6c';
+    ctx.beginPath(); ctx.arc(hx, hy, 13.5 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1e1b18';
+    ctx.beginPath(); ctx.arc(hx - 1 * s, hy - 3 * s, 13.8 * s, Math.PI * 0.9, Math.PI * 2.05); ctx.quadraticCurveTo(hx + 8 * s, hy - 13 * s, hx - 11 * s, hy - 1 * s); ctx.fill();
+    ctx.fillStyle = '#1e1b18'; ctx.strokeStyle = '#1e1b18'; ctx.lineWidth = 1.8 * s;
+    if (c.slipping || c.lostSlide) {
+      ctx.beginPath();
+      ctx.moveTo(hx + 3 * s, hy - 4 * s); ctx.lineTo(hx + 8 * s, hy + 1 * s);
+      ctx.moveTo(hx + 8 * s, hy - 4 * s); ctx.lineTo(hx + 3 * s, hy + 1 * s); ctx.stroke();
+      ctx.fillStyle = '#7f1d1d';
+      ctx.beginPath(); ctx.arc(hx + 7 * s, hy + 7 * s, 3.2 * s, 0, Math.PI * 2); ctx.fill();
+    } else if (c.won) {
+      ctx.beginPath(); ctx.arc(hx + 5 * s, hy - 1 * s, 2.2 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(hx + 5 * s, hy + 3 * s, 4.4 * s, 0.1, Math.PI * 0.9); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(hx + 5 * s, hy - 1 * s, 2.2 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(hx + 2 * s, hy - 6 * s); ctx.lineTo(hx + 9 * s, hy - 4 * s); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx + 6 * s, hy + 5 * s, 3.4 * s, 0, Math.PI); ctx.stroke();
+    }
+    // near arm to pole
+    ctx.strokeStyle = '#d99a6c'; ctx.lineWidth = 8.5 * s;
+    ctx.beginPath(); ctx.moveTo(P.shX, P.shY); ctx.lineTo(-1 * s, P.nearHandY); ctx.stroke();
+    // lightning bolts while zipping
+    if (c.boltT > 0) {
+      ctx.strokeStyle = '#fde047'; ctx.lineWidth = 3 * s;
+      for (var i = 0; i < 3; i++) {
+        var bx = (Math.random() - 0.5) * 54 * s, by = -40 * s + i * 34 * s;
+        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + 9 * s, by + 12 * s); ctx.lineTo(bx + 2 * s, by + 13 * s); ctx.lineTo(bx + 11 * s, by + 26 * s); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawBadge(c, m) {
+    var p = climberXY(c, m);
+    if (p.y < 40 || p.y > viewH + 40) return;
+    var poleX = poleXOf(c, m);
+    var x = poleX + c.facing * 52 * m.s, y = p.y - 6 * m.s;
+    var txt = '▲ ' + myaNum(Math.round(c.dispFt)) + ' ပေ';
+    ctx.save();
+    ctx.font = '800 ' + Math.round(12.5 * m.s) + 'px "Noto Sans Myanmar", sans-serif';
+    var w = ctx.measureText(txt).width + 16 * m.s, h = 20 * m.s;
+    ctx.fillStyle = 'rgba(255,255,255,0.94)';
+    ctx.strokeStyle = c.team === 'red' ? '#dc2626' : '#2563eb'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#1e293b'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, x, y + 1);
+    ctx.restore();
+  }
+  function drawTag(c, m) {
+    if (!c.tagName || G.time > c.tagUntil) return;
+    var p = climberXY(c, m);
+    var x = p.x - c.facing * 16 * m.s, y = p.y - 118 * m.s;
+    if (y < 16) y = 16;
+    ctx.save();
+    ctx.font = '700 ' + Math.round(13 * m.s) + 'px "Noto Sans Myanmar", system-ui, sans-serif';
+    var w = ctx.measureText(c.tagName).width + 18 * m.s, h = 21 * m.s;
+    ctx.fillStyle = 'rgba(10,12,24,0.72)';
+    ctx.strokeStyle = c.team === 'red' ? '#ff4d7e' : '#3fa9ff'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(c.tagName, x, y + 1);
+    ctx.restore();
+  }
+
+  function drawEffects(m) {
+    G.oilDrops.forEach(function(d) {
+      ctx.fillStyle = 'rgba(250,204,21,0.9)';
+      ctx.beginPath(); ctx.arc(d.x, ftY(d.ft, m), d.size * m.s * 0.6, 0, Math.PI * 2); ctx.fill();
+    });
+    G.sparks.forEach(function(sp) {
+      ctx.fillStyle = 'rgba(253,224,71,' + Math.max(0, sp.life / sp.maxLife) + ')';
+      ctx.fillRect(sp.x, ftY(sp.ft, m), 5 * m.s, 2.4 * m.s);
+    });
+    G.popups.forEach(function(pop) {
+      var t = 1 - pop.life / pop.maxLife;
+      var scale = t < 0.18 ? 0.6 + (t / 0.18) * 0.55 : 1.05;
+      ctx.save();
+      ctx.translate(pop.x, ftY(pop.ft, m)); ctx.scale(scale, scale);
+      ctx.globalAlpha = pop.life < 0.25 ? pop.life / 0.25 : 1;
+      ctx.font = '800 ' + Math.round(19 * m.s) + 'px "Noto Sans Myanmar", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5 * m.s; ctx.strokeStyle = pop.stroke; ctx.strokeText(pop.text, 0, 0);
+      ctx.fillStyle = pop.color; ctx.fillText(pop.text, 0, 0);
+      ctx.restore();
+    });
+    G.confetti.forEach(function(cf) {
+      ctx.save(); ctx.translate(cf.x, cf.y); ctx.rotate(cf.rot);
+      ctx.fillStyle = cf.color; ctx.fillRect(-cf.size / 2, -cf.size / 4, cf.size, cf.size / 2);
+      ctx.restore();
+    });
+  }
+
+  function render() {
+    var m = metrics();
+    drawSky(m);
+    drawGroundAndCrowd(m);
+    drawBunting(m);
+    drawHelpers(L, m); drawHelpers(R, m);
+    drawTower(L, m); drawTower(R, m);
+    drawClimberBack(L, m); drawPole(m.p1X, L, m, true); drawClimberFront(L, m);
+    drawClimberBack(R, m); drawPole(m.p2X, R, m, false); drawClimberFront(R, m);
+    drawBadge(L, m); drawBadge(R, m);
+    drawTag(L, m); drawTag(R, m);
+    drawEffects(m);
+  }
+
+  /* ---------------- wrapper interface ---------------- */
+  function reset() {
+    var jr = G.joins.red, jb = G.joins.blue;
+    L = createClimber('red', 1); R = createClimber('blue', -1);
+    G.joins.red = jr; G.joins.blue = jb;
+    G.cameraFt = 0; G.oilDrops = []; G.sparks = []; G.popups = []; G.confetti = [];
+    G.overPlayed = false;
+  }
+
+  function update(dt, S) {
+    G.time += dt;
+    if (S.over && !G.overPlayed) {
+      G.overPlayed = true;
+      var w = S.winner === 'red' ? L : R, l = S.winner === 'red' ? R : L;
+      w.won = true; l.lostSlide = true;
+      G.crowdExcitement = 1.0;
+      spawnConfetti();
+    }
+    if (!S.over && G.overPlayed) G.overPlayed = false;
+    [L, R].forEach(function(c) {
+      if (c.lostSlide) {
+        c.dispFt = Math.max(0, c.dispFt - 11 * dt);
+        c.slipping = c.dispFt > 0.1;
+        c.slipStretch += ((c.slipping ? 1 : 0) - c.slipStretch) * Math.min(1, dt * 10);
+      } else {
+        updateClimber(c, dt, S);
+      }
+    });
+    var focus = Math.max(L.dispFt, R.dispFt);
+    if (L.ladder) focus = L.dispFt; else if (R.ladder) focus = R.dispFt;
+    var camTarget = Math.max(0, Math.min(22.2, focus - 6.8));
+    var cd = camTarget - G.cameraFt;
+    G.cameraFt += Math.max(-10 * dt, Math.min(10 * dt, cd));
+    if (G.crowdExcitement > 0) G.crowdExcitement = Math.max(0, G.crowdExcitement - 0.6 * dt);
+    updateParticles(dt);
+    render();
+    tex.needsUpdate = true;
+  }
+
+  return {
+    scene: scene, camera: camera, update: update,
+    onJoin: function(team) {
+      G.joins[team] = Math.min(12, G.joins[team] + 1);
+      G.crowdExcitement = Math.min(1, G.crowdExcitement + 0.4);
+    },
+    onGift: function(team, tier, name) {
+      var c = climber(team), f = foeOf(c), m = metrics();
+      c.tagName = name || ''; c.tagUntil = G.time + 1.9;
+      if (tier === 2) {
+        spawnOil(poleXOf(f, m), f.dispFt + 0.4, f.facing, 7);
+        spawnPopup(poleXOf(f, m) - f.facing * 20 * m.s, f.dispFt + 3.4, 'ချောဆီ!', '#fde047', '#92400e');
+      } else if (tier === 3) {
+        startLadder(c, name);
+      } else if (tier === 4) {
+        c.boltT = 0.9;
+        spawnPopup(poleXOf(c, m) - c.facing * 20 * m.s, c.dispFt + 3.4, 'မိုးကြိုး!', '#fde047', '#1e293b');
+      }
+    },
+    onLike: function(team) { G.crowdExcitement = Math.min(1, G.crowdExcitement + 0.25); },
+    reset: reset
+  };
 } };
 
 </script>
