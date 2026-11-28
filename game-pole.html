@@ -92,7 +92,6 @@ body.clean #cleanExit{display:flex}
 <label>🔴 အသင်း ၁ (မန့် ၁)</label><input id="tnR" maxlength="24">
 <label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
 <div class="row"><button id="tnCancel">မပြင်တော့</button><button id="tnSave">သိမ်းမယ်</button></div></div></div>
-<div class="democol" id="demoR"></div><div class="democol" id="demoB"></div>
 <button id="cleanExit">✕</button>
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
@@ -771,9 +770,10 @@ $('tnSave').addEventListener('click', function(){
   applyNames(); $('tedit').classList.remove('show'); tick('✎ အသင်းနာမည်များ ပြောင်းပြီ — ' + TN.red + ' / ' + TN.blue);
 });
 // ---------- guide ----------
-CFG.guide.forEach(function(g){ var d=document.createElement('div'); d.innerHTML='<b>'+g[0].replace('Gift ','')+'</b> → '+g[1].split(' — ')[0]; $('gRowsL').appendChild(d); });
+var TIER_ICONS = ['🎁','💎','👑','🔥'];
+CFG.guide.forEach(function(g, i){ var d=document.createElement('div'); d.innerHTML=TIER_ICONS[i]+' <b>'+g[0].replace('Gift ','')+'</b> → '+g[1].split(' — ')[0]; $('gRowsL').appendChild(d); });
 var likeTx = CFG.metric==='p' ? 'နောက်ကျ အသင်း အားဖြည့်' : 'အားပေးတယ်';
-[['၁','🔴 အနီ join'],['၂','🔵 အပြာ join'],['Gift','auto join'],['Like', likeTx]].forEach(function(r){ var d=document.createElement('div'); d.innerHTML='<b>"'+r[0]+'"</b> – '+r[1]; $('gRowsR').appendChild(d); });
+[['၁','🔴 အနီ join'],['၂','🔵 အပြာ join'],['Gift','🎁 auto join'],['Like','👍 '+likeTx]].forEach(function(r){ var d=document.createElement('div'); d.innerHTML='<b>"'+r[0]+'"</b> – '+r[1]; $('gRowsR').appendChild(d); });
 // ---------- state ----------
 var S = { p:0, hpR:100, hpB:100, hR:0, hB:0, balR:100, balB:100, scoreR:0, scoreB:0, t:0, running:false, over:false, winner:null };
 var M = { red:{members:0, gifts:0, power:0, names:[]}, blue:{members:0, gifts:0, power:0, names:[]} };
@@ -899,25 +899,7 @@ function onEvent(ev){
 }
 addEventListener('message', function(e){ var d=e.data; if(d && d.nlo===1) onEvent(d); });
 if (parent && parent!==window) parent.postMessage({nlo:1, kind:'ready', game:CFG.id}, '*');
-// ---------- demo (standalone debug) ----------
-if (window.parent===window){
-  document.body.classList.add('standalone');
-  $('demoR').classList.add('show'); $('demoB').classList.add('show');
-  var names=['Aung Aung','May May','Ko Ko','Thiri','Zaw Zaw','Nilar'];
-  var demoDefs=[
-   ['demoR','Join',function(){ onEvent({kind:'join',team:'red',name:names[Math.random()*6|0]}); }],
-   ['demoB','Join',function(){ onEvent({kind:'join',team:'blue',name:names[Math.random()*6|0]}); }]
-  ];
-  if (CFG.climb){
-    demoDefs.push(['demoR',CFG.climb,function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Heart',coins:99}); }]);
-    demoDefs.push(['demoB',CFG.climb,function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Heart',coins:99}); }]);
-  }
-  demoDefs.push(['demoR',CFG.btn[0],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Rose',coins:199}); }]);
-  demoDefs.push(['demoR',CFG.btn[1],function(){ onEvent({kind:'gift',team:'red',name:'Fan',gift:'Crown',coins:599}); }]);
-  demoDefs.push(['demoB',CFG.btn[0],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Rose',coins:199}); }]);
-  demoDefs.push(['demoB',CFG.btn[1],function(){ onEvent({kind:'gift',team:'blue',name:'Fan',gift:'Crown',coins:599}); }]);
-  demoDefs.forEach(function(b){ var btn=document.createElement('button'); btn.textContent=b[1]; btn.addEventListener('click', b[2]); $(b[0]).appendChild(btn); });
-}
+if (window.parent===window) document.body.classList.add('standalone');
 // ---------- loop ----------
 S.running = true;
 var last = performance.now();
