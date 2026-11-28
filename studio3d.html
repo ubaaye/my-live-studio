@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#070a18">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>NLO Live Studio — LIVE ဂိမ်းများ</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -198,7 +204,7 @@
 <div id="gameScreen" class="hidden">
   <div id="stageWrap">
     <div id="stage">
-      <iframe id="gameFrame" title="game" allow="autoplay"></iframe>
+      <iframe id="gameFrame" title="game" allow="autoplay; fullscreen" allowfullscreen></iframe>
       <button id="exitOutput" title="ထွက်">✕</button>
     </div>
   </div>
