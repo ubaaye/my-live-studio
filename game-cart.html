@@ -24,24 +24,25 @@
 #vsbar .pc{position:absolute;top:0;bottom:0;display:flex;align-items:center;font-size:9.5px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000c;z-index:2}
 #vsL{left:7px} #vsRp{right:7px}
 .mid .tm{font-size:21px;font-weight:900;line-height:1} .mid .sc{font-size:13px;margin-top:2px} .mid .rd{font-size:11px;opacity:.8}
-#ticker{position:fixed;left:10px;bottom:64px;z-index:5;font-size:12.5px;line-height:1.5;pointer-events:none;text-shadow:0 1px 3px #000}
+#ticker{position:fixed;left:10px;bottom:172px;z-index:5;font-size:12.5px;line-height:1.5;pointer-events:none;text-shadow:0 1px 3px #000}
 #ticker div{background:rgba(5,8,20,.55);display:inline-block;padding:2px 8px;border-radius:8px;margin-top:3px}
-#guide{position:fixed;left:8px;right:8px;bottom:8px;z-index:6;background:rgba(10,14,34,.82);border:1px solid #ffffff26;
- border-radius:14px;padding:8px 12px;backdrop-filter:blur(8px);font-size:12.5px}
-#guide .hd{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px;cursor:pointer}
-#guide .rows{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}
-#guide .rows div b{color:#ffd54d;font-weight:700}
-#guide.closed .rows{display:none}
-#howto{position:fixed;top:116px;left:0;right:0;text-align:center;z-index:4;pointer-events:none}
+.gpanel{position:fixed;top:132px;z-index:6;background:rgba(10,14,24,.8);border:1px solid rgba(255,215,130,.45);
+ border-radius:11px;padding:8px 10px;font-size:11.5px;line-height:1.6;font-weight:600;color:#f7efdb;
+ backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.4);text-shadow:0 1px 2px #000;max-width:242px}
+#guideL{left:8px} #guideR{right:8px}
+.gpanel .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:800;font-size:12.5px;color:#ffd97a;margin-bottom:2px;white-space:nowrap}
+.gpanel .ctlrow{display:flex;gap:6px;align-items:center;margin:2px 0 4px}
+.gpanel .hd2{font-weight:800;font-size:12.5px;color:#ffd97a;margin-top:3px}
+.gpanel .rows div{white-space:nowrap}
+.gpanel .rows b{color:#ffd97a;font-weight:800}
+#howto{position:fixed;top:108px;left:0;right:0;text-align:center;z-index:4;pointer-events:none}
 #howto span{background:rgba(5,8,20,.5);padding:3px 12px;border-radius:999px;font-size:13px}
-#popup{position:fixed;top:38%;left:0;right:0;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:scale(.9);transition:all .18s}
-#popup.show{opacity:1;transform:scale(1)}
-#popup .big{display:inline-block;background:rgba(255,255,255,.13);color:#fff;font-weight:800;
- font-size:15px;line-height:1.3;padding:6px 14px;border-radius:11px;box-shadow:0 5px 18px #0004,inset 0 0 12px #ffffff1f;max-width:82%;
- border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(10px) saturate(1.3);-webkit-backdrop-filter:blur(10px) saturate(1.3);
- text-shadow:0 1px 4px #0009}
-#popup .sub{display:block;margin-top:4px;font-size:11.5px;color:#fff;text-shadow:0 1px 4px #000}
-#sideR,#sideB{position:fixed;top:150px;z-index:5;display:flex;flex-direction:column;gap:3px;pointer-events:none;min-width:106px}
+#popup{position:fixed;top:40%;left:50%;right:auto;text-align:center;z-index:8;pointer-events:none;opacity:0;transform:translateX(-50%) scale(.92);transition:all .2s;
+ background:rgba(16,12,4,.92);border:1.5px solid #ffd97a;border-radius:14px;padding:10px 18px;width:max-content;max-width:88%;box-shadow:0 8px 28px rgba(0,0,0,.55)}
+#popup.show{opacity:1;transform:translateX(-50%) scale(1)}
+#popup .big{display:block;color:#ffe9b0;font-weight:800;font-size:16.5px;line-height:1.3;text-shadow:0 1px 3px #000;white-space:nowrap}
+#popup .sub{display:block;margin-top:2px;font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
+#sideR,#sideB{position:fixed;top:300px;z-index:5;display:flex;flex-direction:column;gap:3px;pointer-events:none;min-width:106px}
 #sideR{left:8px} #sideB{right:8px}
 #giftsR,#giftsB{display:none;flex-direction:column;gap:3px}
 .qbox{display:none;background:rgba(255,255,255,.10);border:1px dashed #ffffff70;border-radius:8px;padding:3px 7px;
@@ -50,14 +51,13 @@
  padding:2.5px 7px;font-size:11px;color:#fff;text-shadow:0 1px 3px #000a;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .grow .n{opacity:.92;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .grow .c{margin-left:auto;font-weight:800}
-.democol{position:fixed;top:150px;z-index:9;display:none;flex-direction:column;gap:5px}
+.democol{position:fixed;bottom:12px;z-index:9;display:none;flex-direction:column;gap:5px}
 #demoR{left:8px} #demoB{right:8px}
 .democol button{background:rgba(24,20,12,.58);color:#fff;border:1px solid #ffffff40;border-radius:999px;padding:3px 8px;font-size:9.5px;font-weight:700;
  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 8px #0004;text-shadow:0 1px 2px #000}
 .democol.show{display:flex}
-body.standalone #sideR,body.standalone #sideB{top:252px}
-#gEdit{font-size:11.5px;font-weight:700;background:rgba(255,255,255,.13);border:1px solid #ffffff59;border-radius:8px;
- padding:3px 9px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#gEdit{font-size:11px;font-weight:700;background:rgba(255,255,255,.13);border:1px solid #ffffff59;border-radius:8px;
+ padding:2px 7px;cursor:pointer;color:#fff}
 #tedit{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:20;background:rgba(4,6,16,.45)}
 #tedit.show{display:flex}
 #tedit .card{background:rgba(255,255,255,.13);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
@@ -69,9 +69,9 @@ body.standalone #sideR,body.standalone #sideB{top:252px}
 #tedit .row{display:flex;gap:8px;margin-top:14px}
 #tedit button{flex:1;padding:9px;border-radius:9px;border:1px solid #ffffff59;background:rgba(255,255,255,.13);
  color:#fff;font-size:13.5px;font-weight:700;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-#cleanBtn{position:fixed;right:10px;bottom:122px;z-index:30;background:rgba(24,20,12,.78);color:#fff;border:1px solid #ffffff55;border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:800;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 3px 10px #0006}
+#cleanBtn{background:rgba(24,20,12,.78);color:#fff;border:1px solid #ffffff55;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:800;cursor:pointer}
 #cleanExit{position:fixed;right:8px;bottom:8px;z-index:30;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.35);color:#fff;border:1px solid #ffffff40;font-size:13px;display:none;align-items:center;justify-content:center;opacity:.45;padding:0}
-body.clean #guide,body.clean .democol,body.clean #tedit,body.clean #cleanBtn{display:none!important}
+body.clean .democol,body.clean #tedit,body.clean #cleanBtn,body.clean #gEdit{display:none!important}
 body.clean #cleanExit{display:flex}
 #fx{position:fixed;inset:0;z-index:7;pointer-events:none;overflow:hidden}
 #fx .cf{position:absolute;width:8px;height:12px;border-radius:2px;opacity:.95}
@@ -90,13 +90,14 @@ body.clean #cleanExit{display:flex}
 <div id="ticker"></div>
 <div id="flash"></div><div id="fx"></div>
 <div id="popup"><span class="big" id="popBig"></span><span class="sub" id="popSub"></span></div>
-<div id="guide"><div class="hd"><span>🎁 Gift လမ်းညွှန် — နွားလှည်းပြိုင်ပွဲ (OX-CART RACE)</span><span style="display:flex;gap:8px;align-items:center"><span id="gEdit">✎ အသင်းပြင်</span><span id="gTog">▾</span></span></div><div class="rows" id="gRows"></div></div>
+<div class="gpanel" id="guideL"><div class="hd"><span>🎁 Send Gift Guide</span></div><div class="ctlrow"><span id="gEdit">✎ အသင်းပြင်</span><button id="cleanBtn">📺 LIVE mode</button></div><div class="rows" id="gRowsL"></div></div>
+<div class="gpanel" id="guideR"><div class="hd"><span>👤 Join – အသင်းဝင်</span></div><div class="hd2">💬 Comment Guide</div><div class="rows" id="gRowsR"></div></div>
 <div id="tedit"><div class="card"><h3>✎ အသင်းနာမည်များ ပြင်ရန်</h3>
 <label>🔴 အသင်း ၁ (မန့် ၁)</label><input id="tnR" maxlength="24">
 <label>🔵 အသင်း ၂ (မန့် ၂)</label><input id="tnB" maxlength="24">
 <div class="row"><button id="tnCancel">မပြင်တော့</button><button id="tnSave">သိမ်းမယ်</button></div></div></div>
 <div class="democol" id="demoR"></div><div class="democol" id="demoB"></div>
-<button id="cleanBtn">📺 LIVE mode</button><button id="cleanExit">✕</button>
+<button id="cleanExit">✕</button>
 <script src="three.min.js"></script>
 <script>window.GAME3D = {};</script>
 <script>
@@ -607,8 +608,9 @@ $('tnSave').addEventListener('click', function(){
   applyNames(); $('tedit').classList.remove('show'); tick('✎ အသင်းနာမည်များ ပြောင်းပြီ — ' + TN.red + ' / ' + TN.blue);
 });
 // ---------- guide ----------
-CFG.guide.forEach(function(g){ var d=document.createElement('div'); d.innerHTML='<b>'+g[0]+'</b> — '+g[1]; $('gRows').appendChild(d); });
-$('gTog').addEventListener('click', function(e){ e.stopPropagation(); $('guide').classList.toggle('closed'); $('gTog').textContent = $('guide').classList.contains('closed') ? '▸' : '▾'; });
+CFG.guide.forEach(function(g){ var d=document.createElement('div'); d.innerHTML='<b>'+g[0].replace('Gift ','')+'</b> → '+g[1]; $('gRowsL').appendChild(d); });
+var likeTx = CFG.metric==='p' ? 'နောက်ကျ အသင်း အားဖြည့်' : 'အသင်းကို အားပေးတယ်';
+[['၁','🔴 အနီ join'],['၂','🔵 အပြာ join'],['🎁 Gift','ပို့ရင် auto join'],['👍 Like', likeTx]].forEach(function(r){ var d=document.createElement('div'); d.innerHTML='<b>"'+r[0]+'"</b> – '+r[1]; $('gRowsR').appendChild(d); });
 // ---------- state ----------
 var S = { p:0, hpR:100, hpB:100, hR:0, hB:0, balR:100, balB:100, scoreR:0, scoreB:0, t:0, running:false, over:false, winner:null };
 var M = { red:{members:0, gifts:0, power:0, names:[]}, blue:{members:0, gifts:0, power:0, names:[]} };
@@ -679,7 +681,7 @@ function applyGift(team, tier, name, giftName){
   else if (CFG.metric==='hp'){ var dmg=[0,4,9,16,30][tier]; if(foe==='red') S.hpR=Math.max(0,S.hpR-dmg); else S.hpB=Math.max(0,S.hpB-dmg); lastHit[foe]=S.t; }
   else if (CFG.metric==='bal'){ var bd=[0,6,13,22,40][tier]; if(foe==='red') S.balR=Math.max(0,S.balR-bd); else S.balB=Math.max(0,S.balB-bd); lastHit[foe]=S.t; }
   else if (CFG.metric==='goal'){ S.p += (team==='red'?1:-1) * [0,.12,.26,.45,.85][tier]; if(tier===3) goldUntil[team]=S.t+5; if(tier===4 && Math.abs(S.p)>0.55){ goal(team); } }
-  showPop(tn(team)+' — '+feat, name+' က '+giftName+' ပို့တယ်', tier>=4 ? 2600 : tier>=3 ? 2100 : 1500);
+  showPop('🎁 '+name+' — '+giftName, tn(team)+' · '+feat, tier>=4 ? 2600 : tier>=3 ? 2100 : 1500);
   burst(team, tier);
   tick('🎁 '+name+' → '+tn(team)+' · '+feat);
   syncHud();
